@@ -37,12 +37,12 @@ export default function Results({ analysisResult, userSymptoms }: ResultsProps) 
       <div className="flex justify-center mb-8">
         <div className="inline-flex rounded-md shadow-sm" role="group">
           <Link href="/results">
-            <div className="py-2 px-4 text-sm font-medium text-white bg-primary-600 rounded-l-lg border border-primary-600 focus:z-10 focus:ring-2 focus:ring-primary-500 cursor-pointer">
+            <div className="py-2 px-4 text-sm font-medium text-white bg-blue-600 rounded-l-lg border border-blue-600 focus:z-10 focus:ring-2 focus:ring-blue-500 cursor-pointer">
               Analysis
             </div>
           </Link>
           <Link href="/tracker">
-            <div className="py-2 px-4 text-sm font-medium text-gray-900 bg-white rounded-r-lg border border-gray-200 hover:bg-gray-100 hover:text-primary-700 focus:z-10 focus:ring-2 focus:ring-primary-500 cursor-pointer">
+            <div className="py-2 px-4 text-sm font-medium text-gray-900 bg-white rounded-r-lg border border-gray-200 hover:bg-gray-100 hover:text-blue-700 focus:z-10 focus:ring-2 focus:ring-blue-500 cursor-pointer">
               Track Symptoms
             </div>
           </Link>
@@ -125,7 +125,7 @@ export default function Results({ analysisResult, userSymptoms }: ResultsProps) 
               </p>
               
               <Link href="/tracker">
-                <div className="block w-full bg-secondary-600 text-white py-2 px-4 rounded-md font-medium hover:bg-secondary-700 transition-colors mb-4 text-center cursor-pointer">
+                <div className="block w-full bg-blue-600 text-white py-2 px-4 rounded-md font-medium hover:bg-blue-700 transition-colors mb-4 text-center cursor-pointer">
                   Start Daily Tracking
                 </div>
               </Link>
