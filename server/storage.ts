@@ -9,6 +9,8 @@ import {
   type DailyTracking,
   type InsertDailyTracking
 } from "@shared/schema";
+import { db } from "./db";
+import { eq, gte } from "drizzle-orm";
 
 // Storage interface
 export interface IStorage {
@@ -27,64 +29,52 @@ export interface IStorage {
   getDailyTrackingData(days: number): Promise<DailyTracking[]>;
 }
 
-// In-memory storage implementation
-export class MemStorage implements IStorage {
-  private users: Map<number, User>;
-  private symptomRecords: Map<number, SymptomRecord>;
-  private dailyTrackings: Map<number, DailyTracking>;
-  private currentUserId: number;
-  private currentSymptomRecordId: number;
-  private currentDailyTrackingId: number;
-
-  constructor() {
-    this.users = new Map();
-    this.symptomRecords = new Map();
-    this.dailyTrackings = new Map();
-    this.currentUserId = 1;
-    this.currentSymptomRecordId = 1;
-    this.currentDailyTrackingId = 1;
-  }
-
+// Database storage implementation
+export class DatabaseStorage implements IStorage {
   // User methods
   async getUser(id: number): Promise<User | undefined> {
-    return this.users.get(id);
+    const [user] = await db.select().from(users).where(eq(users.id, id));
+    return user || undefined;
   }
 
   async getUserByUsername(username: string): Promise<User | undefined> {
-    return Array.from(this.users.values()).find(
-      (user) => user.username === username,
-    );
+    const [user] = await db.select().from(users).where(eq(users.username, username));
+    return user || undefined;
   }
 
   async createUser(insertUser: InsertUser): Promise<User> {
-    const id = this.currentUserId++;
-    const user: User = { ...insertUser, id };
-    this.users.set(id, user);
+    const [user] = await db
+      .insert(users)
+      .values(insertUser)
+      .returning();
     return user;
   }
 
   // Symptom record methods
   async createSymptomRecord(record: InsertSymptomRecord): Promise<SymptomRecord> {
-    const id = this.currentSymptomRecordId++;
-    const symptomRecord: SymptomRecord = { ...record, id };
-    this.symptomRecords.set(id, symptomRecord);
+    const [symptomRecord] = await db
+      .insert(symptomRecords)
+      .values(record)
+      .returning();
     return symptomRecord;
   }
 
   async getSymptomRecords(): Promise<SymptomRecord[]> {
-    return Array.from(this.symptomRecords.values());
+    return await db.select().from(symptomRecords);
   }
 
   async getSymptomRecordById(id: number): Promise<SymptomRecord | undefined> {
-    return this.symptomRecords.get(id);
+    const [record] = await db.select().from(symptomRecords).where(eq(symptomRecords.id, id));
+    return record || undefined;
   }
 
   // Daily tracking methods
   async createDailyTracking(tracking: InsertDailyTracking): Promise<DailyTracking> {
-    const id = this.currentDailyTrackingId++;
-    const dailyTracking: DailyTracking = { ...tracking, id };
-    this.dailyTrackings.set(id, dailyTracking);
-    return dailyTracking;
+    const [trackingResult] = await db
+      .insert(dailyTracking)
+      .values(tracking)
+      .returning();
+    return trackingResult;
   }
 
   async getDailyTrackingData(days: number): Promise<DailyTracking[]> {
@@ -92,21 +82,13 @@ export class MemStorage implements IStorage {
     const cutoffDate = new Date();
     cutoffDate.setDate(cutoffDate.getDate() - days);
     
-    return Array.from(this.dailyTrackings.values())
-      .filter(tracking => {
-        if (typeof tracking.date === 'string') {
-          return new Date(tracking.date) >= cutoffDate;
-        } else {
-          return tracking.date >= cutoffDate;
-        }
-      })
-      .sort((a, b) => {
-        const dateA = typeof a.date === 'string' ? new Date(a.date) : a.date;
-        const dateB = typeof b.date === 'string' ? new Date(b.date) : b.date;
-        return dateA.getTime() - dateB.getTime();
-      });
+    return await db
+      .select()
+      .from(dailyTracking)
+      .where(gte(dailyTracking.date, cutoffDate))
+      .orderBy(dailyTracking.date);
   }
 }
 
 // Export a singleton instance
-export const storage = new MemStorage();
+export const storage = new DatabaseStorage();
