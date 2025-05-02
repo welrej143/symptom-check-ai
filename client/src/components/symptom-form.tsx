@@ -52,13 +52,13 @@ export default function SymptomForm({ onSubmit }: SymptomFormProps) {
           />
           
           <div className="flex items-center text-sm text-gray-500 mb-4 mt-4">
-            <AlertCircle className="h-5 w-5 mr-2 text-primary-500" />
+            <AlertCircle className="h-5 w-5 mr-2 text-blue-500" />
             <span>Your data is private and secure. Not stored without your consent.</span>
           </div>
           
           <Button
             type="submit"
-            className="w-full bg-primary-600 text-white py-3 px-4 rounded-md font-medium hover:bg-primary-700 transition-colors"
+            className="w-full bg-blue-500 text-white py-3 px-4 rounded-md font-medium hover:bg-blue-700 transition-colors"
           >
             Analyze Symptoms
           </Button>

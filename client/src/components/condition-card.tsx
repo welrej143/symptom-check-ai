@@ -36,13 +36,13 @@ export default function ConditionCard({ condition }: ConditionCardProps) {
         );
       case "low":
         return (
-          <svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6 text-secondary-600" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+          <svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6 text-green-500" fill="none" viewBox="0 0 24 24" stroke="currentColor">
             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
           </svg>
         );
       default:
         return (
-          <svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6 text-secondary-600" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+          <svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6 text-green-500" fill="none" viewBox="0 0 24 24" stroke="currentColor">
             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
           </svg>
         );
@@ -75,7 +75,7 @@ export default function ConditionCard({ condition }: ConditionCardProps) {
             </div>
             
             <div className="mt-3">
-              <button className="text-sm text-primary-600 hover:text-primary-800 font-medium">
+              <button className="text-sm text-blue-500 hover:text-blue-700 font-medium">
                 Learn more
               </button>
             </div>
