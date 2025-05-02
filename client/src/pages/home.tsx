@@ -1,10 +1,6 @@
-import { useState } from "react";
 import { useLocation } from "wouter";
 import SymptomForm from "@/components/symptom-form";
-import LoadingAnalysis from "@/components/loading-analysis";
 import FeatureCards from "@/components/feature-cards";
-import { AnalysisResponse } from "@shared/schema";
-import { analyzeSymptoms } from "@/lib/openai";
 import { useAuth } from "@/hooks/use-auth";
 import { useToast } from "@/hooks/use-toast";
 
@@ -14,14 +10,12 @@ interface HomeProps {
   analyzeSymptoms: (symptoms: string) => Promise<void>;
 }
 
-export default function Home({ setAnalysisResult, setUserSymptoms, initialSymptoms = "" }: HomeProps) {
+export default function Home({ setUserSymptoms, initialSymptoms = "", analyzeSymptoms }: HomeProps) {
   const [, navigate] = useLocation();
-  const [isLoading, setIsLoading] = useState(false);
-  const [progress, setProgress] = useState(0);
   const { user } = useAuth();
   const { toast } = useToast();
   
-  const handleSymptomSubmit = (symptoms: string) => {
+  const handleSymptomSubmit = async (symptoms: string) => {
     // Check if user is logged in
     if (!user) {
       toast({
@@ -33,9 +27,6 @@ export default function Home({ setAnalysisResult, setUserSymptoms, initialSympto
       return;
     }
     
-    // Save symptoms to parent state right away
-    setUserSymptoms(symptoms);
-    
     // Only proceed if we have symptoms text
     if (!symptoms.trim()) {
       toast({
@@ -46,73 +37,16 @@ export default function Home({ setAnalysisResult, setUserSymptoms, initialSympto
       return;
     }
     
-    // Show loading state immediately
-    console.log("Setting loading state to true");
-    setIsLoading(true);
-    setProgress(0);
+    console.log("Starting symptom analysis process");
     
-    // Define a function for progress animation
-    const startProgressAnimation = () => {
-      // Return the interval ID so we can clear it later
-      return setInterval(() => {
-        setProgress((prev) => {
-          // Cap at 90% until the analysis is complete
-          if (prev >= 90) return 90;
-          return prev + 5;
-        });
-      }, 300);
-    };
-    
-    // Start progress animation with a slight delay to ensure loading component renders
-    const timer = setTimeout(() => {
-      const progressTimer = startProgressAnimation();
-      
-      // Analyze symptoms
-      analyzeSymptoms(symptoms)
-        .then(result => {
-          // Clear the progress timer
-          clearInterval(progressTimer);
-          
-          // Set to 100% when done
-          setProgress(100);
-          
-          // Set the result
-          setAnalysisResult(result);
-          
-          // Short delay to show 100% before redirecting
-          setTimeout(() => {
-            setIsLoading(false);
-            navigate("/results");
-          }, 500);
-        })
-        .catch(error => {
-          // Clear the progress timer
-          clearInterval(progressTimer);
-          console.error("Error analyzing symptoms:", error);
-          
-          setIsLoading(false);
-          toast({
-            title: "Analysis Failed",
-            description: "There was a problem analyzing your symptoms. Please try again.",
-            variant: "destructive",
-          });
-        });
-    }, 100);
-    
-    // Cleanup function if component unmounts
-    return () => {
-      clearTimeout(timer);
-    };
+    // Call the parent component's analyze function
+    try {
+      await analyzeSymptoms(symptoms);
+    } catch (error) {
+      console.error("Error in handleSymptomSubmit:", error);
+    }
   };
-  
-  // Debug log for rendering
-  console.log("Home component rendering, isLoading:", isLoading, "progress:", progress);
-  
-  if (isLoading) {
-    console.log("Rendering loading component");
-    return <LoadingAnalysis progress={progress} />;
-  }
-  
+
   return (
     <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
       <section id="landing-section">
