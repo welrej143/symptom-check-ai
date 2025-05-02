@@ -18,6 +18,11 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // Analyze symptoms route
   app.post("/api/analyze-symptoms", async (req: Request, res: Response) => {
     try {
+      // Check if user is authenticated
+      if (!req.isAuthenticated()) {
+        return res.status(401).json({ message: "Authentication required" });
+      }
+      
       const validation = symptomInputSchema.safeParse(req.body);
       
       if (!validation.success) {
@@ -29,9 +34,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
       
       const { symptoms } = validation.data;
       
-      // Store the symptom record
+      // Store the symptom record with user ID
       await storage.createSymptomRecord({
-        userId: null, // Not requiring login for the basic version
+        userId: req.user.id, 
         symptoms,
         date: new Date(), // This is okay since symptomRecords uses timestamp
       });
@@ -138,6 +143,11 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // Track daily symptoms
   app.post("/api/track-symptoms", async (req: Request, res: Response) => {
     try {
+      // Check if user is authenticated
+      if (!req.isAuthenticated()) {
+        return res.status(401).json({ message: "Authentication required" });
+      }
+      
       const { 
         symptomSeverity, 
         symptoms, 
@@ -154,7 +164,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       
       // Store the daily tracking data
       const tracking = await storage.createDailyTracking({
-        userId: null, // Not requiring login for now
+        userId: req.user.id,
         date: new Date().toISOString().split('T')[0], // Format as YYYY-MM-DD
         symptoms,
         symptomSeverity,
@@ -174,8 +184,13 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // Get daily tracking data
   app.get("/api/tracking-data", async (req: Request, res: Response) => {
     try {
+      // Check if user is authenticated
+      if (!req.isAuthenticated()) {
+        return res.status(401).json({ message: "Authentication required" });
+      }
+      
       const days = req.query.days ? parseInt(req.query.days as string) : 7;
-      const data = await storage.getDailyTrackingData(days);
+      const data = await storage.getDailyTrackingData(days, req.user.id);
       res.json(data);
     } catch (error) {
       console.error("Error fetching tracking data:", error);

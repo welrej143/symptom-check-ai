@@ -5,6 +5,8 @@ import LoadingAnalysis from "@/components/loading-analysis";
 import FeatureCards from "@/components/feature-cards";
 import { AnalysisResponse } from "@shared/schema";
 import { analyzeSymptoms } from "@/lib/openai";
+import { useAuth } from "@/hooks/use-auth";
+import { useToast } from "@/hooks/use-toast";
 
 interface HomeProps {
   setAnalysisResult: (result: AnalysisResponse) => void;
@@ -15,8 +17,21 @@ export default function Home({ setAnalysisResult, setUserSymptoms }: HomeProps) 
   const [, navigate] = useLocation();
   const [isLoading, setIsLoading] = useState(false);
   const [progress, setProgress] = useState(0);
+  const { user } = useAuth();
+  const { toast } = useToast();
   
   const handleSymptomSubmit = async (symptoms: string) => {
+    // Check if user is logged in
+    if (!user) {
+      toast({
+        title: "Authentication Required",
+        description: "Please sign in or register to analyze your symptoms.",
+        variant: "default",
+      });
+      navigate("/auth");
+      return;
+    }
+    
     setIsLoading(true);
     setUserSymptoms(symptoms);
     

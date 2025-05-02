@@ -29,7 +29,7 @@ export interface IStorage {
   
   // Daily tracking methods
   createDailyTracking(tracking: InsertDailyTracking): Promise<DailyTracking>;
-  getDailyTrackingData(days: number): Promise<DailyTracking[]>;
+  getDailyTrackingData(days: number, userId?: number): Promise<DailyTracking[]>;
   
   // Session management
   sessionStore: session.Store;
@@ -93,16 +93,28 @@ export class DatabaseStorage implements IStorage {
     return trackingResult;
   }
 
-  async getDailyTrackingData(days: number): Promise<DailyTracking[]> {
+  async getDailyTrackingData(days: number, userId?: number): Promise<DailyTracking[]> {
     const now = new Date();
     const cutoffDate = new Date();
     cutoffDate.setDate(cutoffDate.getDate() - days);
     
-    return await db
-      .select()
-      .from(dailyTracking)
-      .where(gte(dailyTracking.date, cutoffDate.toISOString()))
-      .orderBy(asc(dailyTracking.date));
+    // Build the query with conditions
+    if (userId) {
+      return await db
+        .select()
+        .from(dailyTracking)
+        .where(
+          gte(dailyTracking.date, cutoffDate.toISOString()),
+          eq(dailyTracking.userId, userId)
+        )
+        .orderBy(asc(dailyTracking.date));
+    } else {
+      return await db
+        .select()
+        .from(dailyTracking)
+        .where(gte(dailyTracking.date, cutoffDate.toISOString()))
+        .orderBy(asc(dailyTracking.date));
+    }
   }
 }
 
