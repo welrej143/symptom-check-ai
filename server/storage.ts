@@ -82,10 +82,13 @@ export class DatabaseStorage implements IStorage {
     const cutoffDate = new Date();
     cutoffDate.setDate(cutoffDate.getDate() - days);
     
+    // Format date as YYYY-MM-DD for PostgreSQL date comparison
+    const formattedDate = cutoffDate.toISOString().split('T')[0];
+    
     return await db
       .select()
       .from(dailyTracking)
-      .where(gte(dailyTracking.date, cutoffDate))
+      .where(gte(dailyTracking.date, formattedDate))
       .orderBy(dailyTracking.date);
   }
 }
