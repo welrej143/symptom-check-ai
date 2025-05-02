@@ -63,6 +63,7 @@ export const conditionSchema = z.object({
   name: z.string(),
   description: z.string(),
   symptoms: z.array(z.string()),
+  causes: z.array(z.string()).optional(),
   urgencyLevel: z.enum(["low", "moderate", "high"]),
   medications: z.array(z.object({
     name: z.string(),

@@ -77,6 +77,22 @@ export default function ConditionCard({ condition }: ConditionCardProps) {
               </div>
             </div>
             
+            {condition.causes && condition.causes.length > 0 && (
+              <div className="mt-3">
+                <h5 className="text-sm font-medium text-gray-900">Possible Causes</h5>
+                <div className="mt-2 flex flex-wrap gap-2">
+                  {condition.causes.map((cause, index) => (
+                    <span 
+                      key={index}
+                      className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-amber-50 text-amber-800 border border-amber-200"
+                    >
+                      {cause}
+                    </span>
+                  ))}
+                </div>
+              </div>
+            )}
+            
             {/* Show/Hide medications and supplements */}
             {showDetails && (
               <>

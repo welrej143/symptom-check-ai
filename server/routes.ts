@@ -44,6 +44,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
               "name": "Condition name",
               "description": "Brief description of the condition",
               "symptoms": ["symptom1", "symptom2", "etc"],
+              "causes": ["cause1", "cause2", "etc"],
               "urgencyLevel": "low/moderate/high",
               "medications": [
                 {
@@ -78,13 +79,14 @@ export async function registerRoutes(app: Express): Promise<Server> {
         Important guidelines:
         1. Return exactly 3 possible conditions based on the symptoms
         2. For each condition, provide common symptoms (4-6 symptoms per condition)
-        3. Set urgencyLevel to either "low" (monitor at home), "moderate" (see doctor soon), or "high" (emergency)
-        4. Provide 3-5 actionable recommendations
-        5. For each condition, include 1-3 relevant medications that are commonly prescribed
-        6. For each condition, include 1-3 relevant supplements that may help with symptoms
-        7. For the icon field, use only icon names from Lucide React (like "stethoscope", "thermometer", "clipboard", etc.)
-        8. ALWAYS include disclaimer text about consulting healthcare professionals
-        9. If symptoms suggest a potentially life-threatening condition, mark the recommendation with isEmergency: true
+        3. For each condition, provide 2-4 common causes or risk factors that may lead to this condition
+        4. Set urgencyLevel to either "low" (monitor at home), "moderate" (see doctor soon), or "high" (emergency)
+        5. Provide 3-5 actionable recommendations
+        6. For each condition, include 1-3 relevant medications that are commonly prescribed
+        7. For each condition, include 1-3 relevant supplements that may help with symptoms
+        8. For the icon field, use only icon names from Lucide React (like "stethoscope", "thermometer", "clipboard", etc.)
+        9. ALWAYS include disclaimer text about consulting healthcare professionals
+        10. If symptoms suggest a potentially life-threatening condition, mark the recommendation with isEmergency: true
         
         Response should be properly formatted JSON only, without any additional text.
       `;
