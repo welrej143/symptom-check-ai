@@ -6,10 +6,10 @@ export default function Header() {
     <header className="bg-white shadow-sm">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-4 flex justify-between items-center">
         <Link href="/">
-          <a className="flex items-center">
+          <div className="flex items-center cursor-pointer">
             <Zap className="h-8 w-8 text-primary-600" />
             <h1 className="ml-2 text-xl font-bold text-gray-900">SymptomCheck AI</h1>
-          </a>
+          </div>
         </Link>
         <nav>
           <button className="text-sm font-medium text-primary-600 hover:text-primary-800 mr-4">Sign In</button>

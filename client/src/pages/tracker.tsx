@@ -6,6 +6,7 @@ import { DailyTracking } from "@shared/schema";
 import SymptomTrackerForm from "@/components/symptom-tracker-form";
 import SymptomChart from "@/components/symptom-chart";
 import HealthScore from "@/components/health-score";
+import PremiumCard from "@/components/premium-card";
 import { queryClient } from "@/lib/queryClient";
 import { useToast } from "@/hooks/use-toast";
 
@@ -14,7 +15,7 @@ export default function Tracker() {
   const { toast } = useToast();
   
   // Fetch tracking data
-  const { data: trackingData, isLoading } = useQuery({
+  const { data: trackingData = [], isLoading } = useQuery<DailyTracking[]>({
     queryKey: ['/api/tracking-data', timeRange],
     refetchOnWindowFocus: false
   });
@@ -44,7 +45,7 @@ export default function Tracker() {
   
   // Calculate health insights based on tracking data
   const getHealthInsights = () => {
-    if (!trackingData || trackingData.length === 0) {
+    if (trackingData.length === 0) {
       return [];
     }
     
@@ -102,14 +103,14 @@ export default function Tracker() {
       <div className="flex justify-center mb-8">
         <div className="inline-flex rounded-md shadow-sm" role="group">
           <Link href="/results">
-            <a className="py-2 px-4 text-sm font-medium text-gray-900 bg-white rounded-l-lg border border-gray-200 hover:bg-gray-100 hover:text-primary-700 focus:z-10 focus:ring-2 focus:ring-primary-500">
+            <div className="py-2 px-4 text-sm font-medium text-gray-900 bg-white rounded-l-lg border border-gray-200 hover:bg-gray-100 hover:text-primary-700 focus:z-10 focus:ring-2 focus:ring-primary-500 cursor-pointer">
               Analysis
-            </a>
+            </div>
           </Link>
           <Link href="/tracker">
-            <a className="py-2 px-4 text-sm font-medium text-white bg-primary-600 rounded-r-lg border border-primary-600 focus:z-10 focus:ring-2 focus:ring-primary-500">
+            <div className="py-2 px-4 text-sm font-medium text-white bg-primary-600 rounded-r-lg border border-primary-600 focus:z-10 focus:ring-2 focus:ring-primary-500 cursor-pointer">
               Track Symptoms
-            </a>
+            </div>
           </Link>
         </div>
       </div>

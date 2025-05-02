@@ -17,19 +17,19 @@ export default function Footer() {
           <div>
             <h3 className="text-sm font-semibold text-gray-900 uppercase tracking-wider mb-4">Resources</h3>
             <ul className="space-y-2">
-              <li><Link href="#"><a className="text-sm text-gray-600 hover:text-gray-900">Help Center</a></Link></li>
-              <li><Link href="#"><a className="text-sm text-gray-600 hover:text-gray-900">Blog</a></Link></li>
-              <li><Link href="#"><a className="text-sm text-gray-600 hover:text-gray-900">Medical Disclaimer</a></Link></li>
-              <li><Link href="#"><a className="text-sm text-gray-600 hover:text-gray-900">Privacy Policy</a></Link></li>
+              <li><Link href="#"><div className="text-sm text-gray-600 hover:text-gray-900 cursor-pointer">Help Center</div></Link></li>
+              <li><Link href="#"><div className="text-sm text-gray-600 hover:text-gray-900 cursor-pointer">Blog</div></Link></li>
+              <li><Link href="#"><div className="text-sm text-gray-600 hover:text-gray-900 cursor-pointer">Medical Disclaimer</div></Link></li>
+              <li><Link href="#"><div className="text-sm text-gray-600 hover:text-gray-900 cursor-pointer">Privacy Policy</div></Link></li>
             </ul>
           </div>
           
           <div>
             <h3 className="text-sm font-semibold text-gray-900 uppercase tracking-wider mb-4">Company</h3>
             <ul className="space-y-2">
-              <li><Link href="#"><a className="text-sm text-gray-600 hover:text-gray-900">About Us</a></Link></li>
-              <li><Link href="#"><a className="text-sm text-gray-600 hover:text-gray-900">Careers</a></Link></li>
-              <li><Link href="#"><a className="text-sm text-gray-600 hover:text-gray-900">Contact</a></Link></li>
+              <li><Link href="#"><div className="text-sm text-gray-600 hover:text-gray-900 cursor-pointer">About Us</div></Link></li>
+              <li><Link href="#"><div className="text-sm text-gray-600 hover:text-gray-900 cursor-pointer">Careers</div></Link></li>
+              <li><Link href="#"><div className="text-sm text-gray-600 hover:text-gray-900 cursor-pointer">Contact</div></Link></li>
             </ul>
           </div>
         </div>
