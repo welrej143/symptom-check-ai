@@ -28,7 +28,7 @@ type RegisterData = {
   email: string;
 };
 
-export const AuthContext = createContext<AuthContextType | null>(null);
+const AuthContext = createContext<AuthContextType | null>(null);
 
 export function AuthProvider({ children }: { children: ReactNode }) {
   const { toast } = useToast();
@@ -36,9 +36,11 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     data: user,
     error,
     isLoading,
+    refetch: refetchUser
   } = useQuery<User | null, Error>({
     queryKey: ["/api/user"],
     queryFn: getQueryFn({ on401: "returnNull" }),
+    staleTime: 0, // Always refetch when requested
   });
 
   const loginMutation = useMutation({
@@ -46,12 +48,21 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       const res = await apiRequest("POST", "/api/login", credentials);
       return await res.json();
     },
-    onSuccess: (user) => {
-      queryClient.setQueryData(["/api/user"], user);
+    onSuccess: (userData) => {
+      // Update cache immediately
+      queryClient.setQueryData(["/api/user"], userData);
+      // Also force a refetch for fresh data
+      refetchUser();
+      
       toast({
         title: "Login successful",
-        description: `Welcome back, ${user.username}!`,
+        description: `Welcome back, ${userData.username}!`,
       });
+      
+      // Force a refresh to ensure proper state
+      setTimeout(() => {
+        window.location.href = "/";
+      }, 500);
     },
     onError: (error: Error) => {
       toast({
@@ -67,12 +78,21 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       const res = await apiRequest("POST", "/api/register", userData);
       return await res.json();
     },
-    onSuccess: (user) => {
-      queryClient.setQueryData(["/api/user"], user);
+    onSuccess: (userData) => {
+      // Update cache immediately
+      queryClient.setQueryData(["/api/user"], userData);
+      // Also force a refetch for fresh data
+      refetchUser();
+      
       toast({
         title: "Registration successful",
-        description: `Welcome to SymptomCheck AI, ${user.username}!`,
+        description: `Welcome to SymptomCheck AI, ${userData.username}!`,
       });
+      
+      // Force a refresh to ensure proper state
+      setTimeout(() => {
+        window.location.href = "/";
+      }, 500);
     },
     onError: (error: Error) => {
       toast({
@@ -88,11 +108,20 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       await apiRequest("POST", "/api/logout");
     },
     onSuccess: () => {
+      // Clear cache
       queryClient.setQueryData(["/api/user"], null);
+      // Also force a refetch to get fresh session state
+      refetchUser();
+      
       toast({
         title: "Logout successful",
         description: "You have been logged out.",
       });
+      
+      // Force a refresh to ensure proper state
+      setTimeout(() => {
+        window.location.href = "/";
+      }, 500);
     },
     onError: (error: Error) => {
       toast({

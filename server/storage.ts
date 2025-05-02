@@ -97,19 +97,23 @@ export class DatabaseStorage implements IStorage {
     const cutoffDate = new Date();
     cutoffDate.setDate(cutoffDate.getDate() - days);
     
-    // Build the query with conditions
-    let query = db
-      .select()
-      .from(dailyTracking)
-      .where(gte(dailyTracking.date, cutoffDate.toISOString()));
-    
-    // Add user ID filter if provided
+    // Build the query based on whether we have a userId filter
     if (userId) {
-      query = query.where(eq(dailyTracking.userId, userId));
+      return await db
+        .select()
+        .from(dailyTracking)
+        .where(and(
+          gte(dailyTracking.date, cutoffDate.toISOString()),
+          eq(dailyTracking.userId, userId)
+        ))
+        .orderBy(asc(dailyTracking.date));
+    } else {
+      return await db
+        .select()
+        .from(dailyTracking)
+        .where(gte(dailyTracking.date, cutoffDate.toISOString()))
+        .orderBy(asc(dailyTracking.date));
     }
-    
-    // Execute the query with order by
-    return await query.orderBy(asc(dailyTracking.date));
   }
 }
 
