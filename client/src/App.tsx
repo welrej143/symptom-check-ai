@@ -1,4 +1,4 @@
-import { Switch, Route } from "wouter";
+import { Switch, Route, useLocation } from "wouter";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import NotFound from "@/pages/not-found";
 import Home from "@/pages/home";
@@ -11,17 +11,69 @@ import { useState } from "react";
 import { AnalysisResponse } from "@shared/schema";
 import { AuthProvider } from "@/hooks/use-auth";
 import { ProtectedRoute } from "@/lib/protected-route";
+import LoadingAnalysis from "@/components/loading-analysis";
+import { analyzeSymptoms } from "@/lib/openai";
+import { useToast } from "@/hooks/use-toast";
 
 function App() {
   const [analysisResult, setAnalysisResult] = useState<AnalysisResponse | null>(null);
   const [userSymptoms, setUserSymptoms] = useState<string>("");
+  const [isAnalyzing, setIsAnalyzing] = useState(false);
+  const [progress, setProgress] = useState(0);
+  const [, navigate] = useLocation();
+  const { toast } = useToast();
+  
+  // Function to handle analyzing symptoms
+  const analyzeUserSymptoms = async (symptoms: string) => {
+    if (!symptoms.trim()) return;
+    
+    // Store the symptoms
+    setUserSymptoms(symptoms);
+    
+    // Show loading state 
+    setIsAnalyzing(true);
+    setProgress(0);
+    
+    // Set up progress animation
+    let progressTimer = setInterval(() => {
+      setProgress(prev => prev < 90 ? prev + 5 : 90);
+    }, 300);
+    
+    try {
+      // Call API
+      const result = await analyzeSymptoms(symptoms);
+      
+      // Update progress to 100%
+      clearInterval(progressTimer);
+      setProgress(100);
+      
+      // Set result
+      setAnalysisResult(result);
+      
+      // Let user see 100% briefly, then navigate
+      setTimeout(() => {
+        setIsAnalyzing(false);
+        navigate("/results");
+      }, 500);
+    } catch (error) {
+      console.error("Analysis failed:", error);
+      clearInterval(progressTimer);
+      setIsAnalyzing(false);
+      
+      toast({
+        title: "Analysis Failed",
+        description: "There was a problem analyzing your symptoms. Please try again.",
+        variant: "destructive",
+      });
+    }
+  };
   
   // Create Home component wrapper to pass props
   const HomeWrapper = () => (
     <Home 
-      setAnalysisResult={setAnalysisResult} 
       setUserSymptoms={setUserSymptoms}
       initialSymptoms={userSymptoms}
+      analyzeSymptoms={analyzeUserSymptoms}
     />
   );
   
@@ -39,13 +91,17 @@ function App() {
         <div className="min-h-screen flex flex-col">
           <Header />
           <main className="flex-grow">
-            <Switch>
-              <Route path="/" component={HomeWrapper} />
-              <Route path="/results" component={ResultsWrapper} />
-              <ProtectedRoute path="/tracker" component={Tracker} />
-              <Route path="/auth" component={AuthPage} />
-              <Route component={NotFound} />
-            </Switch>
+            {isAnalyzing ? (
+              <LoadingAnalysis progress={progress} />
+            ) : (
+              <Switch>
+                <Route path="/" component={HomeWrapper} />
+                <Route path="/results" component={ResultsWrapper} />
+                <ProtectedRoute path="/tracker" component={Tracker} />
+                <Route path="/auth" component={AuthPage} />
+                <Route component={NotFound} />
+              </Switch>
+            )}
           </main>
           <Footer />
         </div>

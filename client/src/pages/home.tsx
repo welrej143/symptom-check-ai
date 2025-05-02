@@ -9,9 +9,9 @@ import { useAuth } from "@/hooks/use-auth";
 import { useToast } from "@/hooks/use-toast";
 
 interface HomeProps {
-  setAnalysisResult: (result: AnalysisResponse) => void;
   setUserSymptoms: (symptoms: string) => void;
   initialSymptoms?: string;
+  analyzeSymptoms: (symptoms: string) => Promise<void>;
 }
 
 export default function Home({ setAnalysisResult, setUserSymptoms, initialSymptoms = "" }: HomeProps) {
@@ -47,6 +47,7 @@ export default function Home({ setAnalysisResult, setUserSymptoms, initialSympto
     }
     
     // Show loading state immediately
+    console.log("Setting loading state to true");
     setIsLoading(true);
     setProgress(0);
     
@@ -104,7 +105,11 @@ export default function Home({ setAnalysisResult, setUserSymptoms, initialSympto
     };
   };
   
+  // Debug log for rendering
+  console.log("Home component rendering, isLoading:", isLoading, "progress:", progress);
+  
   if (isLoading) {
+    console.log("Rendering loading component");
     return <LoadingAnalysis progress={progress} />;
   }
   
