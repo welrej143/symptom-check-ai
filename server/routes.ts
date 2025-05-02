@@ -106,6 +106,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
       
       try {
         const analysisData = JSON.parse(analysisContent);
+        console.log("ANALYSIS DATA:", JSON.stringify(analysisData, null, 2));
+        console.log("Does it have causes?", analysisData.conditions?.[0]?.causes ? "YES" : "NO");
         const validatedData = analysisResponseSchema.parse(analysisData);
         res.json(validatedData);
       } catch (error) {
