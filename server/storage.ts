@@ -10,7 +10,7 @@ import {
   type InsertDailyTracking
 } from "@shared/schema";
 import { db } from "./db";
-import { eq, gte, asc } from "drizzle-orm";
+import { eq, gte, asc, and } from "drizzle-orm";
 import session from "express-session";
 import connectPg from "connect-pg-simple";
 import { pool } from "./db";
@@ -104,8 +104,10 @@ export class DatabaseStorage implements IStorage {
         .select()
         .from(dailyTracking)
         .where(
-          gte(dailyTracking.date, cutoffDate.toISOString()),
-          eq(dailyTracking.userId, userId)
+          and(
+            gte(dailyTracking.date, cutoffDate.toISOString()),
+            eq(dailyTracking.userId, userId)
+          )
         )
         .orderBy(asc(dailyTracking.date));
     } else {

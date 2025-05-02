@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
@@ -39,6 +39,7 @@ type RegisterFormData = z.infer<typeof registerSchema>;
 export default function AuthPage() {
   const [activeTab, setActiveTab] = useState<string>("login");
   const { user, loginMutation, registerMutation } = useAuth();
+  const [redirectToHome, setRedirectToHome] = useState(false);
   
   const loginForm = useForm<LoginFormData>({
     resolver: zodResolver(loginSchema),
@@ -59,16 +60,27 @@ export default function AuthPage() {
   });
   
   const onLoginSubmit = (data: LoginFormData) => {
-    loginMutation.mutate(data);
+    loginMutation.mutate(data, {
+      onSuccess: () => {
+        setRedirectToHome(true);
+      }
+    });
   };
   
   const onRegisterSubmit = (data: RegisterFormData) => {
     const { confirmPassword, ...registerData } = data;
-    registerMutation.mutate(registerData);
+    registerMutation.mutate(registerData, {
+      onSuccess: () => {
+        setRedirectToHome(true);
+      }
+    });
   };
 
+  // Log auth state for debugging
+  console.log("Auth state:", { user, isPending: loginMutation.isPending || registerMutation.isPending });
+  
   // If user is already logged in, redirect to home page
-  if (user) {
+  if (user || redirectToHome) {
     return <Redirect to="/" />;
   }
 
