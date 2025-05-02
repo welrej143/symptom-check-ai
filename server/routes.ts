@@ -1,11 +1,15 @@
 import type { Express, Request, Response } from "express";
 import { createServer, type Server } from "http";
 import { storage } from "./storage";
+import { setupAuth } from "./auth";
 import OpenAI from "openai";
 import z from "zod";
 import { symptomInputSchema, analysisResponseSchema } from "@shared/schema";
 
 export async function registerRoutes(app: Express): Promise<Server> {
+  // Set up authentication
+  setupAuth(app);
+  
   // Setup OpenAI
   const openai = new OpenAI({
     apiKey: process.env.OPENAI_API_KEY || "sk-dummy",
