@@ -11,6 +11,9 @@ import {
 } from "@shared/schema";
 import { db } from "./db";
 import { eq, gte, asc } from "drizzle-orm";
+import session from "express-session";
+import connectPg from "connect-pg-simple";
+import { pool } from "./db";
 
 // Storage interface
 export interface IStorage {
@@ -27,10 +30,23 @@ export interface IStorage {
   // Daily tracking methods
   createDailyTracking(tracking: InsertDailyTracking): Promise<DailyTracking>;
   getDailyTrackingData(days: number): Promise<DailyTracking[]>;
+  
+  // Session management
+  sessionStore: session.Store;
 }
 
 // Database storage implementation
 export class DatabaseStorage implements IStorage {
+  sessionStore: session.Store;
+
+  constructor() {
+    const PostgresStore = connectPg(session);
+    this.sessionStore = new PostgresStore({
+      pool,
+      createTableIfMissing: true
+    });
+  }
+
   // User methods
   async getUser(id: number): Promise<User | undefined> {
     const [user] = await db.select().from(users).where(eq(users.id, id));
