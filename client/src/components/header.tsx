@@ -65,20 +65,12 @@ export default function Header() {
               </DropdownMenuContent>
             </DropdownMenu>
           ) : (
-            <>
-              <button 
-                className="text-sm font-medium text-blue-500 hover:text-blue-700"
-                onClick={() => navigate("/auth")}
-              >
-                Sign In
-              </button>
-              <button 
-                className="bg-blue-500 text-white text-sm font-medium px-4 py-2 rounded-md hover:bg-blue-700 transition-colors"
-                onClick={() => navigate("/auth")}
-              >
-                Get Started
-              </button>
-            </>
+            <button 
+              className="text-sm font-medium text-blue-500 hover:text-blue-700"
+              onClick={() => navigate("/auth")}
+            >
+              Sign In
+            </button>
           )}
         </nav>
       </div>
