@@ -119,11 +119,13 @@ export default function Tracker() {
         <div className="lg:col-span-8">
           <div className="bg-white rounded-lg shadow-md overflow-hidden mb-6">
             <div className="p-6">
-              <h3 className="text-xl font-semibold text-gray-900 mb-4">Today's Check-in</h3>
-              <SymptomTrackerForm 
-                onSubmit={handleSubmit}
-                isSubmitting={trackSymptomsMutation.isPending}
-              />
+              <h3 className="text-xl font-semibold text-gray-900 mb-6">Today's Check-in</h3>
+              <div className="bg-gray-50 p-5 rounded-lg border border-gray-100">
+                <SymptomTrackerForm 
+                  onSubmit={handleSubmit}
+                  isSubmitting={trackSymptomsMutation.isPending}
+                />
+              </div>
             </div>
           </div>
           

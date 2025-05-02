@@ -268,10 +268,10 @@ export default function SymptomTrackerForm({ onSubmit, isSubmitting }: SymptomTr
           )}
         />
         
-        <div className="pt-4 border-t border-gray-200">
+        <div className="pt-4 mt-4 border-t border-gray-200">
           <Button
             type="submit"
-            className="w-full sm:w-auto bg-secondary-600 text-white py-2 px-4 rounded-md font-medium hover:bg-secondary-700 transition-colors"
+            className="w-full bg-blue-600 text-white py-3 px-6 rounded-md font-medium hover:bg-blue-700 transition-colors text-base"
             disabled={isSubmitting}
           >
             {isSubmitting ? "Saving..." : "Save Today's Check-in"}
