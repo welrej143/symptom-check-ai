@@ -1,4 +1,4 @@
-import { Shield, Calendar, UserPlus } from "lucide-react";
+import { Shield, FileText, TrendingUp } from "lucide-react";
 
 export default function PremiumCard() {
   return (
@@ -19,21 +19,21 @@ export default function PremiumCard() {
           
           <div className="flex items-start">
             <div className="flex-shrink-0">
-              <Calendar className="h-6 w-6 text-primary-600" />
+              <FileText className="h-6 w-6 text-primary-600" />
             </div>
             <div className="ml-3">
-              <h4 className="text-base font-medium text-gray-900">24/7 doctor chat access</h4>
-              <p className="mt-1 text-sm text-gray-600">Connect with healthcare professionals whenever you need advice.</p>
+              <h4 className="text-base font-medium text-gray-900">PDF health reports</h4>
+              <p className="mt-1 text-sm text-gray-600">Download and share detailed health reports with your doctor.</p>
             </div>
           </div>
           
           <div className="flex items-start">
             <div className="flex-shrink-0">
-              <UserPlus className="h-6 w-6 text-primary-600" />
+              <TrendingUp className="h-6 w-6 text-primary-600" />
             </div>
             <div className="ml-3">
-              <h4 className="text-base font-medium text-gray-900">Family profiles</h4>
-              <p className="mt-1 text-sm text-gray-600">Create and manage health profiles for your loved ones.</p>
+              <h4 className="text-base font-medium text-gray-900">Advanced analytics</h4>
+              <p className="mt-1 text-sm text-gray-600">Get deeper insights with advanced health pattern recognition.</p>
             </div>
           </div>
         </div>
