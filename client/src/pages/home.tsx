@@ -32,8 +32,21 @@ export default function Home({ setAnalysisResult, setUserSymptoms }: HomeProps) 
       return;
     }
     
-    setIsLoading(true);
+    // Save symptoms to parent state right away
     setUserSymptoms(symptoms);
+    
+    // Only proceed if we have symptoms text
+    if (!symptoms.trim()) {
+      toast({
+        title: "Missing Information",
+        description: "Please enter your symptoms before analyzing.",
+        variant: "destructive",
+      });
+      return;
+    }
+    
+    setIsLoading(true);
+    setProgress(0); // Reset progress
     
     // Simulate progress
     const interval = setInterval(() => {
@@ -63,6 +76,12 @@ export default function Home({ setAnalysisResult, setUserSymptoms }: HomeProps) 
       console.error("Error analyzing symptoms:", error);
       clearInterval(interval);
       setIsLoading(false);
+      
+      toast({
+        title: "Analysis Failed",
+        description: "There was a problem analyzing your symptoms. Please try again.",
+        variant: "destructive",
+      });
     }
   };
   

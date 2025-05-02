@@ -23,7 +23,14 @@ export default function SymptomForm({ onSubmit }: SymptomFormProps) {
   });
 
   const handleSubmit = (values: z.infer<typeof formSchema>) => {
-    onSubmit(values.symptoms);
+    // Don't clear the form after submission
+    const symptomText = values.symptoms;
+    onSubmit(symptomText);
+    
+    // This prevents the form from resetting to default values after submission
+    setTimeout(() => {
+      form.setValue("symptoms", symptomText);
+    }, 0);
   };
 
   return (
