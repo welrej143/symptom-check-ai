@@ -5,11 +5,14 @@ import { z } from "zod";
 export const users = pgTable("users", {
   id: serial("id").primaryKey(),
   username: text("username").notNull().unique(),
+  email: text("email").notNull(),
   password: text("password").notNull(),
+  createdAt: timestamp("created_at").notNull().defaultNow(),
 });
 
 export const insertUserSchema = createInsertSchema(users).pick({
   username: true,
+  email: true,
   password: true,
 });
 
@@ -18,7 +21,7 @@ export type User = typeof users.$inferSelect;
 
 export const symptomRecords = pgTable("symptom_records", {
   id: serial("id").primaryKey(),
-  userId: integer("user_id"),
+  userId: integer("user_id").references(() => users.id),
   symptoms: text("symptoms").notNull(),
   date: timestamp("date").notNull().defaultNow(),
 });
@@ -34,7 +37,7 @@ export type SymptomRecord = typeof symptomRecords.$inferSelect;
 
 export const dailyTracking = pgTable("daily_tracking", {
   id: serial("id").primaryKey(),
-  userId: integer("user_id"),
+  userId: integer("user_id").references(() => users.id),
   date: date("date").notNull(),
   symptoms: text("symptoms").array(),
   symptomSeverity: integer("symptom_severity").notNull(),
