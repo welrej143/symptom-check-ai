@@ -44,7 +44,23 @@ export async function registerRoutes(app: Express): Promise<Server> {
               "name": "Condition name",
               "description": "Brief description of the condition",
               "symptoms": ["symptom1", "symptom2", "etc"],
-              "urgencyLevel": "low/moderate/high"
+              "urgencyLevel": "low/moderate/high",
+              "medications": [
+                {
+                  "name": "Medication name",
+                  "description": "Brief description of how this medication helps",
+                  "dosage": "Typical dosage information (optional)",
+                  "sideEffects": ["side effect 1", "side effect 2", "etc"] (optional)
+                }
+              ],
+              "supplements": [
+                {
+                  "name": "Supplement name",
+                  "description": "Brief description of how this supplement helps",
+                  "dosage": "Typical dosage information (optional)",
+                  "benefits": ["benefit 1", "benefit 2", "etc"] (optional)
+                }
+              ]
             }
           ],
           "urgencyLevel": "low/moderate/high",
@@ -64,9 +80,11 @@ export async function registerRoutes(app: Express): Promise<Server> {
         2. For each condition, provide common symptoms (4-6 symptoms per condition)
         3. Set urgencyLevel to either "low" (monitor at home), "moderate" (see doctor soon), or "high" (emergency)
         4. Provide 3-5 actionable recommendations
-        5. For the icon field, use only icon names from Lucide React (like "stethoscope", "thermometer", "clipboard", etc.)
-        6. ALWAYS include disclaimer text about consulting healthcare professionals
-        7. If symptoms suggest a potentially life-threatening condition, mark the recommendation with isEmergency: true
+        5. For each condition, include 1-3 relevant medications that are commonly prescribed
+        6. For each condition, include 1-3 relevant supplements that may help with symptoms
+        7. For the icon field, use only icon names from Lucide React (like "stethoscope", "thermometer", "clipboard", etc.)
+        8. ALWAYS include disclaimer text about consulting healthcare professionals
+        9. If symptoms suggest a potentially life-threatening condition, mark the recommendation with isEmergency: true
         
         Response should be properly formatted JSON only, without any additional text.
       `;
@@ -129,7 +147,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       // Store the daily tracking data
       const tracking = await storage.createDailyTracking({
         userId: null, // Not requiring login for now
-        date: new Date(),
+        date: new Date().toISOString().split('T')[0], // Format as YYYY-MM-DD
         symptoms,
         symptomSeverity,
         energyLevel,

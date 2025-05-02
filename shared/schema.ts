@@ -64,6 +64,18 @@ export const conditionSchema = z.object({
   description: z.string(),
   symptoms: z.array(z.string()),
   urgencyLevel: z.enum(["low", "moderate", "high"]),
+  medications: z.array(z.object({
+    name: z.string(),
+    description: z.string(),
+    dosage: z.string().optional(),
+    sideEffects: z.array(z.string()).optional(),
+  })).optional(),
+  supplements: z.array(z.object({
+    name: z.string(),
+    description: z.string(),
+    dosage: z.string().optional(),
+    benefits: z.array(z.string()).optional(),
+  })).optional(),
 });
 
 export const analysisResponseSchema = z.object({

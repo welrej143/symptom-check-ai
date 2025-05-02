@@ -1,10 +1,13 @@
 import { Condition } from "@shared/schema";
+import { useState } from "react";
 
 interface ConditionCardProps {
   condition: Condition;
 }
 
 export default function ConditionCard({ condition }: ConditionCardProps) {
+  const [showDetails, setShowDetails] = useState(false);
+  
   // Determine card style based on urgency level
   const getUrgencyClass = (level: string) => {
     switch (level) {
@@ -74,9 +77,85 @@ export default function ConditionCard({ condition }: ConditionCardProps) {
               </div>
             </div>
             
+            {/* Show/Hide medications and supplements */}
+            {showDetails && (
+              <>
+                {condition.medications && condition.medications.length > 0 && (
+                  <div className="mt-4">
+                    <h5 className="text-sm font-medium text-gray-900 flex items-center">
+                      <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4 mr-1 text-blue-500" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5M9 7h1m-1 4h1m4-4h1m-1 4h1m-5 10v-5a1 1 0 011-1h2a1 1 0 011 1v5m-4 0h4" />
+                      </svg>
+                      Common Medications
+                    </h5>
+                    <div className="mt-2 space-y-2">
+                      {condition.medications.map((med, index) => (
+                        <div key={index} className="bg-blue-50 p-2 rounded-md">
+                          <h6 className="text-sm font-medium text-blue-800">{med.name}</h6>
+                          <p className="text-xs text-gray-600 mt-1">{med.description}</p>
+                          {med.dosage && (
+                            <p className="text-xs text-gray-600 mt-1">
+                              <span className="font-medium">Typical dosage:</span> {med.dosage}
+                            </p>
+                          )}
+                          {med.sideEffects && med.sideEffects.length > 0 && (
+                            <div className="mt-1">
+                              <span className="text-xs font-medium text-gray-700">Possible side effects:</span>
+                              <div className="flex flex-wrap gap-1 mt-1">
+                                {med.sideEffects.map((effect, i) => (
+                                  <span key={i} className="text-xs bg-white px-1.5 py-0.5 rounded text-gray-600">{effect}</span>
+                                ))}
+                              </div>
+                            </div>
+                          )}
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                )}
+                
+                {condition.supplements && condition.supplements.length > 0 && (
+                  <div className="mt-4">
+                    <h5 className="text-sm font-medium text-gray-900 flex items-center">
+                      <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4 mr-1 text-green-500" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 6v6m0 0v6m0-6h6m-6 0H6" />
+                      </svg>
+                      Helpful Supplements
+                    </h5>
+                    <div className="mt-2 space-y-2">
+                      {condition.supplements.map((supp, index) => (
+                        <div key={index} className="bg-green-50 p-2 rounded-md">
+                          <h6 className="text-sm font-medium text-green-800">{supp.name}</h6>
+                          <p className="text-xs text-gray-600 mt-1">{supp.description}</p>
+                          {supp.dosage && (
+                            <p className="text-xs text-gray-600 mt-1">
+                              <span className="font-medium">Typical dosage:</span> {supp.dosage}
+                            </p>
+                          )}
+                          {supp.benefits && supp.benefits.length > 0 && (
+                            <div className="mt-1">
+                              <span className="text-xs font-medium text-gray-700">Potential benefits:</span>
+                              <div className="flex flex-wrap gap-1 mt-1">
+                                {supp.benefits.map((benefit, i) => (
+                                  <span key={i} className="text-xs bg-white px-1.5 py-0.5 rounded text-gray-600">{benefit}</span>
+                                ))}
+                              </div>
+                            </div>
+                          )}
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                )}
+              </>
+            )}
+            
             <div className="mt-3">
-              <button className="text-sm text-blue-500 hover:text-blue-700 font-medium">
-                Learn more
+              <button 
+                className="text-sm text-blue-500 hover:text-blue-700 font-medium"
+                onClick={() => setShowDetails(!showDetails)}
+              >
+                {showDetails ? "Hide details" : "View treatment options"}
               </button>
             </div>
           </div>
