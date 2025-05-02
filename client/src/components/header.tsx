@@ -32,13 +32,6 @@ export default function Header() {
         </div>
         
         <nav className="flex items-center space-x-4">
-          <button 
-            className="text-sm font-medium text-gray-700 hover:text-blue-700"
-            onClick={() => navigate("/tracker")}
-          >
-            Tracker
-          </button>
-          
           {isLoading ? (
             <Loader2 className="h-5 w-5 animate-spin text-blue-500" />
           ) : user ? (
