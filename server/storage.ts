@@ -94,29 +94,22 @@ export class DatabaseStorage implements IStorage {
   }
 
   async getDailyTrackingData(days: number, userId?: number): Promise<DailyTracking[]> {
-    const now = new Date();
     const cutoffDate = new Date();
     cutoffDate.setDate(cutoffDate.getDate() - days);
     
     // Build the query with conditions
+    let query = db
+      .select()
+      .from(dailyTracking)
+      .where(gte(dailyTracking.date, cutoffDate.toISOString()));
+    
+    // Add user ID filter if provided
     if (userId) {
-      return await db
-        .select()
-        .from(dailyTracking)
-        .where(
-          and(
-            gte(dailyTracking.date, cutoffDate.toISOString()),
-            eq(dailyTracking.userId, userId)
-          )
-        )
-        .orderBy(asc(dailyTracking.date));
-    } else {
-      return await db
-        .select()
-        .from(dailyTracking)
-        .where(gte(dailyTracking.date, cutoffDate.toISOString()))
-        .orderBy(asc(dailyTracking.date));
+      query = query.where(eq(dailyTracking.userId, userId));
     }
+    
+    // Execute the query with order by
+    return await query.orderBy(asc(dailyTracking.date));
   }
 }
 

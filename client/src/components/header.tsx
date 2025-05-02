@@ -17,7 +17,13 @@ export default function Header() {
   const { user, isLoading, logoutMutation } = useAuth();
   
   const handleLogout = () => {
-    logoutMutation.mutate();
+    logoutMutation.mutate(undefined, {
+      onSuccess: () => {
+        navigate("/");
+        // Force page reload to ensure all auth state is cleared
+        window.location.reload();
+      }
+    });
   };
   
   return (
