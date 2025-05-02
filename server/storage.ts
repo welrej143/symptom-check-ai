@@ -10,7 +10,7 @@ import {
   type InsertDailyTracking
 } from "@shared/schema";
 import { db } from "./db";
-import { eq, gte } from "drizzle-orm";
+import { eq, gte, asc } from "drizzle-orm";
 
 // Storage interface
 export interface IStorage {
@@ -85,8 +85,8 @@ export class DatabaseStorage implements IStorage {
     return await db
       .select()
       .from(dailyTracking)
-      .where(gte(dailyTracking.date, cutoffDate))
-      .orderBy(dailyTracking.date);
+      .where(gte(dailyTracking.date, cutoffDate.toISOString()))
+      .orderBy(asc(dailyTracking.date));
   }
 }
 

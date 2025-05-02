@@ -11,9 +11,17 @@ export default function Header() {
             <h1 className="ml-2 text-xl font-bold text-gray-900">SymptomCheck AI</h1>
           </div>
         </Link>
-        <nav>
-          <button className="text-sm font-medium text-primary-600 hover:text-primary-800 mr-4">Sign In</button>
-          <button className="bg-primary-600 text-white text-sm font-medium px-4 py-2 rounded-md hover:bg-primary-700 transition-colors">Get Premium</button>
+        <nav className="flex items-center">
+          <Link href="/">
+            <div className="text-sm font-medium text-primary-600 hover:text-primary-800 mr-4 cursor-pointer">
+              Sign In
+            </div>
+          </Link>
+          <Link href="/">
+            <div className="bg-primary-600 text-white text-sm font-medium px-4 py-2 rounded-md hover:bg-primary-700 transition-colors cursor-pointer">
+              Get Premium
+            </div>
+          </Link>
         </nav>
       </div>
     </header>
