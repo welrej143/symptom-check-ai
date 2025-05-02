@@ -5,36 +5,64 @@ interface LoadingAnalysisProps {
 }
 
 export default function LoadingAnalysis({ progress }: LoadingAnalysisProps) {
-  const [steps, setSteps] = useState([
-    { id: 1, text: "Processing symptom information", status: "complete" },
-    { id: 2, text: "Comparing with medical knowledge base", status: "complete" },
-    { id: 3, text: "Generating possible conditions", status: "in-progress" },
-    { id: 4, text: "Determining urgency level", status: "pending" },
-    { id: 5, text: "Preparing personalized recommendations", status: "pending" },
-  ]);
-  
-  // Update steps based on progress
-  useEffect(() => {
-    if (progress >= 40 && progress < 70) {
-      setSteps(prev => 
-        prev.map(step => 
-          step.id === 3 ? { ...step, status: "complete" } : 
-          step.id === 4 ? { ...step, status: "in-progress" } : 
-          step
-        )
-      );
-    } else if (progress >= 70 && progress < 90) {
-      setSteps(prev => 
-        prev.map(step => 
-          step.id <= 4 ? { ...step, status: "complete" } : 
-          { ...step, status: "in-progress" }
-        )
-      );
-    } else if (progress >= 90) {
-      setSteps(prev => 
-        prev.map(step => ({ ...step, status: "complete" }))
-      );
+  // Initialize steps based on progress
+  const getInitialSteps = () => {
+    if (progress < 20) {
+      return [
+        { id: 1, text: "Processing symptom information", status: "in-progress" },
+        { id: 2, text: "Comparing with medical knowledge base", status: "pending" },
+        { id: 3, text: "Generating possible conditions", status: "pending" },
+        { id: 4, text: "Determining urgency level", status: "pending" },
+        { id: 5, text: "Preparing personalized recommendations", status: "pending" },
+      ];
+    } else if (progress < 40) {
+      return [
+        { id: 1, text: "Processing symptom information", status: "complete" },
+        { id: 2, text: "Comparing with medical knowledge base", status: "in-progress" },
+        { id: 3, text: "Generating possible conditions", status: "pending" },
+        { id: 4, text: "Determining urgency level", status: "pending" },
+        { id: 5, text: "Preparing personalized recommendations", status: "pending" },
+      ];
+    } else if (progress < 60) {
+      return [
+        { id: 1, text: "Processing symptom information", status: "complete" },
+        { id: 2, text: "Comparing with medical knowledge base", status: "complete" },
+        { id: 3, text: "Generating possible conditions", status: "in-progress" },
+        { id: 4, text: "Determining urgency level", status: "pending" },
+        { id: 5, text: "Preparing personalized recommendations", status: "pending" },
+      ];
+    } else if (progress < 80) {
+      return [
+        { id: 1, text: "Processing symptom information", status: "complete" },
+        { id: 2, text: "Comparing with medical knowledge base", status: "complete" },
+        { id: 3, text: "Generating possible conditions", status: "complete" },
+        { id: 4, text: "Determining urgency level", status: "in-progress" },
+        { id: 5, text: "Preparing personalized recommendations", status: "pending" },
+      ];
+    } else if (progress < 100) {
+      return [
+        { id: 1, text: "Processing symptom information", status: "complete" },
+        { id: 2, text: "Comparing with medical knowledge base", status: "complete" },
+        { id: 3, text: "Generating possible conditions", status: "complete" },
+        { id: 4, text: "Determining urgency level", status: "complete" },
+        { id: 5, text: "Preparing personalized recommendations", status: "in-progress" },
+      ];
+    } else {
+      return [
+        { id: 1, text: "Processing symptom information", status: "complete" },
+        { id: 2, text: "Comparing with medical knowledge base", status: "complete" },
+        { id: 3, text: "Generating possible conditions", status: "complete" },
+        { id: 4, text: "Determining urgency level", status: "complete" },
+        { id: 5, text: "Preparing personalized recommendations", status: "complete" },
+      ];
     }
+  };
+  
+  const [steps, setSteps] = useState(getInitialSteps());
+  
+  // Update steps when progress changes
+  useEffect(() => {
+    setSteps(getInitialSteps());
   }, [progress]);
   
   return (

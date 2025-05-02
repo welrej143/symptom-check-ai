@@ -21,7 +21,7 @@ export default function Home({ setAnalysisResult, setUserSymptoms, initialSympto
   const { user } = useAuth();
   const { toast } = useToast();
   
-  const handleSymptomSubmit = async (symptoms: string) => {
+  const handleSymptomSubmit = (symptoms: string) => {
     // Check if user is logged in
     if (!user) {
       toast({
@@ -46,44 +46,62 @@ export default function Home({ setAnalysisResult, setUserSymptoms, initialSympto
       return;
     }
     
+    // Show loading state immediately
     setIsLoading(true);
-    setProgress(0); // Reset progress
+    setProgress(0);
     
-    // Simulate progress
-    const interval = setInterval(() => {
-      setProgress(prev => {
-        if (prev >= 90) {
-          clearInterval(interval);
-          return 90;
-        }
-        return prev + 10;
-      });
-    }, 500);
+    // Define a function for progress animation
+    const startProgressAnimation = () => {
+      // Return the interval ID so we can clear it later
+      return setInterval(() => {
+        setProgress((prev) => {
+          // Cap at 90% until the analysis is complete
+          if (prev >= 90) return 90;
+          return prev + 5;
+        });
+      }, 300);
+    };
     
-    try {
-      const result = await analyzeSymptoms(symptoms);
-      clearInterval(interval);
-      setProgress(100);
+    // Start progress animation with a slight delay to ensure loading component renders
+    const timer = setTimeout(() => {
+      const progressTimer = startProgressAnimation();
       
-      // Set result and navigate to results page
-      setAnalysisResult(result);
-      
-      // Small delay to show 100% before navigating
-      setTimeout(() => {
-        setIsLoading(false);
-        navigate("/results");
-      }, 500);
-    } catch (error) {
-      console.error("Error analyzing symptoms:", error);
-      clearInterval(interval);
-      setIsLoading(false);
-      
-      toast({
-        title: "Analysis Failed",
-        description: "There was a problem analyzing your symptoms. Please try again.",
-        variant: "destructive",
-      });
-    }
+      // Analyze symptoms
+      analyzeSymptoms(symptoms)
+        .then(result => {
+          // Clear the progress timer
+          clearInterval(progressTimer);
+          
+          // Set to 100% when done
+          setProgress(100);
+          
+          // Set the result
+          setAnalysisResult(result);
+          
+          // Short delay to show 100% before redirecting
+          setTimeout(() => {
+            setIsLoading(false);
+            navigate("/results");
+          }, 500);
+        })
+        .catch(error => {
+          // Clear the progress timer
+          clearInterval(progressTimer);
+          console.error("Error analyzing symptoms:", error);
+          
+          setIsLoading(false);
+          toast({
+            title: "Analysis Failed",
+            description: "There was a problem analyzing your symptoms. Please try again.",
+            variant: "destructive",
+          });
+        });
+    }, 100);
+    
+    // Cleanup function if component unmounts
+    return () => {
+      clearTimeout(timer);
+    };
   };
   
   if (isLoading) {
