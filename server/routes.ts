@@ -29,7 +29,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       await storage.createSymptomRecord({
         userId: null, // Not requiring login for the basic version
         symptoms,
-        date: new Date(),
+        date: new Date(), // This is okay since symptomRecords uses timestamp
       });
       
       // Call OpenAI API to analyze symptoms
