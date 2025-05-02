@@ -1,5 +1,6 @@
 import { zodResolver } from "@hookform/resolvers/zod";
 import { useForm } from "react-hook-form";
+import { useEffect } from "react";
 import { z } from "zod";
 import { Button } from "@/components/ui/button";
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "@/components/ui/form";
@@ -12,15 +13,23 @@ const formSchema = z.object({
 
 interface SymptomFormProps {
   onSubmit: (symptoms: string) => void;
+  initialSymptoms?: string;
 }
 
-export default function SymptomForm({ onSubmit }: SymptomFormProps) {
+export default function SymptomForm({ onSubmit, initialSymptoms = "" }: SymptomFormProps) {
   const form = useForm<z.infer<typeof formSchema>>({
     resolver: zodResolver(formSchema),
     defaultValues: {
-      symptoms: "",
+      symptoms: initialSymptoms,
     },
   });
+
+  // Update form value when initialSymptoms changes
+  useEffect(() => {
+    if (initialSymptoms && initialSymptoms.trim() !== "") {
+      form.setValue("symptoms", initialSymptoms);
+    }
+  }, [initialSymptoms, form]);
 
   const handleSubmit = (values: z.infer<typeof formSchema>) => {
     // Don't clear the form after submission

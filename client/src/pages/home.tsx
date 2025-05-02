@@ -11,9 +11,10 @@ import { useToast } from "@/hooks/use-toast";
 interface HomeProps {
   setAnalysisResult: (result: AnalysisResponse) => void;
   setUserSymptoms: (symptoms: string) => void;
+  initialSymptoms?: string;
 }
 
-export default function Home({ setAnalysisResult, setUserSymptoms }: HomeProps) {
+export default function Home({ setAnalysisResult, setUserSymptoms, initialSymptoms = "" }: HomeProps) {
   const [, navigate] = useLocation();
   const [isLoading, setIsLoading] = useState(false);
   const [progress, setProgress] = useState(0);
@@ -100,7 +101,10 @@ export default function Home({ setAnalysisResult, setUserSymptoms }: HomeProps) 
             <p className="text-lg text-gray-600 mb-6">
               Describe your symptoms and get AI-powered analysis to understand what might be happening with your health.
             </p>
-            <SymptomForm onSubmit={handleSymptomSubmit} />
+            <SymptomForm 
+              onSubmit={handleSymptomSubmit}
+              initialSymptoms={initialSymptoms}
+            />
           </div>
           <div className="lg:w-1/2">
             <img 

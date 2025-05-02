@@ -21,6 +21,7 @@ function App() {
     <Home 
       setAnalysisResult={setAnalysisResult} 
       setUserSymptoms={setUserSymptoms}
+      initialSymptoms={userSymptoms}
     />
   );
   
