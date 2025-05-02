@@ -1,5 +1,5 @@
 import { useLocation } from "wouter";
-import { Zap, UserCircle, LogOut, ChevronDown } from "lucide-react";
+import { Zap, UserCircle, LogOut, ChevronDown, Sun, Moon } from "lucide-react";
 import { useAuth } from "@/hooks/use-auth";
 import {
   DropdownMenu,
@@ -11,13 +11,19 @@ import {
 } from "@/components/ui/dropdown-menu";
 import { Button } from "@/components/ui/button";
 import { Loader2 } from "lucide-react";
+import { useTheme } from "next-themes";
 
 export default function Header() {
   const [_, navigate] = useLocation();
   const { user, isLoading, logoutMutation } = useAuth();
+  const { theme, setTheme } = useTheme();
   
   const handleLogout = () => {
     logoutMutation.mutate();
+  };
+  
+  const toggleTheme = () => {
+    setTheme(theme === 'dark' ? 'light' : 'dark');
   };
   
   return (
