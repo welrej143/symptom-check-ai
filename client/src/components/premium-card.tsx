@@ -1,4 +1,4 @@
-import { Shield, FileText, TrendingUp } from "lucide-react";
+import { Shield, LineChart } from "lucide-react";
 
 export default function PremiumCard() {
   return (
@@ -19,21 +19,11 @@ export default function PremiumCard() {
           
           <div className="flex items-start">
             <div className="flex-shrink-0">
-              <FileText className="h-6 w-6 text-primary-600" />
+              <LineChart className="h-6 w-6 text-primary-600" />
             </div>
             <div className="ml-3">
-              <h4 className="text-base font-medium text-gray-900">PDF health reports</h4>
-              <p className="mt-1 text-sm text-gray-600">Download and share detailed health reports with your doctor.</p>
-            </div>
-          </div>
-          
-          <div className="flex items-start">
-            <div className="flex-shrink-0">
-              <TrendingUp className="h-6 w-6 text-primary-600" />
-            </div>
-            <div className="ml-3">
-              <h4 className="text-base font-medium text-gray-900">Advanced analytics</h4>
-              <p className="mt-1 text-sm text-gray-600">Get deeper insights with advanced health pattern recognition.</p>
+              <h4 className="text-base font-medium text-gray-900">Unlimited Symptoms Tracker</h4>
+              <p className="mt-1 text-sm text-gray-600">Track your symptoms and health metrics with no limitations.</p>
             </div>
           </div>
         </div>
