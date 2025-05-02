@@ -59,14 +59,14 @@
 
 @layer components {
   .urgency-emergency {
-    @apply border-l-4 border-red-500 dark:bg-red-950/30 bg-red-50;
+    @apply bg-red-50 border-l-4 border-red-500;
   }
   
   .urgency-urgent {
-    @apply border-l-4 border-amber-500 dark:bg-amber-950/30 bg-amber-50;
+    @apply bg-amber-50 border-l-4 border-amber-500;
   }
   
   .urgency-moderate {
-    @apply border-l-4 border-green-500 dark:bg-green-950/30 bg-green-50;
+    @apply bg-green-50 border-l-4 border-green-500;
   }
 }

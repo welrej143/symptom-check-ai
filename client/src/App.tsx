@@ -11,7 +11,6 @@ import { useState } from "react";
 import { AnalysisResponse } from "@shared/schema";
 import { AuthProvider } from "@/hooks/use-auth";
 import { ProtectedRoute } from "@/lib/protected-route";
-import { ThemeProvider } from "next-themes";
 
 function App() {
   const [analysisResult, setAnalysisResult] = useState<AnalysisResponse | null>(null);
@@ -34,25 +33,23 @@ function App() {
   );
   
   return (
-    <ThemeProvider attribute="class" defaultTheme="dark" enableSystem>
-      <AuthProvider>
-        <TooltipProvider>
-          <div className="min-h-screen flex flex-col">
-            <Header />
-            <main className="flex-grow">
-              <Switch>
-                <Route path="/" component={HomeWrapper} />
-                <Route path="/results" component={ResultsWrapper} />
-                <ProtectedRoute path="/tracker" component={Tracker} />
-                <Route path="/auth" component={AuthPage} />
-                <Route component={NotFound} />
-              </Switch>
-            </main>
-            <Footer />
-          </div>
-        </TooltipProvider>
-      </AuthProvider>
-    </ThemeProvider>
+    <AuthProvider>
+      <TooltipProvider>
+        <div className="min-h-screen flex flex-col">
+          <Header />
+          <main className="flex-grow">
+            <Switch>
+              <Route path="/" component={HomeWrapper} />
+              <Route path="/results" component={ResultsWrapper} />
+              <ProtectedRoute path="/tracker" component={Tracker} />
+              <Route path="/auth" component={AuthPage} />
+              <Route component={NotFound} />
+            </Switch>
+          </main>
+          <Footer />
+        </div>
+      </TooltipProvider>
+    </AuthProvider>
   );
 }
 
