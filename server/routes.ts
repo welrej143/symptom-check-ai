@@ -348,6 +348,59 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // Get pricing information from Stripe
+  app.get("/api/pricing", async (_req: Request, res: Response) => {
+    try {
+      // Get price ID from environment variable
+      const stripePriceId = process.env.STRIPE_PRICE_ID;
+      if (!stripePriceId) {
+        console.error('Missing STRIPE_PRICE_ID environment variable');
+        return res.status(500).json({ 
+          message: "Missing Stripe price ID configuration",
+          errorType: "configuration"
+        });
+      }
+      
+      // Fetch the price details from Stripe
+      console.log("Fetching price details from Stripe:", stripePriceId);
+      const price = await stripe.prices.retrieve(stripePriceId, {
+        expand: ['product']
+      });
+      
+      // Extract the relevant details
+      const priceDetails = {
+        id: price.id,
+        amount: price.unit_amount || 0,
+        currency: price.currency,
+        interval: price.recurring ? price.recurring.interval : 'month',
+        intervalCount: price.recurring ? price.recurring.interval_count : 1,
+        formattedPrice: formatPrice(price.unit_amount || 0, price.currency),
+        productName: (price.product as any)?.name || 'Premium Subscription',
+        productDescription: (price.product as any)?.description || 'Unlimited symptom analyses and premium features'
+      };
+      
+      res.json(priceDetails);
+    } catch (error) {
+      console.error("Error fetching price details from Stripe:", error);
+      res.status(500).json({ 
+        message: "Error fetching pricing information",
+        error: error instanceof Error ? error.message : "Unknown error"
+      });
+    }
+  });
+  
+  // Format price amount based on currency
+  function formatPrice(amount: number, currency: string): string {
+    // Convert amount from cents to dollars/euros/etc.
+    const value = amount / 100;
+    
+    // Format based on currency
+    return new Intl.NumberFormat('en-US', {
+      style: 'currency',
+      currency: currency
+    }).format(value);
+  }
+  
   // Check subscription status
   app.get("/api/subscription", async (req: Request, res: Response) => {
     try {

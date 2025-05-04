@@ -11,6 +11,7 @@ import {
   PaymentElement
 } from "@stripe/react-stripe-js";
 import SubscriptionManager from "./subscription-manager";
+import { useQuery } from "@tanstack/react-query";
 
 // Initialize Stripe
 if (!import.meta.env.VITE_STRIPE_PUBLIC_KEY) {
@@ -18,8 +19,17 @@ if (!import.meta.env.VITE_STRIPE_PUBLIC_KEY) {
 }
 const stripePromise = loadStripe(import.meta.env.VITE_STRIPE_PUBLIC_KEY);
 
-// Subscription price in dollars
-const SUBSCRIPTION_PRICE = 9.99;
+// Define the price data type
+interface PriceData {
+  id: string;
+  amount: number;
+  currency: string;
+  interval: string;
+  intervalCount: number;
+  formattedPrice: string;
+  productName: string;
+  productDescription: string;
+}
 
 // Stripe Checkout Form Component
 function StripeCheckoutForm({ clientSecret, subscriptionId }: { clientSecret: string, subscriptionId?: string }) {
