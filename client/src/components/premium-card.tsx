@@ -355,70 +355,30 @@ export default function PremiumCard() {
               <h3 className="text-lg font-semibold text-gray-900">Premium Member</h3>
             </div>
             
-            <p className="text-sm text-gray-700 mb-4">
+            <p className="text-sm text-gray-700">
               You're enjoying all premium benefits including unlimited symptom analyses and complete health tracking.
             </p>
             
-            <div className="flex flex-wrap gap-4 mt-2">
-              <div className="bg-white px-3 py-2 rounded-md shadow-sm border border-gray-200 text-sm">
-                <div className="flex items-center space-x-1">
-                  <span className="text-gray-500">Status:</span>
-                  <span className={`font-medium ${
-                    user.subscriptionStatus === "active" ? "text-green-600" : 
-                    user.subscriptionStatus === "canceled" ? "text-orange-600" : 
-                    user.subscriptionStatus === "incomplete" ? "text-amber-600" :
-                    user.subscriptionStatus === "past_due" ? "text-red-600" :
-                    user.subscriptionStatus === "error" ? "text-red-600" : "text-blue-600"
-                  }`}>
-                    {user.subscriptionStatus === "active" ? "Active" : 
-                    user.subscriptionStatus === "canceled" ? "Canceled" :
-                    user.subscriptionStatus === "incomplete" ? "Incomplete" :
-                    user.subscriptionStatus === "past_due" ? "Past Due" :
-                    user.subscriptionStatus === "error" ? "Error" : 
-                    user.subscriptionStatus || "Unknown"}
-                  </span>
-                </div>
-              </div>
-              
-              {user.planName && (
-                <div className="bg-white px-3 py-2 rounded-md shadow-sm border border-gray-200 text-sm">
-                  <div className="flex items-center space-x-1">
-                    <span className="text-gray-500">Plan:</span>
-                    <span className="font-medium text-gray-800">
-                      {user.planName}
-                    </span>
-                  </div>
-                </div>
-              )}
-              
-              {user.subscriptionEndDate ? (
-                <div className="bg-white px-3 py-2 rounded-md shadow-sm border border-gray-200 text-sm relative">
-                  <div className="flex items-center mb-1">
-                    <Calendar className="h-4 w-4 mr-1.5 text-gray-500 flex-shrink-0" />
-                    <div className="text-gray-500">
-                      {user.subscriptionStatus === "canceled" ? "Access until:" : "Next billing:"}
-                    </div>
-                  </div>
-                  <div className="font-medium">
-                    {new Date(user.subscriptionEndDate).toLocaleDateString(undefined, {
-                      year: 'numeric',
-                      month: 'short',
-                      day: 'numeric'
-                    })}
-                  </div>
-
-                </div>
-              ) : (
-                <div className="bg-white px-3 py-2 rounded-md shadow-sm border border-gray-200 text-sm">
-                  <div className="flex items-center mb-1">
-                    <Calendar className="h-4 w-4 mr-1.5 text-gray-500 flex-shrink-0" />
-                    <div className="text-gray-500">Billing date:</div>
-                  </div>
-                  <div className="font-medium text-gray-600">
-                    Not available
-                  </div>
-                </div>
-              )}
+            {/* Status badge - only show this simple indicator */}
+            <div className="mt-4 inline-flex items-center px-2.5 py-1 rounded-full bg-white border border-gray-200 shadow-sm">
+              <span className={`w-2 h-2 rounded-full mr-2 ${
+                user.subscriptionStatus === "active" ? "bg-green-500" : 
+                user.subscriptionStatus === "canceled" ? "bg-orange-500" : 
+                user.subscriptionStatus === "incomplete" || user.subscriptionStatus === "past_due" ? "bg-red-500" :
+                "bg-gray-500"
+              }`}></span>
+              <span className={`text-xs font-medium ${
+                user.subscriptionStatus === "active" ? "text-green-700" : 
+                user.subscriptionStatus === "canceled" ? "text-orange-700" : 
+                user.subscriptionStatus === "incomplete" || user.subscriptionStatus === "past_due" ? "text-red-700" :
+                "text-gray-700"
+              }`}>
+                {user.subscriptionStatus === "active" ? "Active" : 
+                user.subscriptionStatus === "canceled" ? "Canceled" :
+                user.subscriptionStatus === "incomplete" ? "Incomplete" :
+                user.subscriptionStatus === "past_due" ? "Past Due" :
+                user.subscriptionStatus || "Unknown"}
+              </span>
             </div>
           </div>
         </div>
