@@ -904,7 +904,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
                   price: stripePriceId, // Use the price ID from env vars
                 },
               ],
-              expand: ['latest_invoice.payment_intent'],
+              // Don't try to expand payment_intent as it will cause API errors
               metadata: {
                 paymentIntentId: paymentIntentId, // Link back to the original payment intent
                 userId: user.id.toString(),
@@ -939,7 +939,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
                 const invoice = await stripe.invoices.retrieve(subscription.latest_invoice as string);
                 
                 // Get the payment intent ID from the invoice, then retrieve it separately
-                const paymentIntentId = invoice.payment_intent as string;
+                // Using 'as any' because TypeScript doesn't recognize this property
+                const paymentIntentId = (invoice as any).payment_intent as string;
                 const paymentIntent = paymentIntentId ? await stripe.paymentIntents.retrieve(paymentIntentId) : null;
                 if (paymentIntent) {
                   console.log(`Invoice payment intent status: ${paymentIntent.status}`);
