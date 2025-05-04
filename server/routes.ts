@@ -677,13 +677,10 @@ export async function registerRoutes(app: Express): Promise<Server> {
     
     // Find user with this customer ID using storage
     try {
-      // Find users with matching stripe customer ID
-      const userResults = await db.execute(
-        `SELECT * FROM users WHERE stripe_customer_id = $1 LIMIT 1`, 
-        [customerId]
-      );
+      // Find users with matching stripe customer ID using drizzle-orm
+      const userResults = await db.select().from(users).where(eq(users.stripeCustomerId, customerId)).limit(1);
       
-      const user = userResults.rows[0];
+      const user = userResults[0];
       
       if (user) {
         // Calculate subscription end date from current_period_end (comes in seconds)
@@ -709,13 +706,10 @@ export async function registerRoutes(app: Express): Promise<Server> {
     const customerId = subscription.customer;
     
     try {
-      // Find users with matching stripe customer ID
-      const userResults = await db.execute(
-        `SELECT * FROM users WHERE stripe_customer_id = $1 LIMIT 1`, 
-        [customerId]
-      );
+      // Find users with matching stripe customer ID using drizzle-orm
+      const userResults = await db.select().from(users).where(eq(users.stripeCustomerId, customerId)).limit(1);
       
-      const user = userResults.rows[0];
+      const user = userResults[0];
       
       if (user) {
         // Calculate subscription end date from current_period_end (comes in seconds)
@@ -747,13 +741,10 @@ export async function registerRoutes(app: Express): Promise<Server> {
     const customerId = subscription.customer;
     
     try {
-      // Find users with matching stripe customer ID
-      const userResults = await db.execute(
-        `SELECT * FROM users WHERE stripe_customer_id = $1 LIMIT 1`, 
-        [customerId]
-      );
+      // Find users with matching stripe customer ID using drizzle-orm
+      const userResults = await db.select().from(users).where(eq(users.stripeCustomerId, customerId)).limit(1);
       
-      const user = userResults.rows[0];
+      const user = userResults[0];
       
       if (user) {
         // Set end date to now
@@ -778,13 +769,10 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
     
     try {
-      // Find users with matching stripe customer ID
-      const userResults = await db.execute(
-        `SELECT * FROM users WHERE stripe_customer_id = $1 LIMIT 1`, 
-        [customerId]
-      );
+      // Find users with matching stripe customer ID using drizzle-orm
+      const userResults = await db.select().from(users).where(eq(users.stripeCustomerId, customerId)).limit(1);
       
-      const user = userResults.rows[0];
+      const user = userResults[0];
       
       if (user) {
         // Get subscription details from Stripe
