@@ -120,7 +120,8 @@ function StripeCheckoutForm({ clientSecret }: { clientSecret: string }) {
       <button 
         type="submit" 
         disabled={!stripe || isLoading}
-        className="w-full mt-4 bg-primary-600 text-white py-2 px-4 rounded-md font-medium hover:bg-primary-700 transition-colors disabled:opacity-70 disabled:cursor-not-allowed"
+        className="w-full mt-6 bg-blue-600 text-white py-3 px-4 rounded-md font-medium hover:bg-blue-700 transition-colors disabled:opacity-70 disabled:cursor-not-allowed shadow-sm"
+        style={{ fontSize: '1rem', fontWeight: 600 }}
       >
         {isLoading ? (
           <span className="flex items-center justify-center">
@@ -196,7 +197,7 @@ function StripePaymentOptions() {
   }
   
   return (
-    <div className="bg-gray-50 rounded-lg p-5">
+    <div className="bg-gray-50 rounded-lg p-5 border border-gray-200 shadow-sm">
       <h3 className="text-lg font-semibold text-gray-900 mb-2">Premium Monthly</h3>
       <p className="text-sm text-gray-600 mb-5">You will be charged ${SUBSCRIPTION_PRICE} monthly</p>
       
@@ -211,15 +212,29 @@ function StripePaymentOptions() {
             colorDanger: "#ef4444",
             fontFamily: "system-ui, -apple-system, sans-serif",
             borderRadius: "6px",
+            spacingUnit: '4px',
+            spacingGridRow: '20px',
           },
           rules: {
             '.Tab': {
               border: '1px solid #e5e7eb',
               boxShadow: 'none',
+              padding: '10px 16px',
+            },
+            '.Tab:hover': {
+              border: '1px solid #c7c7c7',
             },
             '.Tab--selected': {
               borderColor: '#2563eb',
               boxShadow: '0 0 0 1px #2563eb',
+            },
+            '.Label': {
+              fontWeight: '500',
+              marginBottom: '8px',
+            },
+            '.Input': {
+              padding: '10px 14px',
+              border: '1px solid #e5e7eb',
             }
           }
         }
