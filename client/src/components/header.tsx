@@ -62,7 +62,7 @@ export default function Header() {
                   <LineChart className="h-4 w-4 mr-2" />
                   Health Tracker
                 </DropdownMenuItem>
-                <DropdownMenuItem onClick={() => navigate(user?.isPremium ? "/premium" : "/premium-upgrade")}>
+                <DropdownMenuItem onClick={() => navigate("/premium")}>
                   {user?.isPremium ? (
                     <>
                       <Crown className="h-4 w-4 mr-2 text-yellow-500" />

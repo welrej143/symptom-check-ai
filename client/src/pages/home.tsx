@@ -91,7 +91,7 @@ export default function Home({ setUserSymptoms, initialSymptoms = "", analyzeSym
                 </div>
               </div>
               <button 
-                onClick={() => navigate("/premium-upgrade")}
+                onClick={() => navigate("/premium")}
                 className="px-6 py-3 bg-gradient-to-r from-blue-600 to-purple-600 text-white font-semibold rounded-md shadow-md hover:shadow-lg hover:from-blue-700 hover:to-purple-700 transition-all flex items-center text-base"
               >
                 Upgrade to Premium
