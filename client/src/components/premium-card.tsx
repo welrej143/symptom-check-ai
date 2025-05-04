@@ -1,4 +1,4 @@
-import { Shield, LineChart, Loader, AlertCircle } from "lucide-react";
+import { Shield, LineChart, Loader, AlertCircle, ArrowRight } from "lucide-react";
 import { useAuth } from "@/hooks/use-auth";
 import { useState } from "react";
 import { apiRequest } from "@/lib/queryClient";
@@ -215,9 +215,17 @@ export default function PremiumCard() {
               <span className="text-primary-900 font-semibold">${SUBSCRIPTION_PRICE}/month</span>
             </div>
           </div>
+          
+          <button 
+            onClick={() => setIsUpgrading(true)}
+            className="w-full mt-4 bg-gradient-to-r from-blue-600 to-purple-600 text-white py-2.5 px-4 rounded-md font-medium hover:from-blue-700 hover:to-purple-700 transition-colors flex items-center justify-center"
+          >
+            Upgrade to Premium
+            <ArrowRight className="ml-2 h-4 w-4" />
+          </button>
         </div>
         
-        {isUpgrading ? (
+        {isUpgrading && (
           <div className="mt-6">
             <h4 className="text-base font-medium text-gray-900 mb-3">Complete Your Subscription</h4>
             <Elements stripe={stripePromise}>
@@ -230,13 +238,6 @@ export default function PremiumCard() {
               Cancel
             </button>
           </div>
-        ) : (
-          <button 
-            onClick={() => setIsUpgrading(true)}
-            className="w-full mt-6 bg-gradient-to-r from-primary-600 to-primary-700 text-white py-2 px-4 rounded-md font-medium hover:from-primary-700 hover:to-primary-800 transition-colors"
-          >
-            Upgrade to Premium - ${SUBSCRIPTION_PRICE}/month
-          </button>
         )}
       </div>
     </div>
