@@ -762,32 +762,78 @@ export async function registerRoutes(app: Express): Promise<Server> {
               }
             }
             
-            // Attach the payment method to the customer
-            await stripe.paymentMethods.attach(paymentMethodId, {
-              customer: customerId,
-            });
+            let attachmentSuccessful = false;
+            try {
+              // Attach the payment method to the customer
+              await stripe.paymentMethods.attach(paymentMethodId, {
+                customer: customerId,
+              });
+              attachmentSuccessful = true;
+            } catch (attachError: any) {
+              // Handle specific error for reused payment methods
+              if (attachError?.type === 'StripeInvalidRequestError' && 
+                  attachError?.raw?.message?.includes('previously used without being attached')) {
+                console.log("Payment method was previously used. Will create a new one in the subscription.");
+                
+                // Don't need to attach - will be created with the subscription
+                // Just continue without setting as default
+              } else {
+                // For other errors, rethrow
+                throw attachError;
+              }
+            }
             
-            // Set as default payment method
-            await stripe.customers.update(customerId, {
-              invoice_settings: {
-                default_payment_method: paymentMethodId,
-              },
-            });
+            // Set as default payment method only if we successfully attached
+            if (attachmentSuccessful) {
+              await stripe.customers.update(customerId, {
+                invoice_settings: {
+                  default_payment_method: paymentMethodId,
+                },
+              });
+            }
             
             console.log("Creating actual Stripe subscription with price ID:", stripePriceId);
-            const subscription = await stripe.subscriptions.create({
+            
+            // Create subscription options based on whether payment method attachment was successful
+            const subscriptionOptions: any = {
               customer: customerId,
               items: [
                 {
                   price: stripePriceId, // Use the price ID from env vars
                 },
               ],
-              default_payment_method: paymentMethodId,
               metadata: {
                 paymentIntentId: paymentIntentId, // Link back to the original payment intent
                 userId: user.id.toString(),
               },
-            });
+            };
+            
+            // Only set default_payment_method if the payment method was successfully attached
+            if (attachmentSuccessful) {
+              subscriptionOptions.default_payment_method = paymentMethodId;
+            } else {
+              // Otherwise create a new payment method from payment intent
+              try {
+                // Get payment intent to retrieve payment method
+                const paymentIntent = await stripe.paymentIntents.retrieve(paymentIntentId, {
+                  expand: ['payment_method']
+                });
+                
+                if (paymentIntent.payment_method) {
+                  // Create a new subscription with the payment method but don't attach it
+                  subscriptionOptions.payment_behavior = 'default_incomplete';
+                  subscriptionOptions.payment_settings = {
+                    payment_method_types: ['card'],
+                    save_default_payment_method: 'on_subscription'
+                  };
+                }
+              } catch (piError) {
+                console.error("Error retrieving payment intent details:", piError);
+                // Continue without payment method
+              }
+            }
+            
+            const subscription = await stripe.subscriptions.create(subscriptionOptions);
             
             console.log("Created subscription in Stripe:", subscription.id);
             
