@@ -382,6 +382,16 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.status(400).json({ message: "Payment intent ID is required" });
       }
       
+      // Ensure the STRIPE_PRICE_ID is available
+      const stripePriceId = process.env.STRIPE_PRICE_ID;
+      if (!stripePriceId) {
+        console.error('Missing STRIPE_PRICE_ID environment variable');
+        return res.status(500).json({ 
+          message: "Missing Stripe price ID. Please set the STRIPE_PRICE_ID environment variable.",
+          errorType: "configuration"
+        });
+      }
+      
       // Check if it's a simulated payment for testing
       if (paymentIntentId.startsWith("pi_simulated_")) {
         console.log("Using simulated payment for testing:", paymentIntentId);
@@ -393,6 +403,76 @@ export async function registerRoutes(app: Express): Promise<Server> {
           
           if (paymentIntent.status !== 'succeeded') {
             return res.status(400).json({ message: "Payment has not been completed successfully" });
+          }
+          
+          // Create or verify customer ID
+          let customerId = user.stripeCustomerId;
+          
+          if (!customerId) {
+            // Create a new customer in Stripe
+            const customer = await stripe.customers.create({
+              email: user.email,
+              name: user.username,
+              metadata: {
+                userId: user.id.toString(),
+              },
+            });
+            
+            customerId = customer.id;
+            
+            // Update user with Stripe customer ID
+            await storage.updateUserStripeInfo(user.id, {
+              stripeCustomerId: customerId,
+              stripeSubscriptionId: "", // Will be updated after subscription creation
+            });
+          }
+          
+          // Create a real subscription record in Stripe
+          try {
+            console.log("Creating actual Stripe subscription with price ID:", stripePriceId);
+            const subscription = await stripe.subscriptions.create({
+              customer: customerId,
+              items: [
+                {
+                  price: stripePriceId, // Use the price ID from env vars
+                },
+              ],
+              metadata: {
+                paymentIntentId: paymentIntentId, // Link back to the original payment intent
+                userId: user.id.toString(),
+              },
+            });
+            
+            console.log("Created subscription in Stripe:", subscription.id);
+            
+            // Now we have a real subscription ID starting with sub_
+            const realSubscriptionId = subscription.id;
+            
+            // Calculate end date based on the subscription
+            const endDate = new Date((subscription as any).current_period_end * 1000);
+            
+            // Update user subscription status
+            await storage.updateSubscriptionStatus(user.id, 'active', endDate);
+            
+            // Save the real subscription ID
+            await storage.updateUserStripeInfo(user.id, { 
+              stripeCustomerId: customerId,
+              stripeSubscriptionId: realSubscriptionId,
+            });
+            
+            res.json({ 
+              message: "Premium status updated successfully with Stripe subscription",
+              isPremium: true,
+              subscriptionStatus: 'active',
+              subscriptionEndDate: endDate,
+              subscriptionId: realSubscriptionId,
+            });
+            
+            return; // Exit early since we've handled everything
+            
+          } catch (subCreationError) {
+            console.error("Error creating subscription:", subCreationError);
+            // Continue with fallback approach if subscription creation fails
           }
         } catch (stripeError) {
           console.error("Stripe error:", stripeError);
@@ -671,24 +751,99 @@ export async function registerRoutes(app: Express): Promise<Server> {
         const user = await storage.getUser(userId);
         
         if (user) {
-          // Calculate subscription end date (1 month from now)
-          const endDate = new Date();
-          endDate.setMonth(endDate.getMonth() + 1);
-          
-          // Update subscription status
-          await storage.updateSubscriptionStatus(userId, 'active', endDate);
-          
-          // Log the subscription with proper price ID if available
+          // Get price ID from env vars or metadata
           const priceId = paymentIntent.metadata?.priceId || process.env.STRIPE_PRICE_ID;
           
-          // Save subscription details 
-          if (!user.stripeSubscriptionId) {
-            await storage.updateUserStripeInfo(userId, {
-              stripeCustomerId: user.stripeCustomerId || '',
-              stripeSubscriptionId: paymentIntent.id,
-            });
+          if (!priceId) {
+            console.error("Missing STRIPE_PRICE_ID for subscription creation");
+            return;
+          }
+          
+          // If user doesn't have a subscription ID or has a payment intent ID (not a real subscription)
+          if (!user.stripeSubscriptionId || user.stripeSubscriptionId.startsWith('pi_')) {
+            try {
+              // Create or get customer in Stripe
+              let customerId = user.stripeCustomerId;
+              
+              if (!customerId) {
+                // Create a customer for this user in Stripe
+                const customer = await stripe.customers.create({
+                  email: user.email,
+                  name: user.username,
+                  metadata: {
+                    userId: user.id.toString()
+                  }
+                });
+                
+                customerId = customer.id;
+                
+                // Update user with the new customer ID
+                await storage.updateUserStripeInfo(user.id, {
+                  stripeCustomerId: customerId,
+                  stripeSubscriptionId: user.stripeSubscriptionId || '',
+                });
+              }
+              
+              // Create a real subscription in Stripe
+              console.log(`Creating Stripe subscription for user ${userId} with price ID: ${priceId}`);
+              const subscription = await stripe.subscriptions.create({
+                customer: customerId,
+                items: [{ price: priceId }],
+                metadata: {
+                  paymentIntentId: paymentIntent.id,
+                  userId: user.id.toString()
+                }
+              });
+              
+              console.log(`Created Stripe subscription: ${subscription.id}`);
+              
+              // Calculate subscription end date from the subscription
+              const endDate = new Date((subscription as any).current_period_end * 1000);
+              
+              // Update user subscription status with proper end date
+              await storage.updateSubscriptionStatus(userId, 'active', endDate);
+              
+              // Save the real subscription ID
+              await storage.updateUserStripeInfo(userId, {
+                stripeCustomerId: customerId,
+                stripeSubscriptionId: subscription.id, // This is now a real sub_XXX ID
+              });
+              
+              console.log(`Successfully created subscription for user ${userId}`);
+              
+            } catch (error) {
+              console.error("Error creating subscription in Stripe:", error);
+              
+              // Fallback to using the payment intent as the "subscription"
+              console.log("Using fallback approach with payment intent ID");
+              
+              // Calculate subscription end date (1 month from now)
+              const endDate = new Date();
+              endDate.setMonth(endDate.getMonth() + 1);
+              
+              // Update subscription status with fallback date
+              await storage.updateSubscriptionStatus(userId, 'active', endDate);
+              
+              // Save subscription info with payment intent ID if we don't have anything else
+              if (!user.stripeSubscriptionId) {
+                await storage.updateUserStripeInfo(userId, {
+                  stripeCustomerId: user.stripeCustomerId || '',
+                  stripeSubscriptionId: paymentIntent.id,
+                });
+              }
+            }
+          } else if (user.stripeSubscriptionId.startsWith('sub_')) {
+            // User already has a real subscription, just update status
+            console.log(`User ${userId} already has a subscription: ${user.stripeSubscriptionId}`);
             
-            console.log(`Successfully updated subscription for user ${userId} with price ID: ${priceId}`);
+            // Ensure the subscription is active
+            try {
+              const subscription = await stripe.subscriptions.retrieve(user.stripeSubscriptionId);
+              const endDate = new Date((subscription as any).current_period_end * 1000);
+              await storage.updateSubscriptionStatus(userId, 'active', endDate);
+            } catch (error) {
+              console.error("Error retrieving existing subscription:", error);
+            }
           }
         }
       }
