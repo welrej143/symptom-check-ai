@@ -21,6 +21,8 @@ export interface IStorage {
   getUser(id: number): Promise<User | undefined>;
   getUserByUsername(username: string): Promise<User | undefined>;
   createUser(user: InsertUser): Promise<User>;
+  updateUserStripeInfo(userId: number, stripeInfo: { stripeCustomerId: string, stripeSubscriptionId: string }): Promise<User>;
+  updateSubscriptionStatus(userId: number, status: string, endDate?: Date): Promise<User>;
   
   // Symptom record methods
   createSymptomRecord(record: InsertSymptomRecord): Promise<SymptomRecord>;
@@ -64,6 +66,31 @@ export class DatabaseStorage implements IStorage {
       .values(insertUser)
       .returning();
     return user;
+  }
+  
+  async updateUserStripeInfo(userId: number, stripeInfo: { stripeCustomerId: string, stripeSubscriptionId: string }): Promise<User> {
+    const [updatedUser] = await db
+      .update(users)
+      .set({
+        stripeCustomerId: stripeInfo.stripeCustomerId,
+        stripeSubscriptionId: stripeInfo.stripeSubscriptionId,
+      })
+      .where(eq(users.id, userId))
+      .returning();
+    return updatedUser;
+  }
+  
+  async updateSubscriptionStatus(userId: number, status: string, endDate?: Date): Promise<User> {
+    const [updatedUser] = await db
+      .update(users)
+      .set({
+        subscriptionStatus: status,
+        isPremium: status === 'active',
+        subscriptionEndDate: endDate ? endDate : undefined,
+      })
+      .where(eq(users.id, userId))
+      .returning();
+    return updatedUser;
   }
 
   // Symptom record methods

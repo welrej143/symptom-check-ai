@@ -8,6 +8,11 @@ export const users = pgTable("users", {
   email: text("email").notNull(),
   password: text("password").notNull(),
   createdAt: timestamp("created_at").notNull().defaultNow(),
+  stripeCustomerId: text("stripe_customer_id"),
+  stripeSubscriptionId: text("stripe_subscription_id"),
+  isPremium: boolean("is_premium").default(false),
+  subscriptionStatus: text("subscription_status").default("inactive"),
+  subscriptionEndDate: timestamp("subscription_end_date"),
 });
 
 export const insertUserSchema = createInsertSchema(users).pick({
