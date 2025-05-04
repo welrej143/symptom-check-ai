@@ -75,7 +75,7 @@ function App() {
               <p>Upgrade to Premium for unlimited symptom analyses!</p>
               <div className="pt-2">
                 <button 
-                  onClick={() => navigate("/premium")}
+                  onClick={() => navigate("/premium-upgrade")}
                   className="bg-primary-600 text-white px-4 py-1.5 rounded-md text-sm font-medium"
                 >
                   Upgrade Now
@@ -96,7 +96,7 @@ function App() {
               <p>Upgrade to Premium for unlimited symptom analyses!</p>
               <div className="pt-2">
                 <button 
-                  onClick={() => navigate("/premium")}
+                  onClick={() => navigate("/premium-upgrade")}
                   className="bg-primary-600 text-white px-4 py-1.5 rounded-md text-sm font-medium"
                 >
                   Upgrade Now
