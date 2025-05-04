@@ -109,6 +109,7 @@ function App() {
     <Results 
       analysisResult={analysisResult} 
       userSymptoms={userSymptoms}
+      setUserSymptoms={setUserSymptoms}
     />
   );
   

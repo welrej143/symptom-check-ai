@@ -5,14 +5,25 @@ import { AnalysisResponse } from "@shared/schema";
 import ConditionCard from "@/components/condition-card";
 import UrgencyIndicator from "@/components/urgency-indicator";
 import PremiumCard from "@/components/premium-card";
+import { RotateCcw } from "lucide-react";
 
 interface ResultsProps {
   analysisResult: AnalysisResponse | null;
   userSymptoms: string;
+  setUserSymptoms?: (symptoms: string) => void;
 }
 
-export default function Results({ analysisResult, userSymptoms }: ResultsProps) {
+export default function Results({ analysisResult, userSymptoms, setUserSymptoms }: ResultsProps) {
   const [, navigate] = useLocation();
+  
+  const handleAnalyzeAgain = () => {
+    // If setUserSymptoms is provided, we'll keep the previous symptoms
+    // This allows users to modify their previous symptoms entry
+    if (setUserSymptoms) {
+      setUserSymptoms(userSymptoms);
+    }
+    navigate("/");
+  };
   
   // If no results, redirect to home
   useEffect(() => {
@@ -35,17 +46,27 @@ export default function Results({ analysisResult, userSymptoms }: ResultsProps) 
       </div>
       
       <div className="flex justify-center mb-8">
-        <div className="inline-flex rounded-md shadow-sm" role="group">
-          <Link href="/results">
-            <div className="py-2 px-4 text-sm font-medium text-white bg-blue-600 rounded-l-lg border border-blue-600 focus:z-10 focus:ring-2 focus:ring-blue-500 cursor-pointer">
-              Analysis
-            </div>
-          </Link>
-          <Link href="/tracker">
-            <div className="py-2 px-4 text-sm font-medium text-gray-900 bg-white rounded-r-lg border border-gray-200 hover:bg-gray-100 hover:text-blue-700 focus:z-10 focus:ring-2 focus:ring-blue-500 cursor-pointer">
-              Track Symptoms
-            </div>
-          </Link>
+        <div className="flex flex-col sm:flex-row items-center gap-4 justify-center">
+          <div className="inline-flex rounded-md shadow-sm" role="group">
+            <Link href="/results">
+              <div className="py-2 px-4 text-sm font-medium text-white bg-blue-600 rounded-l-lg border border-blue-600 focus:z-10 focus:ring-2 focus:ring-blue-500 cursor-pointer">
+                Analysis
+              </div>
+            </Link>
+            <Link href="/tracker">
+              <div className="py-2 px-4 text-sm font-medium text-gray-900 bg-white rounded-r-lg border border-gray-200 hover:bg-gray-100 hover:text-blue-700 focus:z-10 focus:ring-2 focus:ring-blue-500 cursor-pointer">
+                Track Symptoms
+              </div>
+            </Link>
+          </div>
+          
+          <button 
+            onClick={handleAnalyzeAgain}
+            className="flex items-center px-4 py-2 text-sm font-medium text-white bg-green-600 rounded-lg shadow-sm hover:bg-green-700 focus:outline-none focus:ring-2 focus:ring-green-500 transition-colors"
+          >
+            <RotateCcw className="w-4 h-4 mr-2" />
+            Analyze Again
+          </button>
         </div>
       </div>
       
