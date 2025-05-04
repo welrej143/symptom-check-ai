@@ -114,14 +114,14 @@ function StripeCheckoutForm({ clientSecret, subscriptionId }: { clientSecret: st
         await refreshSubscriptionStatus();
         
         toast({
-          title: "Welcome to Premium!",
-          description: "Your subscription has been activated successfully.",
+          title: "Payment Successful",
+          description: "Your subscription is being processed. You'll have access to premium features soon.",
           variant: "default",
         });
         
-        // Reload the page to reflect changes
+        // Reload the page to reflect changes after a short delay to let the user see the success message
         setTimeout(() => {
-          window.location.reload();
+          window.location.href = window.location.origin + "/account"; // Redirect to account page
         }, 1500);
       } catch (serverError) {
         console.error("Server error:", serverError);
@@ -386,7 +386,8 @@ export default function PremiumCard() {
               <span className={`text-xs font-medium ${
                 user.subscriptionStatus === "active" ? "text-green-700" : 
                 user.subscriptionStatus === "canceled" ? "text-orange-700" : 
-                user.subscriptionStatus === "incomplete" || user.subscriptionStatus === "past_due" ? "text-red-700" :
+                user.subscriptionStatus === "incomplete" ? "text-amber-700" :
+                user.subscriptionStatus === "past_due" ? "text-red-700" :
                 "text-gray-700"
               }`}>
                 {user.subscriptionStatus === "active" ? "Active" : 
@@ -428,8 +429,8 @@ export default function PremiumCard() {
       await refreshSubscriptionStatus();
       
       toast({
-        title: "Welcome to Premium!",
-        description: "Your subscription has been activated successfully. (Demo Mode)",
+        title: "Payment Successful (Demo)",
+        description: "Your subscription is being processed. You'll have access to premium features soon.",
         variant: "default",
       });
       
