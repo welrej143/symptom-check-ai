@@ -1,4 +1,4 @@
-import { Shield, LineChart, Loader, AlertCircle, ArrowRight, Calendar } from "lucide-react";
+import { Shield, LineChart, Loader, AlertCircle, ArrowRight, Calendar, CreditCard } from "lucide-react";
 import { useAuth } from "@/hooks/use-auth";
 import { useState, useEffect } from "react";
 import { apiRequest } from "@/lib/queryClient";
@@ -344,8 +344,9 @@ export default function PremiumCard() {
     staleTime: 1000 * 60 * 60, // 1 hour cache
   });
   
-  // Check if user has an active subscription or with a specific status other than "inactive"
-  if (user?.isPremium || (user?.subscriptionStatus && user.subscriptionStatus !== "" && user.subscriptionStatus !== "inactive")) {
+  // Check if user has an active subscription or with a specific status other than "inactive" or "incomplete"
+  if (user?.isPremium || (user?.subscriptionStatus && user.subscriptionStatus !== "" && 
+      user.subscriptionStatus !== "inactive" && user.subscriptionStatus !== "incomplete")) {
     return (
       <div className="space-y-5">
         <div className="bg-gradient-to-br from-primary-50 to-primary-100 rounded-lg shadow-md overflow-hidden border border-primary-200">
@@ -452,6 +453,63 @@ export default function PremiumCard() {
     }
   };
   
+  // Show special message for incomplete subscription
+  if (user?.subscriptionStatus === "incomplete") {
+    return (
+      <div className="bg-white rounded-lg shadow-md overflow-hidden">
+        <div className="p-6">
+          <div className="flex items-center mb-4">
+            <AlertCircle className="h-6 w-6 text-amber-500 mr-2" />
+            <h3 className="text-lg font-semibold text-gray-900">Incomplete Subscription</h3>
+          </div>
+          
+          <div className="bg-amber-50 border border-amber-200 rounded-lg p-4 mb-6">
+            <p className="text-sm text-amber-800">
+              Your subscription payment is incomplete. You need to add a payment method to complete your subscription.
+            </p>
+          </div>
+          
+          <div className="space-y-4">
+            <div className="mt-4">
+              <button 
+                onClick={() => setIsUpgrading(true)}
+                className="bg-blue-600 text-white py-2.5 px-4 rounded-md font-medium hover:bg-blue-700 transition-colors flex items-center justify-center w-full"
+              >
+                Complete Payment
+                <CreditCard className="ml-2 h-4 w-4" />
+              </button>
+            </div>
+            
+            <div className="flex items-center justify-center mt-2">
+              <button 
+                onClick={() => window.location.reload()}
+                className="text-sm text-gray-600 hover:text-gray-900 underline"
+              >
+                Refresh status
+              </button>
+            </div>
+          </div>
+        </div>
+        
+        {isUpgrading && (
+          <div className="px-6 pb-6">
+            <div className="flex items-center justify-between mb-3">
+              <h4 className="text-base font-medium text-gray-900">Complete Your Payment</h4>
+              <button 
+                onClick={() => setIsUpgrading(false)}
+                className="text-gray-600 text-sm hover:text-gray-800"
+              >
+                Cancel
+              </button>
+            </div>
+            
+            <StripePaymentOptions />
+          </div>
+        )}
+      </div>
+    );
+  }
+
   return (
     <div className="bg-white rounded-lg shadow-md overflow-hidden">
       <div className="p-6">
