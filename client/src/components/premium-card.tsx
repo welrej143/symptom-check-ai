@@ -1,4 +1,4 @@
-import { Shield, LineChart, Loader, AlertCircle, ArrowRight } from "lucide-react";
+import { Shield, LineChart, Loader, AlertCircle, ArrowRight, Calendar } from "lucide-react";
 import { useAuth } from "@/hooks/use-auth";
 import { useState, useEffect } from "react";
 import { apiRequest } from "@/lib/queryClient";
@@ -384,20 +384,37 @@ export default function PremiumCard() {
               )}
               
               {user.subscriptionEndDate ? (
-                <div className="bg-white px-3 py-2 rounded-md shadow-sm border border-gray-200 text-sm">
-                  <span className="text-gray-500">
-                    {user.subscriptionStatus === "canceled" ? "Access until:" : "Next billing:"}
-                  </span>{" "}
-                  <span className="font-medium">
-                    {new Date(user.subscriptionEndDate).toLocaleDateString()}
-                  </span>
+                <div className="bg-white px-3 py-2 rounded-md shadow-sm border border-gray-200 text-sm relative">
+                  <div className="flex items-center">
+                    <Calendar className="h-4 w-4 mr-1.5 text-gray-500" />
+                    <span className="text-gray-500">
+                      {user.subscriptionStatus === "canceled" ? "Access until:" : "Next billing:"}
+                    </span>
+                  </div>
+                  <div className="font-medium mt-1">
+                    {new Date(user.subscriptionEndDate).toLocaleDateString(undefined, {
+                      year: 'numeric',
+                      month: 'short',
+                      day: 'numeric'
+                    })}
+                  </div>
+                  {user.subscriptionStatus === "active" && (
+                    <div className="absolute -top-1 -right-1">
+                      <span className="text-xs font-medium bg-blue-100 text-blue-800 py-1 px-2 rounded-full">
+                        {Math.max(0, Math.ceil((new Date(user.subscriptionEndDate).getTime() - new Date().getTime()) / (1000 * 60 * 60 * 24)))} days
+                      </span>
+                    </div>
+                  )}
                 </div>
               ) : (
                 <div className="bg-white px-3 py-2 rounded-md shadow-sm border border-gray-200 text-sm">
-                  <span className="text-gray-500">Billing date:</span>{" "}
-                  <span className="font-medium text-gray-600">
+                  <div className="flex items-center">
+                    <Calendar className="h-4 w-4 mr-1.5 text-gray-500" />
+                    <span className="text-gray-500">Billing date:</span>
+                  </div>
+                  <div className="font-medium mt-1 text-gray-600">
                     Not available
-                  </span>
+                  </div>
                 </div>
               )}
             </div>
