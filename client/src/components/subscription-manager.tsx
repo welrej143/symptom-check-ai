@@ -137,6 +137,16 @@ export default function SubscriptionManager({ user, refreshSubscriptionStatus }:
                       <XCircle className="h-4 w-4 text-orange-500 mr-1" />
                       <span className="text-orange-700">Canceled</span>
                     </>
+                  ) : user.subscriptionStatus === "incomplete" ? (
+                    <>
+                      <AlertCircle className="h-4 w-4 text-amber-500 mr-1" />
+                      <span className="text-amber-700">Incomplete - Payment Required</span>
+                    </>
+                  ) : user.subscriptionStatus === "past_due" ? (
+                    <>
+                      <AlertCircle className="h-4 w-4 text-red-500 mr-1" />
+                      <span className="text-red-700">Past Due - Payment Required</span>
+                    </>
                   ) : (
                     <>
                       <AlertCircle className="h-4 w-4 text-gray-500 mr-1" />
