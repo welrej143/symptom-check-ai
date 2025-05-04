@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { User } from "@shared/schema";
 import { apiRequest } from "@/lib/queryClient";
 import { useToast } from "@/hooks/use-toast";
@@ -22,6 +22,43 @@ export default function SubscriptionManager({ user, refreshSubscriptionStatus }:
   const [isLoading, setIsLoading] = useState(false);
   const [isCanceling, setIsCanceling] = useState(false);
   const { toast } = useToast();
+  
+  // Check URL parameters for payment_updated flag
+  useEffect(() => {
+    const checkUrlParams = async () => {
+      const urlParams = new URLSearchParams(window.location.search);
+      const paymentUpdated = urlParams.get('payment_updated');
+      
+      if (paymentUpdated === 'true') {
+        // Remove the query parameter to prevent showing the message on refresh
+        const newUrl = window.location.pathname;
+        window.history.replaceState({}, document.title, newUrl);
+        
+        // Show success message
+        toast({
+          title: "Payment Method Updated",
+          description: "Your payment method has been successfully updated. Your subscription status will be updated shortly.",
+          variant: "default",
+        });
+        
+        // Refresh subscription status to get the latest data
+        await refreshSubscriptionStatus();
+      } else if (paymentUpdated === 'false') {
+        // Remove the query parameter
+        const newUrl = window.location.pathname;
+        window.history.replaceState({}, document.title, newUrl);
+        
+        // Show failure message
+        toast({
+          title: "Payment Update Canceled",
+          description: "Payment method update was canceled. Your subscription status remains unchanged.",
+          variant: "default",
+        });
+      }
+    };
+    
+    checkUrlParams();
+  }, [toast, refreshSubscriptionStatus]);
   
   // Format subscription end date
   const formattedEndDate = user.subscriptionEndDate 
@@ -311,22 +348,34 @@ export default function SubscriptionManager({ user, refreshSubscriptionStatus }:
                     onClick={async () => {
                       setIsLoading(true);
                       try {
-                        // TODO: This is a placeholder. In a production app, redirect to a Stripe Checkout page
-                        toast({
-                          title: "Complete Payment",
-                          description: "You'll be redirected to complete your payment.",
-                          variant: "default",
-                        });
+                        // Use our payment update endpoint to get a Stripe checkout URL
+                        const response = await apiRequest("GET", "/api/payment-method-update");
                         
-                        // For testing purposes, we're just refreshing the status
-                        await refreshSubscriptionStatus();
+                        if (!response.ok) {
+                          throw new Error("Failed to get payment update link");
+                        }
+                        
+                        const data = await response.json();
+                        
+                        if (data.url) {
+                          toast({
+                            title: "Complete Payment",
+                            description: "You'll be redirected to update your payment method.",
+                            variant: "default",
+                          });
+                          
+                          // Redirect to Stripe's hosted payment form
+                          window.location.href = data.url;
+                        } else {
+                          throw new Error("No payment URL returned");
+                        }
                       } catch (error) {
+                        console.error("Error getting payment update URL:", error);
                         toast({
                           title: "Error",
-                          description: "Unable to process payment request",
+                          description: "Unable to process payment request. Please try again later.",
                           variant: "destructive",
                         });
-                      } finally {
                         setIsLoading(false);
                       }
                     }}

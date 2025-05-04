@@ -1419,6 +1419,10 @@ export async function registerRoutes(app: Express): Promise<Server> {
         if (eventType === 'payment_intent.succeeded') {
           await handlePaymentIntentSucceeded(data);
         }
+        // Handle setup intent for payment method updates
+        else if (eventType === 'setup_intent.succeeded') {
+          await handleSetupIntentSucceeded(data);
+        }
         // Handle subscription events
         else if (eventType === 'customer.subscription.created') {
           await handleSubscriptionCreated(data);
@@ -1799,6 +1803,110 @@ export async function registerRoutes(app: Express): Promise<Server> {
       }
     } catch (error: any) {
       console.error(`Error handling invoice payment succeeded: ${error.message}`);
+    }
+  }
+  
+  // Handle successful setup intent (payment method update)
+  async function handleSetupIntentSucceeded(setupIntent: any) {
+    console.log("Setup intent succeeded webhook:", setupIntent.id);
+    console.log("Setup intent metadata:", setupIntent.metadata);
+    
+    if (!setupIntent.metadata || !setupIntent.metadata.subscription_id) {
+      console.log("No subscription ID in setup intent metadata");
+      return;
+    }
+    
+    const subscriptionId = setupIntent.metadata.subscription_id;
+    const userId = setupIntent.metadata.user_id ? parseInt(setupIntent.metadata.user_id) : null;
+    
+    if (!userId) {
+      console.log("No user ID found in setup intent metadata");
+      return;
+    }
+    
+    try {
+      // Get user
+      const user = await storage.getUser(userId);
+      
+      if (!user) {
+        console.log(`User not found with ID ${userId}`);
+        return;
+      }
+      
+      // Get payment method from setup intent
+      const paymentMethodId = setupIntent.payment_method as string;
+      
+      if (!paymentMethodId) {
+        console.log("No payment method found on setup intent");
+        return;
+      }
+      
+      console.log(`Updating subscription ${subscriptionId} with payment method ${paymentMethodId}`);
+      
+      // Get the subscription
+      const subscription = await stripe.subscriptions.retrieve(subscriptionId);
+      
+      if (subscription.status === 'incomplete' || subscription.status === 'past_due') {
+        // For incomplete or past_due subscriptions, try to process the payment
+        try {
+          if (!user.stripeCustomerId) {
+            console.log("User has no Stripe customer ID");
+            return;
+          }
+          
+          // First, set the payment method as default for the customer
+          await stripe.customers.update(user.stripeCustomerId, {
+            invoice_settings: {
+              default_payment_method: paymentMethodId
+            }
+          });
+          
+          // Find the latest unpaid invoice for this subscription
+          const invoices = await stripe.invoices.list({
+            subscription: subscriptionId,
+            status: 'open',
+            limit: 1,
+          });
+          
+          if (invoices.data.length > 0) {
+            const invoice = invoices.data[0];
+            const invoiceId = invoice.id;
+            
+            if (invoiceId) {
+              console.log(`Attempting to pay invoice ${invoiceId} for subscription ${subscriptionId}`);
+              await stripe.invoices.pay(invoiceId, {
+                payment_method: paymentMethodId
+              });
+              console.log(`Successfully paid invoice ${invoiceId}`);
+            }
+          } else {
+            console.log("No unpaid invoice found for this subscription");
+          }
+          
+          // Update the subscription to set the default payment method
+          await stripe.subscriptions.update(subscriptionId, {
+            default_payment_method: paymentMethodId
+          });
+          
+          // Refresh the subscription to get the latest status
+          const updatedSubscription = await stripe.subscriptions.retrieve(subscriptionId);
+          
+          // Update the user's subscription status in our database
+          const endDate = new Date((updatedSubscription as any).current_period_end * 1000);
+          await storage.updateSubscriptionStatus(userId, updatedSubscription.status, endDate);
+          
+          console.log(`Updated subscription status to ${updatedSubscription.status}`);
+        } catch (payError) {
+          console.error("Error processing payment after payment method update:", payError);
+        }
+      } else {
+        // For active subscriptions, just update the payment method
+        await stripe.subscriptions.update(subscriptionId, {
+          default_payment_method: paymentMethodId
+        });
+      }
+    } catch (error) {
+      console.error("Error handling setup intent succeeded:", error);
     }
   }
   
