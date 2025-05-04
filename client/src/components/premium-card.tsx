@@ -99,9 +99,13 @@ function StripeCheckoutForm({ clientSecret }: { clientSecret: string }) {
     <form onSubmit={handleSubmit}>
       <PaymentElement
         options={{
-          layout: {
-            type: "tabs",
-            defaultCollapsed: false,
+          layout: "tabs",
+          paymentMethodOrder: ["card", "amazon_pay", "cashapp"],
+          defaultValues: {
+            billingDetails: {
+              name: user?.username || "",
+              email: user?.email || "",
+            }
           }
         }}
       />
@@ -199,9 +203,24 @@ function StripePaymentOptions() {
       <Elements stripe={stripePromise} options={{ 
         clientSecret,
         appearance: {
-          theme: "stripe",
+          theme: "flat",
           variables: {
-            colorPrimary: "#4f46e5",
+            colorPrimary: "#2563eb",
+            colorBackground: "#f9fafb",
+            colorText: "#18181b",
+            colorDanger: "#ef4444",
+            fontFamily: "system-ui, -apple-system, sans-serif",
+            borderRadius: "6px",
+          },
+          rules: {
+            '.Tab': {
+              border: '1px solid #e5e7eb',
+              boxShadow: 'none',
+            },
+            '.Tab--selected': {
+              borderColor: '#2563eb',
+              boxShadow: '0 0 0 1px #2563eb',
+            }
           }
         }
       }}>
@@ -321,20 +340,13 @@ export default function PremiumCard() {
             </div>
           </div>
           
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-3 mt-4">
+          <div className="mt-4">
             <button 
               onClick={() => setIsUpgrading(true)}
-              className="bg-gradient-to-r from-blue-600 to-purple-600 text-white py-2.5 px-4 rounded-md font-medium hover:from-blue-700 hover:to-purple-700 transition-colors flex items-center justify-center"
+              className="bg-blue-600 text-white py-2.5 px-4 rounded-md font-medium hover:bg-blue-700 transition-colors flex items-center justify-center w-full"
             >
               Upgrade with Stripe
               <ArrowRight className="ml-2 h-4 w-4" />
-            </button>
-            
-            <button 
-              onClick={handleQuickUpgrade}
-              className="bg-primary-600 text-white py-2.5 px-4 rounded-md font-medium hover:bg-primary-700 transition-colors flex items-center justify-center"
-            >
-              Quick Upgrade (Demo)
             </button>
           </div>
         </div>
