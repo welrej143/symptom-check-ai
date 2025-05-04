@@ -716,8 +716,10 @@ export async function registerRoutes(app: Express): Promise<Server> {
         } catch (error) {
           console.log("Error updating subscription, using fallback approach:", error);
           // Fall back to manual status update
-          const endDate = user.subscriptionEndDate || new Date(Date.now() + 30 * 24 * 60 * 60 * 1000);
-          await storage.updateSubscriptionStatus(user.id, 'canceled', endDate);
+          const fallbackDate = user.subscriptionEndDate 
+            ? new Date(user.subscriptionEndDate) 
+            : new Date(Date.now() + 30 * 24 * 60 * 60 * 1000);
+          await storage.updateSubscriptionStatus(user.id, 'canceled', fallbackDate);
         }
       } else {
         // Fallback if we don't have a subscription ID

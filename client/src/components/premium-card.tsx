@@ -31,6 +31,8 @@ interface PriceData {
   productDescription: string;
 }
 
+// Note: We've removed the SUBSCRIPTION_PRICE constant as we now get dynamic pricing from Stripe
+
 // Stripe Checkout Form Component
 function StripeCheckoutForm({ clientSecret, subscriptionId }: { clientSecret: string, subscriptionId?: string }) {
   const stripe = useStripe();
