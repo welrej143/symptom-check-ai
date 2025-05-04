@@ -525,9 +525,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
               cancelAtPeriodEnd: subscription.cancel_at_period_end,
               directFromStripe: true,
               // Add payment intent info for incomplete subscriptions
-              paymentIntentStatus: status === 'incomplete' && (subscription as any).latest_invoice?.payment_intent?.status
-                ? (subscription as any).latest_invoice.payment_intent.status
-                : null
+              // This is safer than trying to access nested properties of latest_invoice
+              paymentIntentStatus: status === 'incomplete' ? 'needs_payment_method' : null
             });
           } else {
             console.log(`No active subscriptions found for customer ${user.stripeCustomerId}`);
@@ -595,9 +594,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
                   cancelAtPeriodEnd: subscription.cancel_at_period_end,
                   directFromStripe: true,
                   // Add payment intent info for incomplete subscriptions
-                  paymentIntentStatus: status === 'incomplete' && (subscription as any).latest_invoice?.payment_intent?.status
-                    ? (subscription as any).latest_invoice.payment_intent.status
-                    : null
+                  // This is safer than trying to access nested properties of latest_invoice
+                  paymentIntentStatus: status === 'incomplete' ? 'needs_payment_method' : null
                 });
               } catch (error) {
                 console.error(`Error retrieving subscription details from Stripe: ${error}`);
@@ -935,13 +933,19 @@ export async function registerRoutes(app: Express): Promise<Server> {
               console.log("Subscription created with incomplete status, trying to confirm payment");
               
               try {
-                // Get the invoice details - don't try to expand payment_intent
+                // Get the invoice details
                 const invoice = await stripe.invoices.retrieve(subscription.latest_invoice as string);
                 
-                // Get the payment intent ID from the invoice, then retrieve it separately
-                // Using 'as any' because TypeScript doesn't recognize this property
-                const paymentIntentId = (invoice as any).payment_intent as string;
-                const paymentIntent = paymentIntentId ? await stripe.paymentIntents.retrieve(paymentIntentId) : null;
+                // Handle the payment intent - Stripe returns this value but TypeScript doesn't recognize it
+                // We'll use object destructuring to safely handle this
+                const { payment_intent: paymentIntentId } = invoice as any;
+                
+                // Only proceed if we actually got a payment intent ID
+                let paymentIntent = null;
+                if (paymentIntentId && typeof paymentIntentId === 'string') {
+                  paymentIntent = await stripe.paymentIntents.retrieve(paymentIntentId);
+                  console.log(`Retrieved payment intent ${paymentIntentId} with status: ${paymentIntent.status}`);
+                }
                 if (paymentIntent) {
                   console.log(`Invoice payment intent status: ${paymentIntent.status}`);
                   
