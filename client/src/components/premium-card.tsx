@@ -65,15 +65,26 @@ function CheckoutForm() {
         });
       } else if (result.paymentIntent) {
         // Payment successful, update premium status
-        await apiRequest("POST", "/api/update-premium-status", {
+        const response = await apiRequest("POST", "/api/update-premium-status", {
           paymentIntentId: result.paymentIntent.id,
         });
+        
+        const statusData = await response.json();
+        
+        // Refresh auth context to update premium status
+        const { refreshSubscriptionStatus } = useAuth();
+        await refreshSubscriptionStatus();
         
         toast({
           title: "Welcome to Premium!",
           description: "Your subscription has been activated successfully.",
           variant: "default",
         });
+        
+        // Reload the page to reflect changes
+        setTimeout(() => {
+          window.location.reload();
+        }, 1500);
       }
     } catch (err) {
       console.error('Payment error:', err);

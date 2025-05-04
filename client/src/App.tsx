@@ -14,6 +14,7 @@ import { ProtectedRoute } from "@/lib/protected-route";
 import LoadingAnalysis from "@/components/loading-analysis";
 import { analyzeSymptoms } from "@/lib/openai";
 import { useToast } from "@/hooks/use-toast";
+import PremiumCard from "@/components/premium-card";
 
 function App() {
   const [analysisResult, setAnalysisResult] = useState<AnalysisResponse | null>(null);
@@ -98,6 +99,14 @@ function App() {
                 <Route path="/" component={HomeWrapper} />
                 <Route path="/results" component={ResultsWrapper} />
                 <ProtectedRoute path="/tracker" component={Tracker} />
+                <ProtectedRoute path="/premium" component={() => (
+                  <div className="container mx-auto py-8 px-4">
+                    <h1 className="text-2xl font-bold mb-6">Premium Subscription</h1>
+                    <div className="max-w-md mx-auto">
+                      <PremiumCard />
+                    </div>
+                  </div>
+                )} />
                 <Route path="/auth" component={AuthPage} />
                 <Route component={NotFound} />
               </Switch>

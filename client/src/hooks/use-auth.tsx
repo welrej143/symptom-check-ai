@@ -15,6 +15,7 @@ type AuthContextType = {
   loginMutation: UseMutationResult<Omit<User, "password">, Error, LoginData>;
   logoutMutation: UseMutationResult<void, Error, void>;
   registerMutation: UseMutationResult<Omit<User, "password">, Error, RegisterData>;
+  refreshSubscriptionStatus: () => Promise<void>;
 };
 
 type LoginData = {
@@ -48,10 +49,29 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       const res = await apiRequest("POST", "/api/login", credentials);
       return await res.json();
     },
-    onSuccess: (userData) => {
+    onSuccess: async (userData) => {
       // Update cache immediately
       queryClient.setQueryData(["/api/user"], userData);
-      // Also force a refetch for fresh data
+      
+      // Check subscription status if user has Stripe info
+      if (userData.stripeCustomerId) {
+        try {
+          const res = await apiRequest("GET", "/api/subscription");
+          const subscriptionData = await res.json();
+          
+          // Update user with subscription data
+          queryClient.setQueryData(["/api/user"], {
+            ...userData,
+            isPremium: subscriptionData.isPremium,
+            subscriptionStatus: subscriptionData.subscriptionStatus,
+            subscriptionEndDate: subscriptionData.subscriptionEndDate,
+          });
+        } catch (error) {
+          console.error("Failed to fetch subscription status:", error);
+        }
+      }
+      
+      // Force a refetch for fresh data
       refetchUser();
       
       toast({
@@ -132,6 +152,26 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     },
   });
 
+  // Function to refresh subscription status
+  const refreshSubscriptionStatus = async () => {
+    if (!user || !user.stripeCustomerId) return;
+    
+    try {
+      const res = await apiRequest("GET", "/api/subscription");
+      const subscriptionData = await res.json();
+      
+      // Update user with subscription data
+      queryClient.setQueryData(["/api/user"], {
+        ...user,
+        isPremium: subscriptionData.isPremium,
+        subscriptionStatus: subscriptionData.subscriptionStatus,
+        subscriptionEndDate: subscriptionData.subscriptionEndDate,
+      });
+    } catch (error) {
+      console.error("Failed to refresh subscription status:", error);
+    }
+  };
+
   return (
     <AuthContext.Provider
       value={{
@@ -141,6 +181,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         loginMutation,
         logoutMutation,
         registerMutation,
+        refreshSubscriptionStatus,
       }}
     >
       {children}
