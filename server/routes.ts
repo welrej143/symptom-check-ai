@@ -1273,8 +1273,29 @@ export async function registerRoutes(app: Express): Promise<Server> {
         // Calculate subscription end date from current_period_end (comes in seconds)
         const endDate = new Date(subscription.current_period_end * 1000);
         
-        // Update subscription status
-        await storage.updateSubscriptionStatus(user.id, 'active', endDate);
+        // Get the plan name from the first subscription item
+        let planName = "Premium Monthly"; // Default fallback
+        
+        try {
+          if (subscription.items.data && subscription.items.data.length > 0) {
+            // Get the first item's price
+            const firstItem = subscription.items.data[0];
+            if (firstItem.price && firstItem.price.product) {
+              // Get the product details to get the product name
+              const product = await stripe.products.retrieve(firstItem.price.product as string);
+              if (product && product.name) {
+                planName = product.name;
+                console.log(`Found plan name from Stripe for new subscription: ${planName}`);
+              }
+            }
+          }
+        } catch (productError) {
+          console.error("Error fetching plan name for new subscription:", productError);
+          // Continue with default plan name
+        }
+        
+        // Update subscription status with plan name
+        await storage.updateSubscriptionStatus(user.id, 'active', endDate, planName);
         
         // Save subscription details
         await storage.updateUserStripeInfo(user.id, {
@@ -1282,7 +1303,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
           stripeSubscriptionId: subscription.id,
         });
         
-        console.log(`Successfully created subscription for user ${user.id}`);
+        console.log(`Successfully created subscription for user ${user.id} with plan: ${planName}`);
       }
     } catch (error: any) {
       console.error(`Error handling subscription created: ${error.message}`);
@@ -1314,10 +1335,36 @@ export async function registerRoutes(app: Express): Promise<Server> {
           status = 'canceled';
         }
         
-        // Update subscription status
-        await storage.updateSubscriptionStatus(user.id, status, endDate);
+        // Get the plan name from the first subscription item
+        let planName = "Premium Monthly"; // Default fallback
         
-        console.log(`Successfully updated subscription for user ${user.id} to status: ${status}`);
+        try {
+          if (subscription.items.data && subscription.items.data.length > 0) {
+            // Get the first item's price
+            const firstItem = subscription.items.data[0];
+            if (firstItem.price && firstItem.price.product) {
+              // Get the product details to get the product name
+              const product = await stripe.products.retrieve(firstItem.price.product as string);
+              if (product && product.name) {
+                planName = product.name;
+                console.log(`Found plan name from Stripe for updated subscription: ${planName}`);
+              }
+            }
+          }
+        } catch (productError) {
+          console.error("Error fetching plan name for updated subscription:", productError);
+          // Continue with default plan name
+        }
+        
+        // Check if plan name has changed
+        if (user.planName !== planName) {
+          console.log(`Plan changed from ${user.planName} to ${planName}`);
+        }
+        
+        // Update subscription status with plan name
+        await storage.updateSubscriptionStatus(user.id, status, endDate, planName);
+        
+        console.log(`Successfully updated subscription for user ${user.id} to status: ${status}, plan: ${planName}`);
       }
     } catch (error: any) {
       console.error(`Error handling subscription updated: ${error.message}`);
@@ -1368,10 +1415,31 @@ export async function registerRoutes(app: Express): Promise<Server> {
         // Calculate subscription end date
         const endDate = new Date((subscription as any).current_period_end * 1000);
         
-        // Update subscription status
-        await storage.updateSubscriptionStatus(user.id, 'active', endDate);
+        // Get the plan name from the first subscription item
+        let planName = "Premium Monthly"; // Default fallback
         
-        console.log(`Successfully processed invoice payment for user ${user.id}`);
+        try {
+          if (subscription.items.data && subscription.items.data.length > 0) {
+            // Get the first item's price
+            const firstItem = subscription.items.data[0];
+            if (firstItem.price && firstItem.price.product) {
+              // Get the product details to get the product name
+              const product = await stripe.products.retrieve(firstItem.price.product as string);
+              if (product && product.name) {
+                planName = product.name;
+                console.log(`Found plan name from Stripe for invoice payment: ${planName}`);
+              }
+            }
+          }
+        } catch (productError) {
+          console.error("Error fetching plan name for invoice payment:", productError);
+          // Continue with default plan name
+        }
+        
+        // Update subscription status with plan name
+        await storage.updateSubscriptionStatus(user.id, 'active', endDate, planName);
+        
+        console.log(`Successfully processed invoice payment for user ${user.id}, plan: ${planName}`);
       }
     } catch (error: any) {
       console.error(`Error handling invoice payment succeeded: ${error.message}`);
