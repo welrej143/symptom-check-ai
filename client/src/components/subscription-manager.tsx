@@ -168,19 +168,22 @@ export default function SubscriptionManager({ user, refreshSubscriptionStatus }:
                 <div className="font-medium mt-1">{formattedStartDate}</div>
               </div>
               
-              <div className="bg-gray-50 p-4 rounded-md">
+              <div className="bg-gray-50 p-4 rounded-md relative">
                 <div className="text-sm text-gray-500">
                   {user.subscriptionStatus === "canceled" ? "Access Until" : "Next Billing Date"}
                 </div>
                 <div className="font-medium mt-1 flex items-center">
                   <Calendar className="h-4 w-4 mr-1 text-gray-500" />
                   {formattedEndDate}
-                  {daysUntilRenewal > 0 && user.subscriptionStatus === "active" && (
-                    <span className="ml-2 text-xs bg-blue-100 text-blue-800 py-0.5 px-2 rounded-full">
-                      {daysUntilRenewal} days
-                    </span>
-                  )}
                 </div>
+                {daysUntilRenewal > 0 && user.subscriptionStatus === "active" && (
+                  <div className="absolute top-3 right-3">
+                    <span className="text-sm font-medium bg-blue-100 text-blue-800 py-1 px-3 rounded-full flex items-center">
+                      <span className="mr-1">{daysUntilRenewal}</span>
+                      <span className="text-xs">days</span>
+                    </span>
+                  </div>
+                )}
               </div>
             </div>
             
