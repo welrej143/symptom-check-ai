@@ -357,16 +357,64 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
       const user = req.user;
       
+      // Always try to get the latest information from Stripe if we have a real subscription
+      if (user.stripeSubscriptionId && user.stripeSubscriptionId.startsWith('sub_')) {
+        try {
+          console.log(`Fetching subscription ${user.stripeSubscriptionId} details from Stripe`);
+          const subscription = await stripe.subscriptions.retrieve(user.stripeSubscriptionId);
+          
+          // Calculate the subscription end date from Stripe's data
+          const endDate = new Date((subscription as any).current_period_end * 1000);
+          
+          // Determine status from Stripe
+          let status = subscription.status;
+          if (subscription.cancel_at_period_end) {
+            status = 'canceled';
+          }
+          
+          // Make sure we're always in sync with Stripe
+          if (status !== user.subscriptionStatus || 
+              !datesEqual(endDate, user.subscriptionEndDate)) {
+            console.log(`Updating status from ${user.subscriptionStatus} to ${status} and end date to ${endDate.toISOString()}`);
+            await storage.updateSubscriptionStatus(user.id, status, endDate);
+          }
+          
+          return res.json({
+            isPremium: true,
+            subscriptionStatus: status,
+            subscriptionEndDate: endDate,
+            subscriptionId: user.stripeSubscriptionId,
+            // Additional subscription details from Stripe
+            currentPeriodStart: new Date((subscription as any).current_period_start * 1000),
+            currentPeriodEnd: endDate,
+            cancelAtPeriodEnd: subscription.cancel_at_period_end,
+            directFromStripe: true
+          });
+        } catch (error) {
+          console.error(`Error retrieving subscription details from Stripe: ${error}`);
+          // Fall back to database info if Stripe API fails
+        }
+      }
+      
+      // Return basic subscription details from the user object (fallback)
       res.json({
         isPremium: user.isPremium || false,
         subscriptionStatus: user.subscriptionStatus || 'inactive',
         subscriptionEndDate: user.subscriptionEndDate || null,
+        subscriptionId: user.stripeSubscriptionId || null,
+        directFromStripe: false
       });
     } catch (error) {
       console.error("Error checking subscription:", error);
       res.status(500).json({ message: "Error checking subscription" });
     }
   });
+  
+  // Helper function to compare dates (ignoring milliseconds)
+  function datesEqual(date1: Date, date2?: Date): boolean {
+    if (!date2) return false;
+    return Math.abs(date1.getTime() - date2.getTime()) < 1000; // Within 1 second
+  }
 
   // Update premium status (after payment)
   app.post("/api/update-premium-status", async (req: Request, res: Response) => {
