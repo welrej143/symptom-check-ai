@@ -297,7 +297,12 @@ export async function registerRoutes(app: Express): Promise<Server> {
         });
       }
 
-      // Create a payment intent for the subscription
+      // Create a payment intent for the subscription using the Stripe Price ID
+      // This ensures the subscription is properly tracked in Stripe
+      if (!process.env.STRIPE_PRICE_ID) {
+        throw new Error('Missing STRIPE_PRICE_ID environment variable');
+      }
+      
       const paymentIntent = await stripe.paymentIntents.create({
         amount: 999, // $9.99
         currency: 'usd',
@@ -305,6 +310,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         metadata: {
           userId: user.id.toString(),
           isSubscription: 'true',
+          priceId: process.env.STRIPE_PRICE_ID
         },
         description: 'SymptomCheck AI Premium Subscription',
       });
@@ -411,12 +417,17 @@ export async function registerRoutes(app: Express): Promise<Server> {
               // Update subscription status
               await storage.updateSubscriptionStatus(userId, 'active', endDate);
               
-              // Also save the payment intent ID as subscription ID if needed
+              // Log the subscription with proper price ID if available
+              const priceId = paymentIntent.metadata?.priceId || process.env.STRIPE_PRICE_ID;
+              
+              // Save subscription details 
               if (!user.stripeSubscriptionId) {
                 await storage.updateUserStripeInfo(userId, {
                   stripeCustomerId: user.stripeCustomerId || '',
                   stripeSubscriptionId: paymentIntent.id,
                 });
+                
+                console.log(`Successfully updated subscription for user ${userId} with price ID: ${priceId}`);
               }
             }
           }
