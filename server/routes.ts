@@ -1246,6 +1246,59 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
   
+  // Route to get payment method update URL
+  app.get("/api/payment-method-update", async (req: Request, res: Response) => {
+    try {
+      if (!req.isAuthenticated()) {
+        return res.status(401).json({ message: "Authentication required" });
+      }
+      
+      const user = req.user;
+      
+      // Check if user has a Stripe customer ID and subscription ID
+      if (!user.stripeCustomerId || !user.stripeSubscriptionId) {
+        return res.status(404).json({ 
+          error: "No subscription found",
+          message: "No active subscription found to update payment method."
+        });
+      }
+      
+      try {
+        // Create a checkout session for updating the payment method
+        const session = await stripe.checkout.sessions.create({
+          mode: 'setup',
+          payment_method_types: ['card'],
+          customer: user.stripeCustomerId,
+          setup_intent_data: {
+            metadata: {
+              subscription_id: user.stripeSubscriptionId,
+              user_id: user.id.toString()
+            }
+          },
+          success_url: `${process.env.PUBLIC_URL || 'http://localhost:5000'}/account?payment_updated=true`,
+          cancel_url: `${process.env.PUBLIC_URL || 'http://localhost:5000'}/account?payment_updated=false`,
+        });
+        
+        return res.json({ 
+          url: session.url,
+          success: true
+        });
+      } catch (stripeError) {
+        console.error("Error creating Stripe checkout session:", stripeError);
+        return res.status(500).json({ 
+          error: "Payment processor error",
+          message: "Could not create a payment update session. Please try again later."
+        });
+      }
+    } catch (error) {
+      console.error("Error in payment method update route:", error);
+      return res.status(500).json({ 
+        error: "Server error",
+        message: "An unexpected error occurred. Please try again later."
+      });
+    }
+  });
+  
   // Route to reactivate a canceled subscription
   app.post("/api/reactivate-subscription", async (req: Request, res: Response) => {
     try {

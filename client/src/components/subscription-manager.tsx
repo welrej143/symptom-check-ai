@@ -97,13 +97,27 @@ export default function SubscriptionManager({ user, refreshSubscriptionStatus }:
   const handleUpdatePaymentMethod = async () => {
     setIsLoading(true);
     try {
-      // This would redirect to a Stripe Customer Portal in a production app
-      toast({
-        title: "Feature Coming Soon",
-        description: "Updating payment methods will be available soon.",
-        variant: "default",
-      });
+      // Request an update payment method link from the server
+      const response = await apiRequest("GET", "/api/payment-method-update");
+      
+      if (!response.ok) {
+        throw new Error("Failed to get payment update link");
+      }
+      
+      const data = await response.json();
+      
+      if (data.url) {
+        // Redirect to Stripe's hosted update payment form
+        window.location.href = data.url;
+      } else {
+        toast({
+          title: "Payment Update",
+          description: "Cannot update payment method at this time. Please try again later.",
+          variant: "default",
+        });
+      }
     } catch (error) {
+      console.error("Error updating payment method:", error);
       toast({
         title: "Error",
         description: "Unable to update payment method at this time",
