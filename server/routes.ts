@@ -317,34 +317,60 @@ export async function registerRoutes(app: Express): Promise<Server> {
         });
       }
       
-      // Simplified approach: Just create a payment intent
-      // We'll create the subscription after successful payment via webhook
-      const paymentIntent = await stripe.paymentIntents.create({
-        amount: 999, // $9.99 in cents
-        currency: 'usd',
-        customer: customerId,
-        metadata: {
-          userId: user.id.toString(),
-          priceId: stripePriceId,
-          isSubscriptionPayment: 'true',
-        },
-        // Link to the subscription
-        description: `Premium subscription for ${user.username}`,
-      });
+      // Create a subscription with Stripe
+      console.log("Creating subscription with Stripe price ID:", stripePriceId);
       
-      console.log("Payment intent created:", paymentIntent.id);
-      
-      // Get the client secret which will be used on the client side to complete the payment
-      const clientSecret = paymentIntent.client_secret;
-
-      res.json({
-        clientSecret: clientSecret,
-        paymentIntentId: paymentIntent.id,
-      });
-    
+      try {
+        // Create subscription directly - this is the recommended approach
+        const subscription = await stripe.subscriptions.create({
+          customer: customerId,
+          items: [
+            {
+              price: stripePriceId,
+            },
+          ],
+          payment_behavior: 'default_incomplete',
+          payment_settings: {
+            payment_method_types: ['card'],
+            save_default_payment_method: 'on_subscription'
+          },
+          expand: ['latest_invoice.payment_intent'],
+          metadata: {
+            userId: user.id.toString(),
+          },
+        });
+        
+        console.log("Subscription created:", subscription.id, "with status:", subscription.status);
+        
+        // Get the client secret from the PaymentIntent
+        const latestInvoice = subscription.latest_invoice as any;
+        if (!latestInvoice || !latestInvoice.payment_intent || !latestInvoice.payment_intent.client_secret) {
+          throw new Error("No payment intent found on the subscription invoice");
+        }
+        
+        const clientSecret = latestInvoice.payment_intent.client_secret;
+        
+        // Update user with the subscription ID
+        await storage.updateUserStripeInfo(user.id, {
+          stripeCustomerId: customerId,
+          stripeSubscriptionId: subscription.id,
+        });
+        
+        // Return both the client secret and subscription ID
+        res.json({
+          clientSecret: clientSecret,
+          subscriptionId: subscription.id,
+        });
+      } catch (subscriptionError) {
+        console.error("Failed to create subscription:", subscriptionError);
+        return res.status(500).json({ 
+          message: "Failed to create subscription with payment provider",
+          error: subscriptionError.message
+        });
+      }
     } catch (error) {
-      console.error("Error creating payment intent for subscription:", error);
-      res.status(500).json({ message: "Error creating payment intent" });
+      console.error("Error setting up subscription:", error);
+      res.status(500).json({ message: "Error setting up subscription" });
     }
   });
 
