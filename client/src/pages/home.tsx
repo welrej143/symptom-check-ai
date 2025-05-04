@@ -79,11 +79,11 @@ export default function Home({ setUserSymptoms, initialSymptoms = "", analyzeSym
         
         {/* Premium banner for logged in non-premium users */}
         {user && !user.isPremium && (
-          <div className="mt-12 mb-8 bg-gradient-to-r from-purple-50 to-blue-50 rounded-lg border border-primary-100 overflow-hidden shadow-sm">
+          <div className="mt-12 mb-8 bg-gradient-to-r from-indigo-100 to-blue-100 rounded-lg border border-blue-200 overflow-hidden shadow-md">
             <div className="p-6 flex flex-col md:flex-row items-center justify-between">
               <div className="flex items-center mb-4 md:mb-0">
-                <div className="bg-primary-100 p-3 rounded-full mr-4">
-                  <Shield className="h-6 w-6 text-primary-600" />
+                <div className="bg-blue-200 p-3 rounded-full mr-4">
+                  <Shield className="h-6 w-6 text-blue-600" />
                 </div>
                 <div>
                   <h3 className="text-lg font-semibold text-gray-900">Unlock unlimited symptom analyses</h3>
@@ -92,10 +92,10 @@ export default function Home({ setUserSymptoms, initialSymptoms = "", analyzeSym
               </div>
               <button 
                 onClick={() => navigate("/premium")}
-                className="px-5 py-2.5 bg-gradient-to-r from-primary-600 to-primary-700 text-white font-medium rounded-md shadow hover:from-primary-700 hover:to-primary-800 transition-all flex items-center"
+                className="px-6 py-3 bg-gradient-to-r from-blue-600 to-purple-600 text-white font-semibold rounded-md shadow-md hover:shadow-lg hover:from-blue-700 hover:to-purple-700 transition-all flex items-center text-base"
               >
                 Upgrade to Premium
-                <ArrowRight className="ml-2 h-4 w-4" />
+                <ArrowRight className="ml-2 h-5 w-5" />
               </button>
             </div>
           </div>
