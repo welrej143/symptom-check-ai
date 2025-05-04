@@ -429,6 +429,34 @@ export async function registerRoutes(app: Express): Promise<Server> {
           
           // Create a real subscription record in Stripe
           try {
+            // Get payment method from the payment intent
+            console.log("Getting payment method from payment intent:", paymentIntentId);
+            const pi = await stripe.paymentIntents.retrieve(paymentIntentId, {
+              expand: ['payment_method']
+            });
+            
+            // Get the payment method ID from the payment intent
+            const paymentMethodId = pi.payment_method as string;
+            
+            if (!paymentMethodId) {
+              console.error("No payment method found on payment intent", paymentIntentId);
+              throw new Error("No payment method found on payment intent");
+            }
+            
+            console.log("Attaching payment method to customer:", paymentMethodId);
+            
+            // Attach the payment method to the customer
+            await stripe.paymentMethods.attach(paymentMethodId, {
+              customer: customerId,
+            });
+            
+            // Set as default payment method
+            await stripe.customers.update(customerId, {
+              invoice_settings: {
+                default_payment_method: paymentMethodId,
+              },
+            });
+            
             console.log("Creating actual Stripe subscription with price ID:", stripePriceId);
             const subscription = await stripe.subscriptions.create({
               customer: customerId,
@@ -437,6 +465,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
                   price: stripePriceId, // Use the price ID from env vars
                 },
               ],
+              default_payment_method: paymentMethodId,
               metadata: {
                 paymentIntentId: paymentIntentId, // Link back to the original payment intent
                 userId: user.id.toString(),
@@ -784,11 +813,40 @@ export async function registerRoutes(app: Express): Promise<Server> {
                 });
               }
               
+              // Get payment method information from the payment intent
+              console.log(`Getting payment method from payment intent: ${paymentIntent.id}`);
+              const pi = await stripe.paymentIntents.retrieve(paymentIntent.id, {
+                expand: ['payment_method']
+              });
+              
+              // Get the payment method ID from the payment intent
+              const paymentMethodId = pi.payment_method as string;
+              
+              if (!paymentMethodId) {
+                console.error("No payment method found on payment intent", paymentIntent.id);
+                throw new Error("No payment method found on payment intent");
+              }
+              
+              console.log(`Attaching payment method ${paymentMethodId} to customer ${customerId}`);
+              
+              // Attach the payment method to the customer
+              await stripe.paymentMethods.attach(paymentMethodId, {
+                customer: customerId,
+              });
+              
+              // Set as default payment method
+              await stripe.customers.update(customerId, {
+                invoice_settings: {
+                  default_payment_method: paymentMethodId,
+                },
+              });
+              
               // Create a real subscription in Stripe
               console.log(`Creating Stripe subscription for user ${userId} with price ID: ${priceId}`);
               const subscription = await stripe.subscriptions.create({
                 customer: customerId,
                 items: [{ price: priceId }],
+                default_payment_method: paymentMethodId,
                 metadata: {
                   paymentIntentId: paymentIntent.id,
                   userId: user.id.toString()
