@@ -317,52 +317,29 @@ export async function registerRoutes(app: Express): Promise<Server> {
         });
       }
       
-      // Create a subscription with payment_behavior: 'default_incomplete' to collect first payment
-      const subscription = await stripe.subscriptions.create({
+      // Simplified approach: Just create a payment intent
+      // We'll create the subscription after successful payment via webhook
+      const paymentIntent = await stripe.paymentIntents.create({
+        amount: 999, // $9.99 in cents
+        currency: 'usd',
         customer: customerId,
-        items: [
-          {
-            price: stripePriceId, // The price ID you created in Stripe
-          },
-        ],
-        payment_behavior: 'default_incomplete',
-        payment_settings: {
-          save_default_payment_method: 'on_subscription',
-        },
         metadata: {
           userId: user.id.toString(),
+          priceId: stripePriceId,
+          isSubscriptionPayment: 'true',
         },
-        // Don't try to expand payment_intent directly - we need to get the invoice first
+        // Link to the subscription
+        description: `Premium subscription for ${user.username}`,
       });
       
-      // Update the user with the subscription ID
-      await storage.updateUserStripeInfo(user.id, {
-        stripeCustomerId: customerId,
-        stripeSubscriptionId: subscription.id,
-      });
+      console.log("Payment intent created:", paymentIntent.id);
       
-      // Get the latest invoice
-      const invoiceId = (subscription.latest_invoice as string);
-      if (!invoiceId) {
-        throw new Error('No invoice found for subscription');
-      }
-      
-      // Retrieve the invoice with expanded payment_intent
-      const invoice = await stripe.invoices.retrieve(invoiceId, {
-        expand: ['payment_intent'],
-      });
-      
-      // Get the client secret from the invoice's payment intent
-      const paymentIntent = invoice.payment_intent;
-      if (!paymentIntent || typeof paymentIntent === 'string') {
-        throw new Error('No payment intent found for invoice');
-      }
-      
+      // Get the client secret which will be used on the client side to complete the payment
       const clientSecret = paymentIntent.client_secret;
 
       res.json({
-        subscriptionId: subscription.id,
         clientSecret: clientSecret,
+        paymentIntentId: paymentIntent.id,
       });
     
     } catch (error) {
