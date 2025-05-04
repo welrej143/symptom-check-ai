@@ -3,6 +3,7 @@ import SymptomForm from "@/components/symptom-form";
 import FeatureCards from "@/components/feature-cards";
 import { useAuth } from "@/hooks/use-auth";
 import { useToast } from "@/hooks/use-toast";
+import { Shield, ArrowRight } from "lucide-react";
 
 interface HomeProps {
   setUserSymptoms: (symptoms: string) => void;
@@ -71,6 +72,30 @@ export default function Home({ setUserSymptoms, initialSymptoms = "", analyzeSym
             />
           </div>
         </div>
+        
+        {/* Premium banner for logged in non-premium users */}
+        {user && !user.isPremium && (
+          <div className="mt-12 mb-8 bg-gradient-to-r from-purple-50 to-blue-50 rounded-lg border border-primary-100 overflow-hidden shadow-sm">
+            <div className="p-6 flex flex-col md:flex-row items-center justify-between">
+              <div className="flex items-center mb-4 md:mb-0">
+                <div className="bg-primary-100 p-3 rounded-full mr-4">
+                  <Shield className="h-6 w-6 text-primary-600" />
+                </div>
+                <div>
+                  <h3 className="text-lg font-semibold text-gray-900">Unlock unlimited symptom analyses</h3>
+                  <p className="text-gray-600 mt-1">Get personalized health insights whenever you need them.</p>
+                </div>
+              </div>
+              <button 
+                onClick={() => navigate("/premium")}
+                className="px-5 py-2.5 bg-gradient-to-r from-primary-600 to-primary-700 text-white font-medium rounded-md shadow hover:from-primary-700 hover:to-primary-800 transition-all flex items-center"
+              >
+                Upgrade to Premium
+                <ArrowRight className="ml-2 h-4 w-4" />
+              </button>
+            </div>
+          </div>
+        )}
         
         <FeatureCards />
       </section>

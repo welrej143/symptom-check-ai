@@ -22,7 +22,7 @@ function CheckoutForm() {
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const { toast } = useToast();
-  const { user } = useAuth();
+  const { user, refreshSubscriptionStatus } = useAuth();
 
   const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
@@ -72,7 +72,6 @@ function CheckoutForm() {
         const statusData = await response.json();
         
         // Refresh auth context to update premium status
-        const { refreshSubscriptionStatus } = useAuth();
         await refreshSubscriptionStatus();
         
         toast({
