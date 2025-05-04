@@ -5,6 +5,7 @@ import Home from "@/pages/home";
 import Results from "@/pages/results";
 import Tracker from "@/pages/tracker";
 import AuthPage from "@/pages/auth-page";
+import PremiumUpgrade from "@/pages/premium-upgrade";
 import Header from "@/components/header";
 import Footer from "@/components/footer";
 import { useState } from "react";
@@ -147,6 +148,7 @@ function App() {
                 <Route path="/" component={HomeWrapper} />
                 <Route path="/results" component={ResultsWrapper} />
                 <ProtectedRoute path="/tracker" component={Tracker} />
+                <Route path="/premium-upgrade" component={PremiumUpgrade} />
                 <ProtectedRoute path="/premium" component={() => (
                   <div className="container mx-auto py-8 px-4">
                     <h1 className="text-2xl font-bold mb-6">Premium Subscription</h1>
