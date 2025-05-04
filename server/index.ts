@@ -3,7 +3,37 @@ import { registerRoutes } from "./routes";
 import { setupVite, serveStatic, log } from "./vite";
 
 const app = express();
-app.use(express.json());
+
+// Special middleware for Stripe webhooks that need the raw body
+// This needs to be before express.json() middleware
+app.use((req, res, next) => {
+  // Only run this middleware for the Stripe webhook route
+  if (req.originalUrl === '/api/stripe-webhook') {
+    let rawBody = '';
+    req.setEncoding('utf8');
+    
+    req.on('data', (chunk) => {
+      rawBody += chunk;
+    });
+    
+    req.on('end', () => {
+      (req as any).rawBody = rawBody;
+      next();
+    });
+  } else {
+    next();
+  }
+});
+
+// Regular middleware for other routes
+app.use(express.json({
+  // Don't parse JSON body for Stripe webhook route as we handle it separately
+  verify: (req, res, buf) => {
+    if (req.originalUrl === '/api/stripe-webhook') {
+      (req as any).rawBody = buf.toString();
+    }
+  }
+}));
 app.use(express.urlencoded({ extended: false }));
 
 app.use((req, res, next) => {

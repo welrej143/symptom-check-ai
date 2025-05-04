@@ -490,52 +490,279 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
   // Webhook to handle Stripe events
   app.post("/api/stripe-webhook", async (req: Request, res: Response) => {
+    // Webhook signature verification
+    const webhookSecret = process.env.STRIPE_WEBHOOK_SECRET;
+    if (!webhookSecret) {
+      console.error("Missing Stripe webhook secret");
+      return res.status(500).json({ message: "Webhook secret not configured" });
+    }
+
+    // Get the signature from headers
+    const signature = req.headers['stripe-signature'] as string;
+    if (!signature) {
+      console.error("No Stripe signature found in headers");
+      return res.status(400).json({ message: "No Stripe signature found" });
+    }
+
+    let event;
+    
     try {
-      const event = req.body;
+      // Get raw body data for signature verification
+      const rawBody = (req as any).rawBody || JSON.stringify(req.body);
       
-      // Handle the payment_intent.succeeded event for subscription handling
-      if (event.type === 'payment_intent.succeeded') {
-        const paymentIntent = event.data.object;
+      // Verify the event using the webhook secret and signature
+      event = stripe.webhooks.constructEvent(
+        rawBody,
+        signature,
+        webhookSecret
+      );
+      
+      console.log(`Webhook received: ${event.type}`);
+      
+      // For TypeScript safety, use a simpler approach for the webhook handler
+      // This avoids complex typings and reduces errors
+      try {
+        const eventType = event.type;
+        const data = event.data.object;
         
-        // Check if this is a subscription payment
-        if (paymentIntent.metadata && paymentIntent.metadata.isSubscription === 'true') {
-          const userId = parseInt(paymentIntent.metadata.userId);
+        // Handle payment intent succeeded event
+        if (eventType === 'payment_intent.succeeded') {
+          await handlePaymentIntentSucceeded(data);
+        }
+        // Handle subscription events
+        else if (eventType === 'customer.subscription.created') {
+          await handleSubscriptionCreated(data);
+        }
+        else if (eventType === 'customer.subscription.updated') {
+          await handleSubscriptionUpdated(data);
+        }
+        else if (eventType === 'customer.subscription.deleted') {
+          await handleSubscriptionDeleted(data);
+        }
+        // Handle invoice events
+        else if (eventType === 'invoice.payment_succeeded') {
+          await handleInvoicePaymentSucceeded(data);
+        }
+        else if (eventType === 'invoice.payment_failed') {
+          await handleInvoicePaymentFailed(data);
+        }
+        else {
+          console.log(`Unhandled event type: ${eventType}`);
+        }
+      } catch (handlerError: any) {
+        console.error(`Error processing webhook event: ${handlerError.message}`);
+        // Still return 200 to acknowledge receipt (Stripe will retry otherwise)
+        return res.json({ 
+          received: true,
+          warning: "Event processed with errors"
+        });
+      }
+
+      // Return a 200 response to acknowledge receipt of the event
+      res.json({ received: true });
+      
+    } catch (error: any) {
+      console.error(`Webhook signature verification error: ${error.message}`);
+      res.status(400).json({ message: `Webhook error: ${error.message}` });
+    }
+  });
+
+  // Helper functions for webhook event handling
+  async function handlePaymentIntentSucceeded(paymentIntent: any) {
+    // Check if this is a subscription payment
+    if (paymentIntent.metadata && paymentIntent.metadata.isSubscription === 'true') {
+      const userId = parseInt(paymentIntent.metadata.userId);
+      
+      if (userId) {
+        // Find the user
+        const user = await storage.getUser(userId);
+        
+        if (user) {
+          // Calculate subscription end date (1 month from now)
+          const endDate = new Date();
+          endDate.setMonth(endDate.getMonth() + 1);
           
-          if (userId) {
-            // Find the user
-            const user = await storage.getUser(userId);
+          // Update subscription status
+          await storage.updateSubscriptionStatus(userId, 'active', endDate);
+          
+          // Log the subscription with proper price ID if available
+          const priceId = paymentIntent.metadata?.priceId || process.env.STRIPE_PRICE_ID;
+          
+          // Save subscription details 
+          if (!user.stripeSubscriptionId) {
+            await storage.updateUserStripeInfo(userId, {
+              stripeCustomerId: user.stripeCustomerId || '',
+              stripeSubscriptionId: paymentIntent.id,
+            });
             
-            if (user) {
-              // Calculate subscription end date (1 month from now)
-              const endDate = new Date();
-              endDate.setMonth(endDate.getMonth() + 1);
-              
-              // Update subscription status
-              await storage.updateSubscriptionStatus(userId, 'active', endDate);
-              
-              // Log the subscription with proper price ID if available
-              const priceId = paymentIntent.metadata?.priceId || process.env.STRIPE_PRICE_ID;
-              
-              // Save subscription details 
-              if (!user.stripeSubscriptionId) {
-                await storage.updateUserStripeInfo(userId, {
-                  stripeCustomerId: user.stripeCustomerId || '',
-                  stripeSubscriptionId: paymentIntent.id,
-                });
-                
-                console.log(`Successfully updated subscription for user ${userId} with price ID: ${priceId}`);
-              }
-            }
+            console.log(`Successfully updated subscription for user ${userId} with price ID: ${priceId}`);
           }
         }
       }
-
-      res.json({ received: true });
-    } catch (error) {
-      console.error("Error processing webhook:", error);
-      res.status(500).json({ message: "Error processing webhook" });
     }
-  });
+  }
+  
+  async function handleSubscriptionCreated(subscription: any) {
+    const customerId = subscription.customer;
+    
+    // Find user with this customer ID using storage
+    try {
+      // Find users with matching stripe customer ID
+      const userResults = await db.execute(
+        `SELECT * FROM users WHERE stripe_customer_id = $1 LIMIT 1`, 
+        [customerId]
+      );
+      
+      const user = userResults.rows[0];
+      
+      if (user) {
+        // Calculate subscription end date from current_period_end (comes in seconds)
+        const endDate = new Date(subscription.current_period_end * 1000);
+        
+        // Update subscription status
+        await storage.updateSubscriptionStatus(user.id, 'active', endDate);
+        
+        // Save subscription details
+        await storage.updateUserStripeInfo(user.id, {
+          stripeCustomerId: customerId,
+          stripeSubscriptionId: subscription.id,
+        });
+        
+        console.log(`Successfully created subscription for user ${user.id}`);
+      }
+    } catch (error: any) {
+      console.error(`Error handling subscription created: ${error.message}`);
+    }
+  }
+  
+  async function handleSubscriptionUpdated(subscription: any) {
+    const customerId = subscription.customer;
+    
+    try {
+      // Find users with matching stripe customer ID
+      const userResults = await db.execute(
+        `SELECT * FROM users WHERE stripe_customer_id = $1 LIMIT 1`, 
+        [customerId]
+      );
+      
+      const user = userResults.rows[0];
+      
+      if (user) {
+        // Calculate subscription end date from current_period_end (comes in seconds)
+        const endDate = new Date(subscription.current_period_end * 1000);
+        
+        // Set appropriate status based on subscription status
+        let status = 'active';
+        if (subscription.cancel_at_period_end) {
+          status = 'canceled';
+        } else if (subscription.status === 'past_due') {
+          status = 'past_due';
+        } else if (subscription.status === 'unpaid') {
+          status = 'unpaid';
+        } else if (subscription.status === 'canceled') {
+          status = 'canceled';
+        }
+        
+        // Update subscription status
+        await storage.updateSubscriptionStatus(user.id, status, endDate);
+        
+        console.log(`Successfully updated subscription for user ${user.id} to status: ${status}`);
+      }
+    } catch (error: any) {
+      console.error(`Error handling subscription updated: ${error.message}`);
+    }
+  }
+  
+  async function handleSubscriptionDeleted(subscription: any) {
+    const customerId = subscription.customer;
+    
+    try {
+      // Find users with matching stripe customer ID
+      const userResults = await db.execute(
+        `SELECT * FROM users WHERE stripe_customer_id = $1 LIMIT 1`, 
+        [customerId]
+      );
+      
+      const user = userResults.rows[0];
+      
+      if (user) {
+        // Set end date to now
+        const endDate = new Date();
+        
+        // Update subscription status to inactive
+        await storage.updateSubscriptionStatus(user.id, 'inactive', endDate);
+        
+        console.log(`Subscription canceled for user ${user.id}`);
+      }
+    } catch (error: any) {
+      console.error(`Error handling subscription deleted: ${error.message}`);
+    }
+  }
+  
+  async function handleInvoicePaymentSucceeded(invoice: any) {
+    const customerId = invoice.customer;
+    const subscriptionId = invoice.subscription;
+    
+    if (!subscriptionId) {
+      return; // Not a subscription invoice
+    }
+    
+    try {
+      // Find users with matching stripe customer ID
+      const userResults = await db.execute(
+        `SELECT * FROM users WHERE stripe_customer_id = $1 LIMIT 1`, 
+        [customerId]
+      );
+      
+      const user = userResults.rows[0];
+      
+      if (user) {
+        // Get subscription details from Stripe
+        const subscription = await stripe.subscriptions.retrieve(subscriptionId);
+        
+        // Calculate subscription end date
+        const endDate = new Date((subscription as any).current_period_end * 1000);
+        
+        // Update subscription status
+        await storage.updateSubscriptionStatus(user.id, 'active', endDate);
+        
+        console.log(`Successfully processed invoice payment for user ${user.id}`);
+      }
+    } catch (error: any) {
+      console.error(`Error handling invoice payment succeeded: ${error.message}`);
+    }
+  }
+  
+  async function handleInvoicePaymentFailed(invoice: any) {
+    const customerId = invoice.customer;
+    const subscriptionId = invoice.subscription;
+    
+    if (!subscriptionId) {
+      return; // Not a subscription invoice
+    }
+    
+    try {
+      // Find users with matching stripe customer ID
+      const userResults = await db.execute(
+        `SELECT * FROM users WHERE stripe_customer_id = $1 LIMIT 1`, 
+        [customerId]
+      );
+      
+      const user = userResults.rows[0];
+      
+      if (user) {
+        // Keep the current end date
+        const endDate = user.subscriptionEndDate || undefined;
+        
+        // Mark as past_due
+        await storage.updateSubscriptionStatus(user.id, 'past_due', endDate);
+        
+        console.log(`Invoice payment failed for user ${user.id}`);
+      }
+    } catch (error: any) {
+      console.error(`Error handling invoice payment failed: ${error.message}`);
+    }
+  }
 
   // Create HTTP server
   const httpServer = createServer(app);
