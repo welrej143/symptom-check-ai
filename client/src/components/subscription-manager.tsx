@@ -123,6 +123,18 @@ export default function SubscriptionManager({ user, refreshSubscriptionStatus }:
             Subscription Details
           </h3>
           
+          {user.subscriptionStatus === "incomplete" && (
+            <div className="mt-4 p-3 bg-amber-50 border border-amber-200 rounded-md text-sm text-amber-800">
+              <div className="flex items-start">
+                <AlertCircle className="h-5 w-5 text-amber-500 mr-2 mt-0.5 flex-shrink-0" />
+                <div>
+                  <strong>Payment Processing:</strong> Your subscription payment is being processed. This may take a few moments to complete.
+                  If your subscription remains in this state, you may need to update your payment method or complete the payment process.
+                </div>
+              </div>
+            </div>
+          )}
+          
           <div className="mt-4 space-y-4">
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               <div className="bg-gray-50 p-4 rounded-md">
@@ -144,7 +156,7 @@ export default function SubscriptionManager({ user, refreshSubscriptionStatus }:
                   ) : user.subscriptionStatus === "incomplete" ? (
                     <>
                       <AlertCircle className="h-4 w-4 text-amber-500 mr-1" />
-                      <span className="text-amber-700">Incomplete - Payment Required</span>
+                      <span className="text-amber-700">Payment Processing</span>
                     </>
                   ) : user.subscriptionStatus === "past_due" ? (
                     <>

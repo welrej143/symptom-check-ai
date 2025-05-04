@@ -344,19 +344,34 @@ export default function PremiumCard() {
     staleTime: 1000 * 60 * 60, // 1 hour cache
   });
   
-  // If user already has premium, show subscription management UI
-  if (user?.isPremium) {
+  // Check if user has a subscription (in any state)
+  if (user?.isPremium || (user?.subscriptionStatus && user.subscriptionStatus !== "")) {
     return (
       <div className="space-y-5">
         <div className="bg-gradient-to-br from-primary-50 to-primary-100 rounded-lg shadow-md overflow-hidden border border-primary-200">
           <div className="p-6">
             <div className="flex items-center mb-4">
               <Shield className="h-6 w-6 text-primary-600 mr-2" />
-              <h3 className="text-lg font-semibold text-gray-900">Premium Member</h3>
+              <h3 className="text-lg font-semibold text-gray-900">
+                {user.subscriptionStatus === "incomplete" ? "Premium (Processing)" : 
+                 user.subscriptionStatus === "past_due" ? "Premium (Payment Required)" :
+                 user.subscriptionStatus === "canceled" ? "Premium (Canceled)" :
+                 "Premium Member"}
+              </h3>
             </div>
             
             <p className="text-sm text-gray-700">
-              You're enjoying all premium benefits including unlimited symptom analyses and complete health tracking.
+              {user.subscriptionStatus === "active" ? (
+                "You're enjoying all premium benefits including unlimited symptom analyses and complete health tracking."
+              ) : user.subscriptionStatus === "incomplete" ? (
+                "Your subscription payment is being processed. Premium features will be available once completed."
+              ) : user.subscriptionStatus === "past_due" ? (
+                "Your subscription payment has failed. Please update your payment method to continue using premium features."
+              ) : user.subscriptionStatus === "canceled" ? (
+                "Your subscription is canceled. You'll have access until the end of your billing period."
+              ) : (
+                "You've subscribed to premium. Enjoy unlimited symptom analyses and complete health tracking."
+              )}
             </p>
             
             {/* Status badge - only show this simple indicator */}
@@ -364,7 +379,8 @@ export default function PremiumCard() {
               <span className={`w-2 h-2 rounded-full mr-2 ${
                 user.subscriptionStatus === "active" ? "bg-green-500" : 
                 user.subscriptionStatus === "canceled" ? "bg-orange-500" : 
-                user.subscriptionStatus === "incomplete" || user.subscriptionStatus === "past_due" ? "bg-red-500" :
+                user.subscriptionStatus === "incomplete" ? "bg-amber-500" :
+                user.subscriptionStatus === "past_due" ? "bg-red-500" :
                 "bg-gray-500"
               }`}></span>
               <span className={`text-xs font-medium ${
