@@ -10,6 +10,7 @@ import {
   useElements,
   PaymentElement
 } from "@stripe/react-stripe-js";
+import SubscriptionManager from "./subscription-manager";
 
 // Initialize Stripe
 if (!import.meta.env.VITE_STRIPE_PUBLIC_KEY) {
@@ -245,32 +246,55 @@ function StripePaymentOptions() {
   );
 }
 
+
+
 // Main premium card component
 export default function PremiumCard() {
   const { user, refreshSubscriptionStatus } = useAuth();
   const [isUpgrading, setIsUpgrading] = useState(false);
   const { toast } = useToast();
   
-  // If user already has premium, show different UI
+  // If user already has premium, show subscription management UI
   if (user?.isPremium) {
     return (
-      <div className="bg-gradient-to-br from-primary-50 to-primary-100 rounded-lg shadow-md overflow-hidden border border-primary-200">
-        <div className="p-6">
-          <div className="flex items-center mb-4">
-            <Shield className="h-6 w-6 text-primary-600 mr-2" />
-            <h3 className="text-lg font-semibold text-gray-900">Premium Member</h3>
+      <div className="space-y-5">
+        <div className="bg-gradient-to-br from-primary-50 to-primary-100 rounded-lg shadow-md overflow-hidden border border-primary-200">
+          <div className="p-6">
+            <div className="flex items-center mb-4">
+              <Shield className="h-6 w-6 text-primary-600 mr-2" />
+              <h3 className="text-lg font-semibold text-gray-900">Premium Member</h3>
+            </div>
+            
+            <p className="text-sm text-gray-700 mb-4">
+              You're enjoying all premium benefits including unlimited symptom analyses and complete health tracking.
+            </p>
+            
+            <div className="flex flex-wrap gap-4 mt-2">
+              <div className="bg-white px-3 py-2 rounded-md shadow-sm border border-gray-200 text-sm">
+                <span className="text-gray-500">Status:</span>{" "}
+                <span className="font-medium text-green-600">
+                  {user.subscriptionStatus === "active" ? "Active" : user.subscriptionStatus}
+                </span>
+              </div>
+              
+              {user.subscriptionEndDate && (
+                <div className="bg-white px-3 py-2 rounded-md shadow-sm border border-gray-200 text-sm">
+                  <span className="text-gray-500">
+                    {user.subscriptionStatus === "canceled" ? "Access until:" : "Next billing:"}
+                  </span>{" "}
+                  <span className="font-medium">
+                    {new Date(user.subscriptionEndDate).toLocaleDateString()}
+                  </span>
+                </div>
+              )}
+            </div>
           </div>
-          
-          <p className="text-sm text-gray-700 mb-4">
-            You're enjoying all premium benefits including unlimited symptom analyses and complete health tracking.
-          </p>
-          
-          <div className="text-sm text-gray-600">
-            <p>Subscription status: <span className="font-medium text-primary-700">Active</span></p>
-            {user.subscriptionEndDate && (
-              <p>Next billing date: {new Date(user.subscriptionEndDate).toLocaleDateString()}</p>
-            )}
-          </div>
+        </div>
+        
+        {/* Subscription management section */}
+        <div className="mt-6">
+          <h3 className="text-lg font-semibold text-gray-900 mb-4">Manage Your Subscription</h3>
+          <SubscriptionManager user={user} refreshSubscriptionStatus={refreshSubscriptionStatus} />
         </div>
       </div>
     );

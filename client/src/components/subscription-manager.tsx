@@ -1,0 +1,215 @@
+import { useState } from "react";
+import { User } from "@shared/schema";
+import { apiRequest } from "@/lib/queryClient";
+import { useToast } from "@/hooks/use-toast";
+import { 
+  CreditCard, 
+  Calendar, 
+  CheckCircle2, 
+  XCircle, 
+  Loader, 
+  RefreshCw, 
+  AlertCircle
+} from "lucide-react";
+
+interface SubscriptionManagerProps {
+  user: User;
+  refreshSubscriptionStatus: () => Promise<void>;
+}
+
+export default function SubscriptionManager({ user, refreshSubscriptionStatus }: SubscriptionManagerProps) {
+  const [isLoading, setIsLoading] = useState(false);
+  const [isCanceling, setIsCanceling] = useState(false);
+  const { toast } = useToast();
+  
+  // Format subscription end date
+  const formattedEndDate = user.subscriptionEndDate 
+    ? new Date(user.subscriptionEndDate).toLocaleDateString(undefined, {
+        year: 'numeric',
+        month: 'long',
+        day: 'numeric'
+      })
+    : 'Not available';
+  
+  // Format subscription start date - using account creation date as a fallback
+  const formattedStartDate = user.createdAt
+    ? new Date(user.createdAt).toLocaleDateString(undefined, {
+        year: 'numeric',
+        month: 'long',
+        day: 'numeric'
+      })
+    : 'Not available';
+    
+  // Calculate days until renewal
+  const daysUntilRenewal = user.subscriptionEndDate 
+    ? Math.max(0, Math.ceil((new Date(user.subscriptionEndDate).getTime() - new Date().getTime()) / (1000 * 60 * 60 * 24)))
+    : 0;
+    
+  // Handle cancellation of subscription
+  const handleCancelSubscription = async () => {
+    if (!confirm("Are you sure you want to cancel your subscription? You'll still have access until the end of your billing period.")) {
+      return;
+    }
+    
+    setIsCanceling(true);
+    
+    try {
+      const response = await apiRequest("POST", "/api/cancel-subscription");
+      
+      if (response.ok) {
+        await refreshSubscriptionStatus();
+        toast({
+          title: "Subscription Canceled",
+          description: "Your subscription has been canceled. You'll have access until the end of your billing period.",
+          variant: "default",
+        });
+      } else {
+        const errorData = await response.json();
+        throw new Error(errorData.message || "Failed to cancel subscription");
+      }
+    } catch (error) {
+      toast({
+        title: "Error",
+        description: error instanceof Error ? error.message : "An error occurred while canceling your subscription",
+        variant: "destructive",
+      });
+    } finally {
+      setIsCanceling(false);
+    }
+  };
+  
+  // Handle updating payment method
+  const handleUpdatePaymentMethod = async () => {
+    setIsLoading(true);
+    try {
+      // This would redirect to a Stripe Customer Portal in a production app
+      toast({
+        title: "Feature Coming Soon",
+        description: "Updating payment methods will be available soon.",
+        variant: "default",
+      });
+    } catch (error) {
+      toast({
+        title: "Error",
+        description: "Unable to update payment method at this time",
+        variant: "destructive",
+      });
+    } finally {
+      setIsLoading(false);
+    }
+  };
+  
+  return (
+    <div className="space-y-6">
+      <div className="bg-white rounded-lg shadow-sm border border-gray-200 overflow-hidden">
+        <div className="p-6">
+          <h3 className="text-lg font-semibold text-gray-900 flex items-center">
+            <CreditCard className="w-5 h-5 mr-2 text-primary-600" />
+            Subscription Details
+          </h3>
+          
+          <div className="mt-4 space-y-4">
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <div className="bg-gray-50 p-4 rounded-md">
+                <div className="text-sm text-gray-500">Status</div>
+                <div className="font-medium flex items-center mt-1">
+                  {user.subscriptionStatus === "active" ? (
+                    <>
+                      <CheckCircle2 className="h-4 w-4 text-green-500 mr-1" />
+                      <span className="text-green-700">Active</span>
+                    </>
+                  ) : user.subscriptionStatus === "canceled" ? (
+                    <>
+                      <XCircle className="h-4 w-4 text-orange-500 mr-1" />
+                      <span className="text-orange-700">Canceled</span>
+                    </>
+                  ) : (
+                    <>
+                      <AlertCircle className="h-4 w-4 text-gray-500 mr-1" />
+                      <span>{user.subscriptionStatus || "Unknown"}</span>
+                    </>
+                  )}
+                </div>
+              </div>
+              
+              <div className="bg-gray-50 p-4 rounded-md">
+                <div className="text-sm text-gray-500">Plan</div>
+                <div className="font-medium mt-1">Premium Monthly</div>
+              </div>
+              
+              <div className="bg-gray-50 p-4 rounded-md">
+                <div className="text-sm text-gray-500">Start Date</div>
+                <div className="font-medium mt-1">{formattedStartDate}</div>
+              </div>
+              
+              <div className="bg-gray-50 p-4 rounded-md">
+                <div className="text-sm text-gray-500">
+                  {user.subscriptionStatus === "canceled" ? "Access Until" : "Next Billing Date"}
+                </div>
+                <div className="font-medium mt-1 flex items-center">
+                  <Calendar className="h-4 w-4 mr-1 text-gray-500" />
+                  {formattedEndDate}
+                  {daysUntilRenewal > 0 && user.subscriptionStatus === "active" && (
+                    <span className="ml-2 text-xs bg-blue-100 text-blue-800 py-0.5 px-2 rounded-full">
+                      {daysUntilRenewal} days
+                    </span>
+                  )}
+                </div>
+              </div>
+            </div>
+            
+            <div className="pt-4 border-t border-gray-200">
+              <div className="flex flex-col sm:flex-row gap-2">
+                <button
+                  onClick={handleUpdatePaymentMethod}
+                  disabled={isLoading}
+                  className="inline-flex items-center justify-center px-4 py-2 border border-gray-300 text-sm font-medium rounded-md text-gray-700 bg-white hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-primary-500"
+                >
+                  {isLoading ? (
+                    <Loader className="animate-spin h-4 w-4 mr-2" />
+                  ) : (
+                    <CreditCard className="h-4 w-4 mr-2" />
+                  )}
+                  Update Payment Method
+                </button>
+                
+                {user.subscriptionStatus === "active" && (
+                  <button
+                    onClick={handleCancelSubscription}
+                    disabled={isCanceling}
+                    className="inline-flex items-center justify-center px-4 py-2 border border-gray-300 text-sm font-medium rounded-md text-red-700 bg-white hover:bg-red-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-red-500"
+                  >
+                    {isCanceling ? (
+                      <Loader className="animate-spin h-4 w-4 mr-2" />
+                    ) : (
+                      <XCircle className="h-4 w-4 mr-2" />
+                    )}
+                    Cancel Subscription
+                  </button>
+                )}
+                
+                {user.subscriptionStatus === "canceled" && (
+                  <button
+                    onClick={refreshSubscriptionStatus}
+                    disabled={isLoading}
+                    className="inline-flex items-center justify-center px-4 py-2 border border-gray-300 text-sm font-medium rounded-md text-blue-700 bg-white hover:bg-blue-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500"
+                  >
+                    <RefreshCw className="h-4 w-4 mr-2" />
+                    Reactivate Subscription
+                  </button>
+                )}
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+      
+      <div className="bg-blue-50 p-4 rounded-md border border-blue-200">
+        <h4 className="text-sm font-medium text-blue-800">Need Help?</h4>
+        <p className="mt-1 text-sm text-blue-700">
+          If you have any questions about your subscription, please email our support team at support@symptomcheckapp.com
+        </p>
+      </div>
+    </div>
+  );
+}
