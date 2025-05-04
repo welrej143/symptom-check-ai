@@ -841,7 +841,31 @@ export async function registerRoutes(app: Express): Promise<Server> {
             const realSubscriptionId = subscription.id;
             
             // Calculate end date based on the subscription
-            const endDate = new Date((subscription as any).current_period_end * 1000);
+            let endDate;
+            try {
+              if ((subscription as any).current_period_end) {
+                // Ensure it's a valid timestamp and create a Date
+                const timestamp = Number((subscription as any).current_period_end) * 1000;
+                if (!isNaN(timestamp) && timestamp > 0) {
+                  endDate = new Date(timestamp);
+                  // Validate the date
+                  if (isNaN(endDate.getTime())) {
+                    throw new Error('Invalid date created from timestamp');
+                  }
+                  console.log(`End date from Stripe: ${endDate.toISOString()}`);
+                } else {
+                  throw new Error('Invalid or missing timestamp');
+                }
+              } else {
+                throw new Error('No current_period_end provided');
+              }
+            } catch (dateError) {
+              console.error('Error creating subscription end date:', dateError);
+              // Set a default end date (1 month from now) if we can't get it from Stripe
+              endDate = new Date();
+              endDate.setMonth(endDate.getMonth() + 1);
+              console.log(`Using default end date: ${endDate.toISOString()}`);
+            }
             
             // Use the actual status from Stripe instead of assuming 'active'
             const actualStatus = subscription.status;
@@ -888,8 +912,27 @@ export async function registerRoutes(app: Express): Promise<Server> {
             const subscription = await stripe.subscriptions.retrieve(subscriptionId);
             
             // Update end date based on the subscription
-            if ((subscription as any).current_period_end) {
-              endDate = new Date((subscription as any).current_period_end * 1000);
+            try {
+              if ((subscription as any).current_period_end) {
+                // Ensure it's a valid timestamp and create a Date
+                const timestamp = Number((subscription as any).current_period_end) * 1000;
+                if (!isNaN(timestamp) && timestamp > 0) {
+                  endDate = new Date(timestamp);
+                  // Validate the date
+                  if (isNaN(endDate.getTime())) {
+                    throw new Error('Invalid date created from timestamp');
+                  }
+                  console.log(`End date from Stripe: ${endDate.toISOString()}`);
+                } else {
+                  throw new Error('Invalid or missing timestamp');
+                }
+              } else {
+                throw new Error('No current_period_end provided');
+              }
+            } catch (dateError) {
+              console.error('Error creating subscription end date:', dateError);
+              // Keep using the default end date we already set
+              console.log(`Using default end date: ${endDate.toISOString()}`);
             }
             
             // Use the exact status from Stripe
