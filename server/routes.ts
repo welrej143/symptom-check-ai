@@ -1347,8 +1347,12 @@ export async function registerRoutes(app: Express): Promise<Server> {
           // Continue with default plan name
         }
         
-        // Update subscription status with plan name
-        await storage.updateSubscriptionStatus(user.id, 'active', endDate, planName);
+        // Use the actual status from Stripe
+        const status = subscription.status;
+        console.log(`New subscription status from Stripe: ${status}`);
+        
+        // Update subscription status with plan name and actual status
+        await storage.updateSubscriptionStatus(user.id, status, endDate, planName);
         
         // Save subscription details
         await storage.updateUserStripeInfo(user.id, {
@@ -1356,7 +1360,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
           stripeSubscriptionId: subscription.id,
         });
         
-        console.log(`Successfully created subscription for user ${user.id} with plan: ${planName}`);
+        console.log(`Successfully created subscription for user ${user.id} with status: ${status}, plan: ${planName}`);
       }
     } catch (error: any) {
       console.error(`Error handling subscription created: ${error.message}`);
@@ -1376,17 +1380,23 @@ export async function registerRoutes(app: Express): Promise<Server> {
         // Calculate subscription end date from current_period_end (comes in seconds)
         const endDate = new Date(subscription.current_period_end * 1000);
         
-        // Set appropriate status based on subscription status
-        let status = 'active';
-        if (subscription.cancel_at_period_end) {
-          status = 'canceled';
-        } else if (subscription.status === 'past_due') {
-          status = 'past_due';
-        } else if (subscription.status === 'unpaid') {
-          status = 'unpaid';
-        } else if (subscription.status === 'canceled') {
+        // Use the exact subscription status from Stripe
+        let status = subscription.status;
+        console.log(`Raw Stripe subscription status: ${status}`);
+        
+        // Handle cancel_at_period_end flag (subscription is technically still active but will be canceled)
+        if (subscription.cancel_at_period_end && status === 'active') {
           status = 'canceled';
         }
+        
+        // Log status information for debugging
+        console.log(`Using subscription status: ${status}`);
+        console.log(`Subscription details: 
+          - Status: ${subscription.status}
+          - Cancel at period end: ${subscription.cancel_at_period_end}
+          - Current period end: ${new Date(subscription.current_period_end * 1000)}
+          - Collection method: ${subscription.collection_method}
+        `);
         
         // Get the plan name from the first subscription item
         let planName = "Premium Monthly"; // Default fallback
@@ -1489,10 +1499,14 @@ export async function registerRoutes(app: Express): Promise<Server> {
           // Continue with default plan name
         }
         
-        // Update subscription status with plan name
-        await storage.updateSubscriptionStatus(user.id, 'active', endDate, planName);
+        // Use the actual status from Stripe
+        const status = subscription.status;
+        console.log(`Subscription status after payment: ${status}`);
         
-        console.log(`Successfully processed invoice payment for user ${user.id}, plan: ${planName}`);
+        // Update subscription status with plan name
+        await storage.updateSubscriptionStatus(user.id, status, endDate, planName);
+        
+        console.log(`Successfully processed invoice payment for user ${user.id}, status: ${status}, plan: ${planName}`);
       }
     } catch (error: any) {
       console.error(`Error handling invoice payment succeeded: ${error.message}`);
@@ -1537,10 +1551,14 @@ export async function registerRoutes(app: Express): Promise<Server> {
             // Continue with existing plan name or default
           }
           
-          // Mark as past_due
-          await storage.updateSubscriptionStatus(user.id, 'past_due', endDate, planName);
+          // Use the actual status from Stripe
+          const status = subscription.status;
+          console.log(`Subscription status after payment failure: ${status}`);
           
-          console.log(`Invoice payment failed for user ${user.id}, subscription will end at: ${endDate.toISOString()}`);
+          // Update subscription status with Stripe status (typically 'past_due' or 'unpaid')
+          await storage.updateSubscriptionStatus(user.id, status, endDate, planName);
+          
+          console.log(`Invoice payment failed for user ${user.id}, status: ${status}, subscription will end at: ${endDate.toISOString()}`);
         } catch (subError) {
           console.error("Error retrieving subscription for failed payment:", subError);
           // Don't update if we can't get accurate data from Stripe
