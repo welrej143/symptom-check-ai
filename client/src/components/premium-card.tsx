@@ -361,25 +361,33 @@ export default function PremiumCard() {
             
             <div className="flex flex-wrap gap-4 mt-2">
               <div className="bg-white px-3 py-2 rounded-md shadow-sm border border-gray-200 text-sm">
-                <span className="text-gray-500">Status:</span>{" "}
-                <span className={`font-medium ${
-                  user.subscriptionStatus === "active" ? "text-green-600" : 
-                  user.subscriptionStatus === "canceled" ? "text-orange-600" : 
-                  user.subscriptionStatus === "error" ? "text-red-600" : "text-blue-600"
-                }`}>
-                  {user.subscriptionStatus === "active" ? "Active" : 
-                   user.subscriptionStatus === "canceled" ? "Canceled" :
-                   user.subscriptionStatus === "error" ? "Error" : 
-                   user.subscriptionStatus || "Unknown"}
-                </span>
+                <div className="flex items-center space-x-1">
+                  <span className="text-gray-500">Status:</span>
+                  <span className={`font-medium ${
+                    user.subscriptionStatus === "active" ? "text-green-600" : 
+                    user.subscriptionStatus === "canceled" ? "text-orange-600" : 
+                    user.subscriptionStatus === "incomplete" ? "text-amber-600" :
+                    user.subscriptionStatus === "past_due" ? "text-red-600" :
+                    user.subscriptionStatus === "error" ? "text-red-600" : "text-blue-600"
+                  }`}>
+                    {user.subscriptionStatus === "active" ? "Active" : 
+                    user.subscriptionStatus === "canceled" ? "Canceled" :
+                    user.subscriptionStatus === "incomplete" ? "Incomplete" :
+                    user.subscriptionStatus === "past_due" ? "Past Due" :
+                    user.subscriptionStatus === "error" ? "Error" : 
+                    user.subscriptionStatus || "Unknown"}
+                  </span>
+                </div>
               </div>
               
               {user.planName && (
                 <div className="bg-white px-3 py-2 rounded-md shadow-sm border border-gray-200 text-sm">
-                  <span className="text-gray-500">Plan:</span>{" "}
-                  <span className="font-medium text-gray-800">
-                    {user.planName}
-                  </span>
+                  <div className="flex items-center space-x-1">
+                    <span className="text-gray-500">Plan:</span>
+                    <span className="font-medium text-gray-800">
+                      {user.planName}
+                    </span>
+                  </div>
                 </div>
               )}
               
@@ -399,8 +407,8 @@ export default function PremiumCard() {
                     })}
                   </div>
                   {user.subscriptionStatus === "active" && (
-                    <div className="absolute -top-1 -right-1">
-                      <span className="text-xs font-medium bg-blue-100 text-blue-800 py-1 px-2 rounded-full">
+                    <div className="absolute top-2 right-2">
+                      <span className="text-xs font-medium bg-blue-100 text-blue-800 py-1 px-2 rounded-full whitespace-nowrap">
                         {Math.max(0, Math.ceil((new Date(user.subscriptionEndDate).getTime() - new Date().getTime()) / (1000 * 60 * 60 * 24)))} days
                       </span>
                     </div>
