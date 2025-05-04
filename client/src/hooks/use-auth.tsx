@@ -158,15 +158,36 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     
     try {
       const res = await apiRequest("GET", "/api/subscription");
-      const subscriptionData = await res.json();
       
-      // Update user with subscription data
-      queryClient.setQueryData(["/api/user"], {
-        ...user,
-        isPremium: subscriptionData.isPremium,
-        subscriptionStatus: subscriptionData.subscriptionStatus,
-        subscriptionEndDate: subscriptionData.subscriptionEndDate,
-      });
+      if (res.ok) {
+        const subscriptionData = await res.json();
+        
+        // Update user with subscription data
+        queryClient.setQueryData(["/api/user"], {
+          ...user,
+          isPremium: subscriptionData.isPremium,
+          subscriptionStatus: subscriptionData.subscriptionStatus,
+          subscriptionEndDate: subscriptionData.subscriptionEndDate,
+          planName: subscriptionData.planName,
+        });
+      } else {
+        // Handle 404 or other error status
+        if (res.status === 404) {
+          // Subscription not found in Stripe
+          console.warn("No active subscription found in Stripe");
+          
+          // Only update if there's a mismatch (user thinks they're premium but they're not)
+          if (user.isPremium) {
+            queryClient.setQueryData(["/api/user"], {
+              ...user,
+              isPremium: false,
+              subscriptionStatus: 'inactive',
+            });
+          }
+        } else {
+          console.error("Error fetching subscription:", res.status);
+        }
+      }
     } catch (error) {
       console.error("Failed to refresh subscription status:", error);
     }

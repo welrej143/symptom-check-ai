@@ -57,20 +57,34 @@ export default function SubscriptionManager({ user, refreshSubscriptionStatus }:
       const response = await apiRequest("POST", "/api/cancel-subscription");
       
       if (response.ok) {
+        const data = await response.json();
         await refreshSubscriptionStatus();
         toast({
           title: "Subscription Canceled",
-          description: "Your subscription has been canceled. You'll have access until the end of your billing period.",
+          description: data.message || "Your subscription has been canceled. You'll have access until the end of your billing period.",
           variant: "default",
         });
       } else {
-        const errorData = await response.json();
-        throw new Error(errorData.message || "Failed to cancel subscription");
+        // Parse error response
+        let errorMessage = "Failed to cancel subscription";
+        try {
+          const errorData = await response.json();
+          errorMessage = errorData.message || errorData.error || errorMessage;
+        } catch (parseError) {
+          console.error("Error parsing response:", parseError);
+        }
+        
+        toast({
+          title: "Error",
+          description: errorMessage,
+          variant: "destructive",
+        });
       }
     } catch (error) {
+      // Network or other unexpected errors
       toast({
-        title: "Error",
-        description: error instanceof Error ? error.message : "An error occurred while canceling your subscription",
+        title: "Connection Error",
+        description: "Could not connect to subscription service. Please check your internet connection and try again.",
         variant: "destructive",
       });
     } finally {
@@ -198,20 +212,34 @@ export default function SubscriptionManager({ user, refreshSubscriptionStatus }:
                         const response = await apiRequest("POST", "/api/reactivate-subscription");
                         
                         if (response.ok) {
+                          const data = await response.json();
                           await refreshSubscriptionStatus();
                           toast({
                             title: "Subscription Reactivated",
-                            description: "Your subscription has been successfully reactivated.",
+                            description: data.message || "Your subscription has been successfully reactivated.",
                             variant: "default",
                           });
                         } else {
-                          const errorData = await response.json();
-                          throw new Error(errorData.message || "Failed to reactivate subscription");
+                          // Parse error response
+                          let errorMessage = "Failed to reactivate subscription";
+                          try {
+                            const errorData = await response.json();
+                            errorMessage = errorData.message || errorData.error || errorMessage;
+                          } catch (parseError) {
+                            console.error("Error parsing response:", parseError);
+                          }
+                          
+                          toast({
+                            title: "Error",
+                            description: errorMessage,
+                            variant: "destructive",
+                          });
                         }
                       } catch (error) {
+                        // Network or other unexpected errors
                         toast({
-                          title: "Error",
-                          description: error instanceof Error ? error.message : "An error occurred while reactivating your subscription",
+                          title: "Connection Error",
+                          description: "Could not connect to subscription service. Please check your internet connection and try again.",
                           variant: "destructive",
                         });
                       } finally {
