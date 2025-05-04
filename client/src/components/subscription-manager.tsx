@@ -5,6 +5,7 @@ import { useToast } from "@/hooks/use-toast";
 import { 
   CreditCard, 
   Calendar, 
+  CalendarClock,
   CheckCircle2, 
   XCircle, 
   Loader, 
@@ -125,8 +126,11 @@ export default function SubscriptionManager({ user, refreshSubscriptionStatus }:
           <div className="mt-4 space-y-4">
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               <div className="bg-gray-50 p-4 rounded-md">
-                <div className="text-sm text-gray-500">Status</div>
-                <div className="font-medium flex items-center mt-1">
+                <div className="flex items-center mb-1">
+                  <AlertCircle className="h-4 w-4 mr-1.5 text-gray-500 flex-shrink-0" />
+                  <div className="text-sm text-gray-500">Status</div>
+                </div>
+                <div className="font-medium flex items-center">
                   {user.subscriptionStatus === "active" ? (
                     <>
                       <CheckCircle2 className="h-4 w-4 text-green-500 mr-1" />
@@ -157,25 +161,31 @@ export default function SubscriptionManager({ user, refreshSubscriptionStatus }:
               </div>
               
               <div className="bg-gray-50 p-4 rounded-md">
-                <div className="text-sm text-gray-500">Plan</div>
-                <div className="font-medium mt-1">
+                <div className="flex items-center mb-1">
+                  <CreditCard className="h-4 w-4 mr-1.5 text-gray-500 flex-shrink-0" />
+                  <div className="text-sm text-gray-500">Plan</div>
+                </div>
+                <div className="font-medium">
                   {user.planName || "Premium Monthly"}
                 </div>
               </div>
               
               <div className="bg-gray-50 p-4 rounded-md">
-                <div className="text-sm text-gray-500">Start Date</div>
-                <div className="font-medium mt-1">{formattedStartDate}</div>
+                <div className="flex items-center mb-1">
+                  <CalendarClock className="h-4 w-4 mr-1.5 text-gray-500 flex-shrink-0" />
+                  <div className="text-sm text-gray-500">Start Date</div>
+                </div>
+                <div className="font-medium">{formattedStartDate}</div>
               </div>
               
               <div className="bg-gray-50 p-4 rounded-md relative">
-                <div className="flex items-center">
-                  <Calendar className="h-4 w-4 mr-1.5 text-gray-500" />
+                <div className="flex items-center mb-1">
+                  <Calendar className="h-4 w-4 mr-1.5 text-gray-500 flex-shrink-0" />
                   <div className="text-sm text-gray-500">
                     {user.subscriptionStatus === "canceled" ? "Access Until" : "Next Billing Date"}
                   </div>
                 </div>
-                <div className="font-medium mt-1.5">
+                <div className="font-medium pr-16">
                   {new Date(user.subscriptionEndDate || new Date()).toLocaleDateString(undefined, {
                     year: 'numeric',
                     month: 'short',
@@ -183,8 +193,8 @@ export default function SubscriptionManager({ user, refreshSubscriptionStatus }:
                   })}
                 </div>
                 {daysUntilRenewal > 0 && user.subscriptionStatus === "active" && (
-                  <div className="absolute top-3 right-3">
-                    <span className="text-xs font-medium bg-blue-100 text-blue-800 py-1 px-2 rounded-full whitespace-nowrap">
+                  <div className="absolute top-1/2 right-3 -translate-y-1/2">
+                    <span className="text-xs font-medium bg-blue-100 text-blue-800 py-1 px-2 rounded-full inline-block">
                       {daysUntilRenewal} days
                     </span>
                   </div>

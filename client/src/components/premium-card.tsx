@@ -393,13 +393,13 @@ export default function PremiumCard() {
               
               {user.subscriptionEndDate ? (
                 <div className="bg-white px-3 py-2 rounded-md shadow-sm border border-gray-200 text-sm relative">
-                  <div className="flex items-center">
-                    <Calendar className="h-4 w-4 mr-1.5 text-gray-500" />
-                    <span className="text-gray-500">
+                  <div className="flex items-center mb-1">
+                    <Calendar className="h-4 w-4 mr-1.5 text-gray-500 flex-shrink-0" />
+                    <div className="text-gray-500">
                       {user.subscriptionStatus === "canceled" ? "Access until:" : "Next billing:"}
-                    </span>
+                    </div>
                   </div>
-                  <div className="font-medium mt-1">
+                  <div className="font-medium pr-16">
                     {new Date(user.subscriptionEndDate).toLocaleDateString(undefined, {
                       year: 'numeric',
                       month: 'short',
@@ -407,8 +407,8 @@ export default function PremiumCard() {
                     })}
                   </div>
                   {user.subscriptionStatus === "active" && (
-                    <div className="absolute top-2 right-2">
-                      <span className="text-xs font-medium bg-blue-100 text-blue-800 py-1 px-2 rounded-full whitespace-nowrap">
+                    <div className="absolute top-1/2 right-2 -translate-y-1/2">
+                      <span className="text-xs font-medium bg-blue-100 text-blue-800 py-1 px-2 rounded-full inline-block">
                         {Math.max(0, Math.ceil((new Date(user.subscriptionEndDate).getTime() - new Date().getTime()) / (1000 * 60 * 60 * 24)))} days
                       </span>
                     </div>
@@ -416,11 +416,11 @@ export default function PremiumCard() {
                 </div>
               ) : (
                 <div className="bg-white px-3 py-2 rounded-md shadow-sm border border-gray-200 text-sm">
-                  <div className="flex items-center">
-                    <Calendar className="h-4 w-4 mr-1.5 text-gray-500" />
-                    <span className="text-gray-500">Billing date:</span>
+                  <div className="flex items-center mb-1">
+                    <Calendar className="h-4 w-4 mr-1.5 text-gray-500 flex-shrink-0" />
+                    <div className="text-gray-500">Billing date:</div>
                   </div>
-                  <div className="font-medium mt-1 text-gray-600">
+                  <div className="font-medium text-gray-600">
                     Not available
                   </div>
                 </div>
