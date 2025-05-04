@@ -473,16 +473,33 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // Update premium status (after payment)
   app.post("/api/update-premium-status", async (req: Request, res: Response) => {
     try {
+      console.log("*** PAYMENT UPDATE REQUEST RECEIVED ***");
+      console.log("Request body:", JSON.stringify(req.body, null, 2));
+      
       if (!req.isAuthenticated()) {
+        console.log("User not authenticated");
         return res.status(401).json({ message: "Authentication required" });
       }
 
       const user = req.user;
+      console.log("User:", JSON.stringify({
+        id: user.id,
+        username: user.username,
+        email: user.email,
+        isPremium: user.isPremium,
+        stripeCustomerId: user.stripeCustomerId,
+        stripeSubscriptionId: user.stripeSubscriptionId,
+        subscriptionStatus: user.subscriptionStatus
+      }, null, 2));
+      
       const { paymentIntentId, subscriptionId } = req.body;
       
       if (!paymentIntentId) {
+        console.log("No payment intent ID provided");
         return res.status(400).json({ message: "Payment intent ID is required" });
       }
+      
+      console.log(`Processing payment update: paymentIntentId=${paymentIntentId}, subscriptionId=${subscriptionId || 'none'}`);
       
       // Ensure the STRIPE_PRICE_ID is available
       const stripePriceId = process.env.STRIPE_PRICE_ID;
@@ -493,6 +510,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
           errorType: "configuration"
         });
       }
+      
+      console.log("Using Stripe price ID:", stripePriceId);
       
       // Check if it's a simulated payment for testing
       if (paymentIntentId.startsWith("pi_simulated_")) {
