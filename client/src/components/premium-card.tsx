@@ -157,9 +157,9 @@ function StripePaymentOptions() {
         if (data.clientSecret) {
           setClientSecret(data.clientSecret);
           
-          // Store the subscription ID if it's returned
-          if (data.subscriptionId) {
-            setSubscriptionId(data.subscriptionId);
+          // Store the payment intent ID if it's returned
+          if (data.paymentIntentId) {
+            setSubscriptionId(data.paymentIntentId);
           }
         } else {
           throw new Error("No client secret returned");

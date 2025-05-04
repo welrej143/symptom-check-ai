@@ -640,7 +640,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // Helper functions for webhook event handling
   async function handlePaymentIntentSucceeded(paymentIntent: any) {
     // Check if this is a subscription payment
-    if (paymentIntent.metadata && paymentIntent.metadata.isSubscription === 'true') {
+    if (paymentIntent.metadata && paymentIntent.metadata.isSubscriptionPayment === 'true') {
       const userId = parseInt(paymentIntent.metadata.userId);
       
       if (userId) {
