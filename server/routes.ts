@@ -630,15 +630,11 @@ export async function registerRoutes(app: Express): Promise<Server> {
         }
       }
       
-      // Return basic subscription details from the user object (fallback)
-      console.log("Using fallback subscription data from database");
-      res.json({
-        isPremium: user.isPremium || false,
-        subscriptionStatus: user.subscriptionStatus || 'inactive',
-        subscriptionEndDate: user.subscriptionEndDate || undefined,
-        planName: user.planName || "Premium Monthly",
-        subscriptionId: user.stripeSubscriptionId || null,
-        directFromStripe: false
+      // If we reach here, we couldn't get fresh data from Stripe
+      console.log("Could not retrieve fresh subscription data from Stripe");
+      res.status(404).json({
+        error: "No active subscription found",
+        message: "Unable to retrieve subscription details from Stripe. Please contact support if you believe this is an error."
       });
     } catch (error) {
       console.error("Error checking subscription:", error);
@@ -921,37 +917,45 @@ export async function registerRoutes(app: Express): Promise<Server> {
           const subscription = await stripe.subscriptions.retrieve(user.stripeSubscriptionId);
           const endDate = new Date((subscription as any).current_period_end * 1000);
           
+          // Get plan name from the subscription if possible
+          let planName = "Premium"; // Will be updated if we can get it from Stripe
+          
+          try {
+            if (subscription.items.data && subscription.items.data.length > 0) {
+              const item = subscription.items.data[0];
+              if (item.price && item.price.product) {
+                const product = await stripe.products.retrieve(item.price.product as string);
+                if (product && product.name) {
+                  planName = product.name;
+                }
+              }
+            }
+          } catch (productError) {
+            console.error("Error getting plan name:", productError);
+            // Continue with existing plan name
+          }
+          
           // Mark the subscription as canceled but keep the end date from Stripe
           await storage.updateSubscriptionStatus(
             user.id,
             'canceled',
-            endDate
+            endDate,
+            planName
           );
         } catch (error) {
-          console.log("Error updating subscription, using fallback approach:", error);
-          // Fall back to manual status update
-          const fallbackDate = user.subscriptionEndDate 
-            ? new Date(user.subscriptionEndDate) 
-            : new Date(Date.now() + 30 * 24 * 60 * 60 * 1000);
-          await storage.updateSubscriptionStatus(user.id, 'canceled', fallbackDate);
+          console.error("Error cancelling subscription with Stripe:", error);
+          return res.status(500).json({ 
+            error: "Failed to cancel subscription", 
+            message: "There was an error cancelling your subscription with Stripe. Please try again or contact support."
+          });
         }
       } else {
-        // Fallback if we don't have a subscription ID
-        // If there's no end date, set one month from now
-        const endDate = user.subscriptionEndDate || new Date(Date.now() + 30 * 24 * 60 * 60 * 1000);
-        
-        await storage.updateSubscriptionStatus(
-          user.id,
-          'canceled',
-          endDate
-        );
+        // No valid subscription ID to cancel
+        return res.status(404).json({ 
+          error: "No valid subscription found", 
+          message: "We couldn't find a valid subscription to cancel. Please contact support if you believe this is an error."
+        });
       }
-      
-      res.json({ 
-        message: "Subscription canceled successfully. You'll have access until the end of your billing period.",
-        subscriptionStatus: 'canceled',
-        subscriptionEndDate: user.subscriptionEndDate,
-      });
     } catch (error) {
       console.error("Error canceling subscription:", error);
       res.status(500).json({ message: "Error canceling subscription" });
@@ -984,36 +988,53 @@ export async function registerRoutes(app: Express): Promise<Server> {
           const subscription = await stripe.subscriptions.retrieve(user.stripeSubscriptionId);
           const endDate = new Date((subscription as any).current_period_end * 1000);
           
+          // Get plan name from the subscription if possible
+          let planName = "Premium"; // Will be updated if we can get it from Stripe
+          
+          try {
+            if (subscription.items.data && subscription.items.data.length > 0) {
+              const item = subscription.items.data[0];
+              if (item.price && item.price.product) {
+                const product = await stripe.products.retrieve(item.price.product as string);
+                if (product && product.name) {
+                  planName = product.name;
+                }
+              }
+            }
+          } catch (productError) {
+            console.error("Error getting plan name:", productError);
+            // Continue with existing plan name
+          }
+          
           // Mark the subscription as active again with the end date from Stripe
           await storage.updateSubscriptionStatus(
             user.id,
             'active',
-            endDate
+            endDate,
+            planName
           );
+          
+          return res.json({ 
+            message: "Subscription reactivated successfully.",
+            subscriptionStatus: 'active',
+            subscriptionEndDate: endDate,
+            planName: planName
+          });
         } catch (error) {
-          console.log("Error reactivating subscription, using fallback approach:", error);
-          // Fall back to manual status update
-          const endDate = user.subscriptionEndDate || new Date(Date.now() + 30 * 24 * 60 * 60 * 1000);
-          await storage.updateSubscriptionStatus(user.id, 'active', endDate);
+          console.error("Error reactivating subscription with Stripe:", error);
+          return res.status(500).json({ 
+            error: "Failed to reactivate subscription", 
+            message: "There was an error reactivating your subscription with Stripe. Please try again or contact support."
+          });
         }
       } else {
-        // Fallback if we don't have a subscription ID
-        // If there's no end date, set one month from now
-        const endDate = user.subscriptionEndDate || new Date(Date.now() + 30 * 24 * 60 * 60 * 1000);
-        
-        // Mark the subscription as active again with the same end date
-        await storage.updateSubscriptionStatus(
-          user.id,
-          'active',
-          endDate
-        );
+        // No valid subscription ID to reactivate
+        return res.status(404).json({ 
+          error: "No valid subscription found", 
+          message: "We couldn't find a valid subscription to reactivate. Please contact support if you believe this is an error."
+        });
       }
       
-      res.json({ 
-        message: "Subscription reactivated successfully.",
-        subscriptionStatus: 'active',
-        subscriptionEndDate: user.subscriptionEndDate,
-      });
     } catch (error) {
       console.error("Error reactivating subscription:", error);
       res.status(500).json({ message: "Error reactivating subscription" });
@@ -1221,25 +1242,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
               console.log(`Successfully created subscription for user ${userId}`);
               
             } catch (error) {
+              // Log error but don't use fallbacks
               console.error("Error creating subscription in Stripe:", error);
-              
-              // Fallback to using the payment intent as the "subscription"
-              console.log("Using fallback approach with payment intent ID");
-              
-              // Calculate subscription end date (1 month from now)
-              const endDate = new Date();
-              endDate.setMonth(endDate.getMonth() + 1);
-              
-              // Update subscription status with fallback date
-              await storage.updateSubscriptionStatus(userId, 'active', endDate);
-              
-              // Save subscription info with payment intent ID if we don't have anything else
-              if (!user.stripeSubscriptionId) {
-                await storage.updateUserStripeInfo(userId, {
-                  stripeCustomerId: user.stripeCustomerId || '',
-                  stripeSubscriptionId: paymentIntent.id,
-                });
-              }
+              console.log("Failed to create a subscription. Will not update user subscription status.");
             }
           } else if (user.stripeSubscriptionId.startsWith('sub_')) {
             // User already has a real subscription, just update status
@@ -1461,13 +1466,37 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const user = userResults[0];
       
       if (user && typeof user.id === 'number') {
-        // Keep the current end date
-        const endDate = user.subscriptionEndDate || new Date(); // Use current date as fallback
-        
-        // Mark as past_due
-        await storage.updateSubscriptionStatus(user.id, 'past_due', endDate);
-        
-        console.log(`Invoice payment failed for user ${user.id}`);
+        try {
+          // Get the subscription from Stripe to get accurate end date
+          const subscription = await stripe.subscriptions.retrieve(subscriptionId);
+          const endDate = new Date((subscription as any).current_period_end * 1000);
+          
+          // Get the plan name from the subscription if possible
+          let planName = "Premium Monthly"; // Will be updated if we can get it from Stripe
+          
+          try {
+            if (subscription.items.data && subscription.items.data.length > 0) {
+              const item = subscription.items.data[0];
+              if (item.price && item.price.product) {
+                const product = await stripe.products.retrieve(item.price.product as string);
+                if (product && product.name) {
+                  planName = product.name;
+                }
+              }
+            }
+          } catch (productError) {
+            console.error("Error getting plan name:", productError);
+            // Continue with existing plan name or default
+          }
+          
+          // Mark as past_due
+          await storage.updateSubscriptionStatus(user.id, 'past_due', endDate, planName);
+          
+          console.log(`Invoice payment failed for user ${user.id}, subscription will end at: ${endDate.toISOString()}`);
+        } catch (subError) {
+          console.error("Error retrieving subscription for failed payment:", subError);
+          // Don't update if we can't get accurate data from Stripe
+        }
       }
     } catch (error: any) {
       console.error(`Error handling invoice payment failed: ${error.message}`);
