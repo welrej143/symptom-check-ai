@@ -131,13 +131,19 @@ export default function SymptomTrackerForm({ onSubmit, isSubmitting }: SymptomTr
                         type="text"
                         value={newSymptom}
                         onChange={(e) => setNewSymptom(e.target.value)}
+                        onKeyDown={(e) => {
+                          if (e.key === 'Enter') {
+                            e.preventDefault();
+                            addCustomSymptom();
+                          }
+                        }}
                         className="w-full px-3 py-1.5 border border-gray-300 rounded-md focus:ring-primary-500 focus:border-primary-500"
                         placeholder="Enter symptom name"
                       />
                       <Button
                         type="button"
                         onClick={addCustomSymptom}
-                        className="ml-2 bg-primary-600 hover:bg-primary-700"
+                        className="ml-2 bg-blue-600 hover:bg-blue-700 text-white font-medium px-3 py-1.5"
                       >
                         Add
                       </Button>
@@ -153,7 +159,7 @@ export default function SymptomTrackerForm({ onSubmit, isSubmitting }: SymptomTr
                   ) : (
                     <Badge
                       variant="outline"
-                      className="inline-flex items-center px-3 py-1.5 rounded-full text-sm font-medium border border-dashed border-gray-300 text-gray-600 hover:bg-gray-50 cursor-pointer"
+                      className="inline-flex items-center px-3 py-1.5 rounded-full text-sm font-medium border border-dashed border-blue-300 text-blue-600 hover:bg-blue-50 cursor-pointer"
                       onClick={() => setShowSymptomInput(true)}
                     >
                       <Plus className="h-4 w-4 mr-1" />
