@@ -267,6 +267,42 @@ export default function SubscriptionManager({ user, refreshSubscriptionStatus }:
                     Reactivate Subscription
                   </button>
                 )}
+                
+                {(user.subscriptionStatus === "incomplete" || user.subscriptionStatus === "past_due") && (
+                  <button
+                    onClick={async () => {
+                      setIsLoading(true);
+                      try {
+                        // TODO: This is a placeholder. In a production app, redirect to a Stripe Checkout page
+                        toast({
+                          title: "Complete Payment",
+                          description: "You'll be redirected to complete your payment.",
+                          variant: "default",
+                        });
+                        
+                        // For testing purposes, we're just refreshing the status
+                        await refreshSubscriptionStatus();
+                      } catch (error) {
+                        toast({
+                          title: "Error",
+                          description: "Unable to process payment request",
+                          variant: "destructive",
+                        });
+                      } finally {
+                        setIsLoading(false);
+                      }
+                    }}
+                    disabled={isLoading}
+                    className="inline-flex items-center justify-center px-4 py-2 border border-transparent text-sm font-medium rounded-md text-white bg-primary-600 hover:bg-primary-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-primary-500"
+                  >
+                    {isLoading ? (
+                      <Loader className="animate-spin h-4 w-4 mr-2 text-white" />
+                    ) : (
+                      <CreditCard className="h-4 w-4 mr-2" />
+                    )}
+                    Complete Payment
+                  </button>
+                )}
               </div>
             </div>
           </div>

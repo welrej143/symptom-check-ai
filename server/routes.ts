@@ -843,8 +843,10 @@ export async function registerRoutes(app: Express): Promise<Server> {
             // Calculate end date based on the subscription
             const endDate = new Date((subscription as any).current_period_end * 1000);
             
-            // Update user subscription status
-            await storage.updateSubscriptionStatus(user.id, 'active', endDate);
+            // Use the actual status from Stripe instead of assuming 'active'
+            const actualStatus = subscription.status;
+            console.log(`Using actual Stripe subscription status: ${actualStatus}`);
+            await storage.updateSubscriptionStatus(user.id, actualStatus, endDate);
             
             // Save the real subscription ID
             await storage.updateUserStripeInfo(user.id, { 
@@ -854,8 +856,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
             
             res.json({ 
               message: "Premium status updated successfully with Stripe subscription",
-              isPremium: true,
-              subscriptionStatus: 'active',
+              isPremium: actualStatus === 'active',  // Only true if subscription is active
+              subscriptionStatus: actualStatus,
               subscriptionEndDate: endDate,
               subscriptionId: realSubscriptionId,
             });
@@ -889,12 +891,12 @@ export async function registerRoutes(app: Express): Promise<Server> {
               endDate = new Date((subscription as any).current_period_end * 1000);
             }
             
-            // Update status based on subscription status
-            if (subscription.status === 'active') {
-              status = 'active';
-            } else if (subscription.status === 'past_due') {
-              status = 'past_due';
-            } else if (subscription.status === 'canceled') {
+            // Use the exact status from Stripe
+            status = subscription.status;
+            console.log(`Using Stripe subscription status: ${status}`);
+            
+            // If subscription is canceled at period end but still active
+            if (subscription.cancel_at_period_end && status === 'active') {
               status = 'canceled';
             }
           } else {
@@ -926,7 +928,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       
       res.json({ 
         message: "Premium status updated successfully",
-        isPremium: true,
+        isPremium: status === 'active',  // Only true if status is active
         subscriptionStatus: status,
         subscriptionEndDate: endDate,
         planName: planName,
