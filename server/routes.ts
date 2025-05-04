@@ -44,6 +44,25 @@ export async function registerRoutes(app: Express): Promise<Server> {
       
       const { symptoms } = validation.data;
       
+      // Check if user is premium or still has free analyses
+      const user = req.user;
+      const FREE_ANALYSIS_LIMIT = 3; // Users get 3 free analyses per month
+      
+      if (!user.isPremium) {
+        // Increment the analysis count and get the new count
+        const analysisCount = await storage.incrementAnalysisCount(user.id);
+        
+        // Check if the user has reached the limit
+        if (analysisCount > FREE_ANALYSIS_LIMIT) {
+          return res.status(402).json({
+            message: "Free analysis limit reached",
+            limit: FREE_ANALYSIS_LIMIT,
+            count: analysisCount,
+            upgrade: true
+          });
+        }
+      }
+      
       // Store the symptom record with user ID
       await storage.createSymptomRecord({
         userId: req.user.id, 

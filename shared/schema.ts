@@ -13,6 +13,9 @@ export const users = pgTable("users", {
   isPremium: boolean("is_premium").default(false),
   subscriptionStatus: text("subscription_status").default("inactive"),
   subscriptionEndDate: timestamp("subscription_end_date"),
+  // Usage tracking for free tier
+  analysisCount: integer("analysis_count").default(0).notNull(),
+  analysisCountResetDate: timestamp("analysis_count_reset_date"),
 });
 
 export const insertUserSchema = createInsertSchema(users).pick({

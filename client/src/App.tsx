@@ -56,16 +56,42 @@ function App() {
         setIsAnalyzing(false);
         navigate("/results");
       }, 500);
-    } catch (error) {
+    } catch (error: any) {
       console.error("Analysis failed:", error);
       clearInterval(progressTimer);
       setIsAnalyzing(false);
       
-      toast({
-        title: "Analysis Failed",
-        description: "There was a problem analyzing your symptoms. Please try again.",
-        variant: "destructive",
-      });
+      // Check if it's a limit reached error (402 Payment Required)
+      if (error.response?.status === 402) {
+        // Get limit information from the response
+        const limitData = error.response?.data;
+        
+        toast({
+          title: "Free Analysis Limit Reached",
+          description: (
+            <div className="space-y-2">
+              <p>You've used all your free analyses this month ({limitData?.limit || 3} analyses).</p>
+              <p>Upgrade to Premium for unlimited symptom analyses!</p>
+              <div className="pt-2">
+                <button 
+                  onClick={() => navigate("/premium")}
+                  className="bg-primary-600 text-white px-4 py-1.5 rounded-md text-sm font-medium"
+                >
+                  Upgrade Now
+                </button>
+              </div>
+            </div>
+          ),
+          variant: "default",
+          duration: 10000, // Show for 10 seconds
+        });
+      } else {
+        toast({
+          title: "Analysis Failed",
+          description: "There was a problem analyzing your symptoms. Please try again.",
+          variant: "destructive",
+        });
+      }
     }
   };
   

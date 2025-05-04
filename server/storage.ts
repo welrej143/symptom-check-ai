@@ -33,6 +33,11 @@ export interface IStorage {
   createDailyTracking(tracking: InsertDailyTracking): Promise<DailyTracking>;
   getDailyTrackingData(days: number, userId?: number): Promise<DailyTracking[]>;
   
+  // Usage tracking methods
+  incrementAnalysisCount(userId: number): Promise<number>;
+  getAnalysisCount(userId: number): Promise<number>;
+  resetAnalysisCount(userId: number): Promise<void>;
+  
   // Session management
   sessionStore: session.Store;
 }
@@ -141,6 +146,79 @@ export class DatabaseStorage implements IStorage {
         .where(gte(dailyTracking.date, cutoffDate.toISOString()))
         .orderBy(asc(dailyTracking.date));
     }
+  }
+  
+  // Usage tracking methods
+  async incrementAnalysisCount(userId: number): Promise<number> {
+    // Get the current user first to check if we need to reset the counter
+    const user = await this.getUser(userId);
+    if (!user) {
+      throw new Error("User not found");
+    }
+    
+    // Check if reset date is null or older than 30 days
+    const now = new Date();
+    let shouldResetCount = false;
+    
+    if (!user.analysisCountResetDate) {
+      shouldResetCount = true;
+    } else {
+      const resetDate = new Date(user.analysisCountResetDate);
+      const daysSinceReset = Math.floor((now.getTime() - resetDate.getTime()) / (1000 * 60 * 60 * 24));
+      if (daysSinceReset >= 30) {
+        shouldResetCount = true;
+      }
+    }
+    
+    // Set next reset date to 30 days from now
+    const nextResetDate = new Date();
+    nextResetDate.setDate(nextResetDate.getDate() + 30);
+    
+    if (shouldResetCount) {
+      // Reset counter to 1 and update reset date
+      const [updatedUser] = await db
+        .update(users)
+        .set({
+          analysisCount: 1,
+          analysisCountResetDate: nextResetDate,
+        })
+        .where(eq(users.id, userId))
+        .returning();
+      
+      return updatedUser.analysisCount;
+    } else {
+      // Increment the counter
+      const [updatedUser] = await db
+        .update(users)
+        .set({
+          analysisCount: user.analysisCount + 1,
+        })
+        .where(eq(users.id, userId))
+        .returning();
+      
+      return updatedUser.analysisCount;
+    }
+  }
+  
+  async getAnalysisCount(userId: number): Promise<number> {
+    const user = await this.getUser(userId);
+    if (!user) {
+      throw new Error("User not found");
+    }
+    return user.analysisCount;
+  }
+  
+  async resetAnalysisCount(userId: number): Promise<void> {
+    const nextResetDate = new Date();
+    nextResetDate.setDate(nextResetDate.getDate() + 30);
+    
+    await db
+      .update(users)
+      .set({
+        analysisCount: 0,
+        analysisCountResetDate: nextResetDate,
+      })
+      .where(eq(users.id, userId));
   }
 }
 
