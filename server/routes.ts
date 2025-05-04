@@ -453,7 +453,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       res.json({
         isPremium: user.isPremium || false,
         subscriptionStatus: user.subscriptionStatus || 'inactive',
-        subscriptionEndDate: user.subscriptionEndDate || null,
+        subscriptionEndDate: user.subscriptionEndDate || undefined,
         subscriptionId: user.stripeSubscriptionId || null,
         directFromStripe: false
       });

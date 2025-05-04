@@ -39,6 +39,12 @@ function StripeCheckoutForm({ clientSecret, subscriptionId }: { clientSecret: st
   const [error, setError] = useState<string | null>(null);
   const { toast } = useToast();
   const { user, refreshSubscriptionStatus } = useAuth();
+  
+  // Fetch price information from Stripe
+  const { data: priceData, isLoading: isPriceLoading, error: priceError } = useQuery<PriceData>({
+    queryKey: ['/api/pricing'],
+    staleTime: 1000 * 60 * 60, // 1 hour cache
+  });
 
   const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
@@ -143,7 +149,7 @@ function StripeCheckoutForm({ clientSecret, subscriptionId }: { clientSecret: st
             Processing...
           </span>
         ) : (
-          `Subscribe for $${SUBSCRIPTION_PRICE}/month`
+          `Subscribe for ${isPriceLoading ? '...' : priceData?.formattedPrice || '$9.99'}/${isPriceLoading ? '...' : priceData?.interval || 'month'}`
         )}
       </button>
     </form>
@@ -157,6 +163,12 @@ function StripePaymentOptions() {
   const [error, setError] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const { toast } = useToast();
+  
+  // Fetch price information from Stripe
+  const { data: priceData, isLoading: isPriceLoading } = useQuery<PriceData>({
+    queryKey: ['/api/pricing'],
+    staleTime: 1000 * 60 * 60, // 1 hour cache
+  });
   
   useEffect(() => {
     const getClientSecret = async () => {
@@ -218,8 +230,8 @@ function StripePaymentOptions() {
   
   return (
     <div className="bg-gray-50 rounded-lg p-5 border border-gray-200 shadow-sm">
-      <h3 className="text-lg font-semibold text-gray-900 mb-2">Premium Monthly</h3>
-      <p className="text-sm text-gray-600 mb-5">You will be charged ${SUBSCRIPTION_PRICE} monthly</p>
+      <h3 className="text-lg font-semibold text-gray-900 mb-2">{isPriceLoading ? 'Premium Subscription' : priceData?.productName || 'Premium Subscription'}</h3>
+      <p className="text-sm text-gray-600 mb-5">You will be charged {isPriceLoading ? '...' : priceData?.formattedPrice || '$9.99'} per {isPriceLoading ? 'month' : priceData?.interval || 'month'}</p>
       
       <Elements stripe={stripePromise} options={{ 
         clientSecret,
@@ -275,6 +287,12 @@ export default function PremiumCard() {
   const { user, refreshSubscriptionStatus } = useAuth();
   const [isUpgrading, setIsUpgrading] = useState(false);
   const { toast } = useToast();
+  
+  // Fetch price information from Stripe
+  const { data: priceData, isLoading: isPriceLoading } = useQuery<PriceData>({
+    queryKey: ['/api/pricing'],
+    staleTime: 1000 * 60 * 60, // 1 hour cache
+  });
   
   // If user already has premium, show subscription management UI
   if (user?.isPremium) {
@@ -397,7 +415,7 @@ export default function PremiumCard() {
             <div className="mt-3 bg-gray-100 h-[1px]"></div>
             <div className="flex items-center justify-between text-sm mt-3">
               <span className="text-gray-600">Premium price</span>
-              <span className="text-primary-900 font-semibold">${SUBSCRIPTION_PRICE}/month</span>
+              <span className="text-primary-900 font-semibold">{isPriceLoading ? '...' : priceData?.formattedPrice || '$9.99'}/{isPriceLoading ? 'month' : priceData?.interval || 'month'}</span>
             </div>
           </div>
           
