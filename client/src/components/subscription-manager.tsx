@@ -134,7 +134,9 @@ export default function SubscriptionManager({ user, refreshSubscriptionStatus }:
               
               <div className="bg-gray-50 p-4 rounded-md">
                 <div className="text-sm text-gray-500">Plan</div>
-                <div className="font-medium mt-1">Premium Monthly</div>
+                <div className="font-medium mt-1">
+                  {user.planName || "Premium Monthly"}
+                </div>
               </div>
               
               <div className="bg-gray-50 p-4 rounded-md">

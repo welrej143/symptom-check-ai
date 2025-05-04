@@ -409,9 +409,139 @@ export async function registerRoutes(app: Express): Promise<Server> {
       }
 
       const user = req.user;
+      console.log("Checking subscription status for user:", user.username);
       
-      // Always try to get the latest information from Stripe if we have a real subscription
-      if (user.stripeSubscriptionId && user.stripeSubscriptionId.startsWith('sub_')) {
+      // If we have a customer ID in Stripe, we can look up their subscriptions directly
+      if (user.stripeCustomerId) {
+        try {
+          console.log(`Fetching subscriptions for customer ${user.stripeCustomerId}`);
+          
+          // Get all subscriptions for this customer
+          const subscriptionsResult = await stripe.subscriptions.list({
+            customer: user.stripeCustomerId,
+            status: 'all', // Get all subscriptions including active, past_due, canceled, etc.
+            limit: 1       // We only need the most recent one
+          });
+          
+          // If we found any subscription
+          if (subscriptionsResult.data.length > 0) {
+            const subscription = subscriptionsResult.data[0];
+            console.log(`Found Stripe subscription: ${subscription.id}, status: ${subscription.status}`);
+            
+            // Calculate the subscription end date from Stripe's data
+            const endDate = new Date((subscription as any).current_period_end * 1000);
+            
+            // Determine status from Stripe
+            let status = subscription.status;
+            if (subscription.cancel_at_period_end) {
+              status = 'canceled';
+            }
+            
+            // Make sure we're always in sync with Stripe
+            const userEndDate = user.subscriptionEndDate ? new Date(user.subscriptionEndDate) : undefined;
+            const subscriptionIdChanged = user.stripeSubscriptionId !== subscription.id;
+            
+            // Get the plan name from the first subscription item
+            let planName = "Premium Monthly"; // Default fallback
+            
+            try {
+              if (subscription.items.data && subscription.items.data.length > 0) {
+                // Get the first item's price
+                const firstItem = subscription.items.data[0];
+                if (firstItem.price && firstItem.price.product) {
+                  // Get the product details to get the product name
+                  const product = await stripe.products.retrieve(firstItem.price.product as string);
+                  if (product && product.name) {
+                    planName = product.name;
+                    console.log(`Found plan name from Stripe: ${planName}`);
+                  }
+                }
+              }
+            } catch (productError) {
+              console.error("Error fetching plan name:", productError);
+              // Continue with default plan name
+            }
+            
+            if (status !== user.subscriptionStatus || 
+                !datesEqual(endDate, userEndDate) ||
+                subscriptionIdChanged ||
+                user.planName !== planName) {
+              console.log(`Updating subscription data from Stripe:`);
+              console.log(`- Status: ${user.subscriptionStatus} -> ${status}`);
+              console.log(`- End date: ${userEndDate?.toISOString()} -> ${endDate.toISOString()}`);
+              if (subscriptionIdChanged) {
+                console.log(`- Subscription ID: ${user.stripeSubscriptionId} -> ${subscription.id}`);
+              }
+              console.log(`- Plan name: ${user.planName} -> ${planName}`);
+              
+              // Update both status and subscription ID if needed
+              await storage.updateSubscriptionStatus(user.id, status, endDate, planName);
+              
+              if (subscriptionIdChanged) {
+                await storage.updateUserStripeInfo(user.id, {
+                  stripeCustomerId: user.stripeCustomerId,
+                  stripeSubscriptionId: subscription.id,
+                });
+              }
+            }
+            
+            return res.json({
+              isPremium: true,
+              subscriptionStatus: status,
+              subscriptionEndDate: endDate,
+              subscriptionId: subscription.id,
+              // Additional subscription details from Stripe
+              currentPeriodStart: new Date((subscription as any).current_period_start * 1000),
+              currentPeriodEnd: endDate,
+              cancelAtPeriodEnd: subscription.cancel_at_period_end,
+              directFromStripe: true
+            });
+          } else {
+            console.log(`No active subscriptions found for customer ${user.stripeCustomerId}`);
+            
+            // Try to look up by current subscription ID as a fallback
+            if (user.stripeSubscriptionId && user.stripeSubscriptionId.startsWith('sub_')) {
+              try {
+                console.log(`Trying to fetch specific subscription ${user.stripeSubscriptionId}`);
+                const subscription = await stripe.subscriptions.retrieve(user.stripeSubscriptionId);
+                
+                // Calculate the subscription end date from Stripe's data
+                const endDate = new Date((subscription as any).current_period_end * 1000);
+                
+                // Determine status from Stripe
+                let status = subscription.status;
+                if (subscription.cancel_at_period_end) {
+                  status = 'canceled';
+                }
+                
+                // Update our database to match Stripe
+                const userEndDate = user.subscriptionEndDate ? new Date(user.subscriptionEndDate) : undefined;
+                if (status !== user.subscriptionStatus || !datesEqual(endDate, userEndDate)) {
+                  console.log(`Updating status from ${user.subscriptionStatus} to ${status} and end date to ${endDate.toISOString()}`);
+                  await storage.updateSubscriptionStatus(user.id, status, endDate);
+                }
+                
+                return res.json({
+                  isPremium: true,
+                  subscriptionStatus: status,
+                  subscriptionEndDate: endDate,
+                  subscriptionId: user.stripeSubscriptionId,
+                  // Additional subscription details from Stripe
+                  currentPeriodStart: new Date((subscription as any).current_period_start * 1000),
+                  currentPeriodEnd: endDate,
+                  cancelAtPeriodEnd: subscription.cancel_at_period_end,
+                  directFromStripe: true
+                });
+              } catch (error) {
+                console.error(`Error retrieving subscription details from Stripe: ${error}`);
+              }
+            }
+          }
+        } catch (error) {
+          console.error(`Error retrieving subscriptions from Stripe: ${error}`);
+        }
+      } else if (user.stripeSubscriptionId && user.stripeSubscriptionId.startsWith('sub_')) {
+        // If we don't have a customer ID but do have a subscription ID, try that
         try {
           console.log(`Fetching subscription ${user.stripeSubscriptionId} details from Stripe`);
           const subscription = await stripe.subscriptions.retrieve(user.stripeSubscriptionId);
@@ -451,6 +581,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       }
       
       // Return basic subscription details from the user object (fallback)
+      console.log("Using fallback subscription data from database");
       res.json({
         isPremium: user.isPremium || false,
         subscriptionStatus: user.subscriptionStatus || 'inactive',
