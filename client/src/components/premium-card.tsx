@@ -344,7 +344,7 @@ export default function PremiumCard() {
     staleTime: 1000 * 60 * 60, // 1 hour cache
   });
   
-  // Check if user has a subscription (in any state)
+  // Check if user has a subscription (in any state, including "inactive")
   if (user?.isPremium || (user?.subscriptionStatus && user.subscriptionStatus !== "")) {
     return (
       <div className="space-y-5">
@@ -356,6 +356,7 @@ export default function PremiumCard() {
                 {user.subscriptionStatus === "incomplete" ? "Premium (Processing)" : 
                  user.subscriptionStatus === "past_due" ? "Premium (Payment Required)" :
                  user.subscriptionStatus === "canceled" ? "Premium (Canceled)" :
+                 user.subscriptionStatus === "inactive" ? "Premium (Inactive)" :
                  "Premium Member"}
               </h3>
             </div>
@@ -369,6 +370,8 @@ export default function PremiumCard() {
                 "Your subscription payment has failed. Please update your payment method to continue using premium features."
               ) : user.subscriptionStatus === "canceled" ? (
                 "Your subscription is canceled. You'll have access until the end of your billing period."
+              ) : user.subscriptionStatus === "inactive" ? (
+                "Your subscription is inactive. Please update your payment method to reactivate your premium features."
               ) : (
                 "You've subscribed to premium. Enjoy unlimited symptom analyses and complete health tracking."
               )}
@@ -381,6 +384,7 @@ export default function PremiumCard() {
                 user.subscriptionStatus === "canceled" ? "bg-orange-500" : 
                 user.subscriptionStatus === "incomplete" ? "bg-amber-500" :
                 user.subscriptionStatus === "past_due" ? "bg-red-500" :
+                user.subscriptionStatus === "inactive" ? "bg-blue-500" :
                 "bg-gray-500"
               }`}></span>
               <span className={`text-xs font-medium ${
@@ -388,12 +392,14 @@ export default function PremiumCard() {
                 user.subscriptionStatus === "canceled" ? "text-orange-700" : 
                 user.subscriptionStatus === "incomplete" ? "text-amber-700" :
                 user.subscriptionStatus === "past_due" ? "text-red-700" :
+                user.subscriptionStatus === "inactive" ? "text-blue-700" :
                 "text-gray-700"
               }`}>
                 {user.subscriptionStatus === "active" ? "Active" : 
                 user.subscriptionStatus === "canceled" ? "Canceled" :
                 user.subscriptionStatus === "incomplete" ? "Incomplete" :
                 user.subscriptionStatus === "past_due" ? "Past Due" :
+                user.subscriptionStatus === "inactive" ? "Inactive" :
                 user.subscriptionStatus || "Unknown"}
               </span>
             </div>
