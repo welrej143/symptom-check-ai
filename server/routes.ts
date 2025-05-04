@@ -426,8 +426,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
           }
           
           // Make sure we're always in sync with Stripe
+          const userEndDate = user.subscriptionEndDate ? new Date(user.subscriptionEndDate) : undefined;
           if (status !== user.subscriptionStatus || 
-              !datesEqual(endDate, user.subscriptionEndDate)) {
+              !datesEqual(endDate, userEndDate)) {
             console.log(`Updating status from ${user.subscriptionStatus} to ${status} and end date to ${endDate.toISOString()}`);
             await storage.updateSubscriptionStatus(user.id, status, endDate);
           }

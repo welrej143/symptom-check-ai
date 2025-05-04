@@ -1,6 +1,12 @@
-import express, { type Request, Response, NextFunction } from "express";
+import express, { Response, NextFunction } from "express";
 import { registerRoutes } from "./routes";
 import { setupVite, serveStatic, log } from "./vite";
+import { setupAuth } from "./auth";
+
+// Extended Request type that includes originalUrl
+interface Request extends express.Request {
+  rawBody?: string;
+}
 
 const app = express();
 
@@ -28,13 +34,16 @@ app.use((req, res, next) => {
 // Regular middleware for other routes
 app.use(express.json({
   // Don't parse JSON body for Stripe webhook route as we handle it separately
-  verify: (req, res, buf) => {
+  verify: (req: any, res, buf) => {
     if (req.originalUrl === '/api/stripe-webhook') {
-      (req as any).rawBody = buf.toString();
+      req.rawBody = buf.toString();
     }
   }
 }));
 app.use(express.urlencoded({ extended: false }));
+
+// Setup authentication
+setupAuth(app);
 
 app.use((req, res, next) => {
   const start = Date.now();
