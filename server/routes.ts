@@ -613,7 +613,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
           }
           
           return res.json({
-            isPremium: true,
+            isPremium: status === 'active', // Only set to true if status is actually 'active'
             subscriptionStatus: status,
             subscriptionEndDate: endDate,
             planName: planName,
@@ -877,7 +877,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
       // Determine endDate and status
       let endDate = new Date();
       endDate.setMonth(endDate.getMonth() + 1);
-      let status = 'active';
+      // Default to 'incomplete' instead of 'active' to avoid false positives
+      let status = 'incomplete';
       
       // If we have a subscription ID, use it to get accurate info
       if (subscriptionId) {
@@ -902,7 +903,23 @@ export async function registerRoutes(app: Express): Promise<Server> {
           } else {
             // It's a payment intent (pi_) or something else, just use default dates
             console.log("Using one-time payment model with ID:", subscriptionId);
-            // No need to fetch anything - just set status to active and use default endDate
+            // Important: For payment intents, verify the status with Stripe before setting to active
+            try {
+              // If it starts with 'pi_', it's a payment intent
+              if (subscriptionId.startsWith('pi_')) {
+                const paymentIntent = await stripe.paymentIntents.retrieve(subscriptionId);
+                if (paymentIntent.status === 'succeeded') {
+                  // Only set as active if payment has succeeded
+                  status = 'active';
+                } else {
+                  console.log(`Payment intent status is ${paymentIntent.status}, not marking as active`);
+                  // Keep default 'incomplete' status
+                }
+              }
+            } catch (piError) {
+              console.error("Error checking payment intent status:", piError);
+              // Keep default status
+            }
           }
         } catch (subError) {
           console.error("Error retrieving subscription:", subError);
