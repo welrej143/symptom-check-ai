@@ -435,15 +435,28 @@ export async function registerRoutes(app: Express): Promise<Server> {
               expand: ['payment_method']
             });
             
-            // Get the payment method ID from the payment intent
-            const paymentMethodId = pi.payment_method as string;
+            // Get the payment method from the payment intent
+            let paymentMethodId = pi.payment_method as string | { id: string };
             
             if (!paymentMethodId) {
               console.error("No payment method found on payment intent", paymentIntentId);
               throw new Error("No payment method found on payment intent");
             }
             
-            console.log("Attaching payment method to customer:", paymentMethodId);
+            console.log(`Attaching payment method ${typeof paymentMethodId === 'string' ? paymentMethodId : 'OBJECT'} to customer ${customerId}`);
+            
+            // Make sure paymentMethodId is a string
+            if (typeof paymentMethodId !== 'string') {
+              console.error("Payment method ID is not a string:", paymentMethodId);
+              
+              // If it's an object with an id property, extract the id
+              if (paymentMethodId && typeof paymentMethodId === 'object' && 'id' in paymentMethodId) {
+                paymentMethodId = paymentMethodId.id;
+                console.log("Extracted payment method ID:", paymentMethodId);
+              } else {
+                throw new Error("Invalid payment method ID format");
+              }
+            }
             
             // Attach the payment method to the customer
             await stripe.paymentMethods.attach(paymentMethodId, {
@@ -819,15 +832,28 @@ export async function registerRoutes(app: Express): Promise<Server> {
                 expand: ['payment_method']
               });
               
-              // Get the payment method ID from the payment intent
-              const paymentMethodId = pi.payment_method as string;
+              // Get the payment method from the payment intent
+              let paymentMethodId = pi.payment_method as string | { id: string };
               
               if (!paymentMethodId) {
                 console.error("No payment method found on payment intent", paymentIntent.id);
                 throw new Error("No payment method found on payment intent");
               }
               
-              console.log(`Attaching payment method ${paymentMethodId} to customer ${customerId}`);
+              console.log(`Attaching payment method ${typeof paymentMethodId === 'string' ? paymentMethodId : 'OBJECT'} to customer ${customerId}`);
+              
+              // Make sure paymentMethodId is a string
+              if (typeof paymentMethodId !== 'string') {
+                console.error("Payment method ID is not a string:", paymentMethodId);
+                
+                // If it's an object with an id property, extract the id
+                if (paymentMethodId && typeof paymentMethodId === 'object' && 'id' in paymentMethodId) {
+                  paymentMethodId = paymentMethodId.id;
+                  console.log("Extracted payment method ID:", paymentMethodId);
+                } else {
+                  throw new Error("Invalid payment method ID format");
+                }
+              }
               
               // Attach the payment method to the customer
               await stripe.paymentMethods.attach(paymentMethodId, {
