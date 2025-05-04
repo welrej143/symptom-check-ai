@@ -57,8 +57,9 @@ export default function SymptomTrackerForm({ onSubmit, isSubmitting }: SymptomTr
   const addCustomSymptom = () => {
     if (newSymptom.trim() && !selectedSymptoms.includes(newSymptom.trim())) {
       const symptomToAdd = newSymptom.trim();
-      setSelectedSymptoms(prev => [...prev, symptomToAdd]);
-      form.setValue("symptoms", [...selectedSymptoms, symptomToAdd]);
+      const updatedSymptoms = [...selectedSymptoms, symptomToAdd];
+      setSelectedSymptoms(updatedSymptoms);
+      form.setValue("symptoms", updatedSymptoms);
       setNewSymptom("");
       setShowSymptomInput(false);
     }
@@ -114,6 +115,20 @@ export default function SymptomTrackerForm({ onSubmit, isSubmitting }: SymptomTr
                       <span>Selected symptoms: {selectedSymptoms.length}</span>
                     }
                   </div>
+                  
+                  {/* Display any selected symptoms that aren't in commonSymptoms (custom ones) */}
+                  {selectedSymptoms
+                    .filter(symptom => !commonSymptoms.includes(symptom))
+                    .map((symptom) => (
+                      <Badge
+                        key={symptom}
+                        variant="default"
+                        className="px-3 py-1.5 cursor-pointer bg-blue-100 text-blue-800 hover:bg-blue-200"
+                        onClick={() => toggleSymptom(symptom)}
+                      >
+                        {symptom}
+                      </Badge>
+                    ))}
                   {commonSymptoms.map((symptom) => (
                     <Badge
                       key={symptom}
