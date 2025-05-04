@@ -935,13 +935,12 @@ export async function registerRoutes(app: Express): Promise<Server> {
               console.log("Subscription created with incomplete status, trying to confirm payment");
               
               try {
-                // Get the invoice details
-                const invoice = await stripe.invoices.retrieve(subscription.latest_invoice as string, {
-                  expand: ['payment_intent']
-                });
+                // Get the invoice details - don't try to expand payment_intent
+                const invoice = await stripe.invoices.retrieve(subscription.latest_invoice as string);
                 
-                // Using 'as any' to access the expanded field that TypeScript doesn't recognize
-                const paymentIntent = (invoice as any).payment_intent;
+                // Get the payment intent ID from the invoice, then retrieve it separately
+                const paymentIntentId = invoice.payment_intent as string;
+                const paymentIntent = paymentIntentId ? await stripe.paymentIntents.retrieve(paymentIntentId) : null;
                 if (paymentIntent) {
                   console.log(`Invoice payment intent status: ${paymentIntent.status}`);
                   
