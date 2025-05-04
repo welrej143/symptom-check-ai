@@ -344,8 +344,8 @@ export default function PremiumCard() {
     staleTime: 1000 * 60 * 60, // 1 hour cache
   });
   
-  // Check if user has a subscription (in any state, including "inactive")
-  if (user?.isPremium || (user?.subscriptionStatus && user.subscriptionStatus !== "")) {
+  // Check if user has an active subscription or with a specific status other than "inactive"
+  if (user?.isPremium || (user?.subscriptionStatus && user.subscriptionStatus !== "" && user.subscriptionStatus !== "inactive")) {
     return (
       <div className="space-y-5">
         <div className="bg-gradient-to-br from-primary-50 to-primary-100 rounded-lg shadow-md overflow-hidden border border-primary-200">
