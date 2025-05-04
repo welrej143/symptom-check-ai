@@ -402,6 +402,91 @@ export async function registerRoutes(app: Express): Promise<Server> {
       res.status(500).json({ message: "Error updating premium status" });
     }
   });
+  
+  // Route to cancel a subscription
+  app.post("/api/cancel-subscription", async (req: Request, res: Response) => {
+    try {
+      if (!req.isAuthenticated()) {
+        return res.status(401).json({ message: "Authentication required" });
+      }
+
+      const user = req.user;
+      
+      // Ensure the user has an active subscription
+      if (!user.isPremium || user.subscriptionStatus !== 'active') {
+        return res.status(400).json({ message: "No active subscription to cancel" });
+      }
+      
+      // In a production app with real Stripe integration:
+      // if (user.stripeSubscriptionId) {
+      //   await stripe.subscriptions.update(user.stripeSubscriptionId, {
+      //     cancel_at_period_end: true,
+      //   });
+      // }
+      
+      // Mark the subscription as canceled but keep the end date the same
+      // This allows the user to continue using premium features until the end of their billing period
+      // If there's no end date, set one month from now
+      const endDate = user.subscriptionEndDate || new Date(Date.now() + 30 * 24 * 60 * 60 * 1000);
+      
+      await storage.updateSubscriptionStatus(
+        user.id,
+        'canceled',
+        endDate // maintain the same end date or use default
+      );
+      
+      res.json({ 
+        message: "Subscription canceled successfully. You'll have access until the end of your billing period.",
+        subscriptionStatus: 'canceled',
+        subscriptionEndDate: user.subscriptionEndDate,
+      });
+    } catch (error) {
+      console.error("Error canceling subscription:", error);
+      res.status(500).json({ message: "Error canceling subscription" });
+    }
+  });
+  
+  // Route to reactivate a canceled subscription
+  app.post("/api/reactivate-subscription", async (req: Request, res: Response) => {
+    try {
+      if (!req.isAuthenticated()) {
+        return res.status(401).json({ message: "Authentication required" });
+      }
+
+      const user = req.user;
+      
+      // Ensure the user has a canceled subscription
+      if (!user.isPremium || user.subscriptionStatus !== 'canceled') {
+        return res.status(400).json({ message: "No canceled subscription to reactivate" });
+      }
+      
+      // In a production app with real Stripe integration:
+      // if (user.stripeSubscriptionId) {
+      //   await stripe.subscriptions.update(user.stripeSubscriptionId, {
+      //     cancel_at_period_end: false,
+      //   });
+      // }
+      
+      // If there's no end date, set one month from now
+      const endDate = user.subscriptionEndDate || new Date(Date.now() + 30 * 24 * 60 * 60 * 1000);
+      
+      // Mark the subscription as active again with the same end date
+      await storage.updateSubscriptionStatus(
+        user.id,
+        'active',
+        endDate
+      );
+      
+      res.json({ 
+        message: "Subscription reactivated successfully.",
+        subscriptionStatus: 'active',
+        subscriptionEndDate: user.subscriptionEndDate,
+      });
+    } catch (error) {
+      console.error("Error reactivating subscription:", error);
+      res.status(500).json({ message: "Error reactivating subscription" });
+    }
+  });
 
   // Webhook to handle Stripe events
   app.post("/api/stripe-webhook", async (req: Request, res: Response) => {
