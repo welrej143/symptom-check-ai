@@ -3,8 +3,18 @@ import { createServer, type Server } from "http";
 import { storage } from "./storage";
 import { setupAuth } from "./auth";
 import OpenAI from "openai";
+import Stripe from "stripe";
 import z from "zod";
 import { symptomInputSchema, analysisResponseSchema } from "@shared/schema";
+import { db } from "./db";
+import { users } from "@shared/schema";
+import { eq } from "drizzle-orm";
+
+// Initialize Stripe
+if (!process.env.STRIPE_SECRET_KEY) {
+  throw new Error("Missing required Stripe secret: STRIPE_SECRET_KEY");
+}
+const stripe = new Stripe(process.env.STRIPE_SECRET_KEY);
 
 export async function registerRoutes(app: Express): Promise<Server> {
   // Set up authentication
@@ -195,6 +205,174 @@ export async function registerRoutes(app: Express): Promise<Server> {
     } catch (error) {
       console.error("Error fetching tracking data:", error);
       res.status(500).json({ message: "Error fetching tracking data" });
+    }
+  });
+
+  // Create payment intent for subscription
+  app.post("/api/create-subscription", async (req: Request, res: Response) => {
+    try {
+      if (!req.isAuthenticated()) {
+        return res.status(401).json({ message: "Authentication required" });
+      }
+
+      const user = req.user;
+      
+      // Check if user already has an active subscription
+      if (user.isPremium && user.subscriptionStatus === 'active') {
+        return res.status(400).json({ message: "User already has an active subscription" });
+      }
+
+      // Create or retrieve a Stripe customer
+      let customerId = user.stripeCustomerId;
+      
+      if (!customerId) {
+        const customer = await stripe.customers.create({
+          email: user.email,
+          name: user.username,
+          metadata: {
+            userId: user.id.toString(),
+          },
+        });
+        
+        customerId = customer.id;
+        
+        // Update user with Stripe customer ID
+        await storage.updateUserStripeInfo(user.id, {
+          stripeCustomerId: customerId,
+          stripeSubscriptionId: "",
+        });
+      }
+
+      // Create a payment intent for the subscription
+      const paymentIntent = await stripe.paymentIntents.create({
+        amount: 999, // $9.99
+        currency: 'usd',
+        customer: customerId,
+        metadata: {
+          userId: user.id.toString(),
+          isSubscription: 'true',
+        },
+        description: 'SymptomCheck AI Premium Subscription',
+      });
+
+      res.json({
+        clientSecret: paymentIntent.client_secret,
+      });
+    } catch (error) {
+      console.error("Error creating payment intent for subscription:", error);
+      res.status(500).json({ message: "Error creating payment intent" });
+    }
+  });
+
+  // Check subscription status
+  app.get("/api/subscription", async (req: Request, res: Response) => {
+    try {
+      if (!req.isAuthenticated()) {
+        return res.status(401).json({ message: "Authentication required" });
+      }
+
+      const user = req.user;
+      
+      res.json({
+        isPremium: user.isPremium || false,
+        subscriptionStatus: user.subscriptionStatus || 'inactive',
+        subscriptionEndDate: user.subscriptionEndDate || null,
+      });
+    } catch (error) {
+      console.error("Error checking subscription:", error);
+      res.status(500).json({ message: "Error checking subscription" });
+    }
+  });
+
+  // Update premium status (after payment)
+  app.post("/api/update-premium-status", async (req: Request, res: Response) => {
+    try {
+      if (!req.isAuthenticated()) {
+        return res.status(401).json({ message: "Authentication required" });
+      }
+
+      const user = req.user;
+      const { paymentIntentId } = req.body;
+      
+      if (!paymentIntentId) {
+        return res.status(400).json({ message: "Payment intent ID is required" });
+      }
+      
+      // Verify the payment was successful
+      const paymentIntent = await stripe.paymentIntents.retrieve(paymentIntentId);
+      
+      if (paymentIntent.status !== 'succeeded') {
+        return res.status(400).json({ message: "Payment has not been completed successfully" });
+      }
+      
+      // Calculate subscription end date (1 month from now)
+      const endDate = new Date();
+      endDate.setMonth(endDate.getMonth() + 1);
+      
+      // Update user subscription status
+      await storage.updateSubscriptionStatus(user.id, 'active', endDate);
+      
+      // Also save the subscription ID if needed
+      if (paymentIntent.id && !user.stripeSubscriptionId) {
+        await storage.updateUserStripeInfo(user.id, { 
+          stripeCustomerId: user.stripeCustomerId || '',
+          stripeSubscriptionId: paymentIntent.id,
+        });
+      }
+      
+      res.json({ 
+        message: "Premium status updated successfully",
+        isPremium: true,
+        subscriptionStatus: 'active',
+        subscriptionEndDate: endDate,
+      });
+    } catch (error) {
+      console.error("Error updating premium status:", error);
+      res.status(500).json({ message: "Error updating premium status" });
+    }
+  });
+
+  // Webhook to handle Stripe events
+  app.post("/api/stripe-webhook", async (req: Request, res: Response) => {
+    try {
+      const event = req.body;
+      
+      // Handle the payment_intent.succeeded event for subscription handling
+      if (event.type === 'payment_intent.succeeded') {
+        const paymentIntent = event.data.object;
+        
+        // Check if this is a subscription payment
+        if (paymentIntent.metadata && paymentIntent.metadata.isSubscription === 'true') {
+          const userId = parseInt(paymentIntent.metadata.userId);
+          
+          if (userId) {
+            // Find the user
+            const user = await storage.getUser(userId);
+            
+            if (user) {
+              // Calculate subscription end date (1 month from now)
+              const endDate = new Date();
+              endDate.setMonth(endDate.getMonth() + 1);
+              
+              // Update subscription status
+              await storage.updateSubscriptionStatus(userId, 'active', endDate);
+              
+              // Also save the payment intent ID as subscription ID if needed
+              if (!user.stripeSubscriptionId) {
+                await storage.updateUserStripeInfo(userId, {
+                  stripeCustomerId: user.stripeCustomerId || '',
+                  stripeSubscriptionId: paymentIntent.id,
+                });
+              }
+            }
+          }
+        }
+      }
+
+      res.json({ received: true });
+    } catch (error) {
+      console.error("Error processing webhook:", error);
+      res.status(500).json({ message: "Error processing webhook" });
     }
   });
 
