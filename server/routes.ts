@@ -682,7 +682,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       
       const user = userResults[0];
       
-      if (user) {
+      if (user && typeof user.id === 'number') {
         // Calculate subscription end date from current_period_end (comes in seconds)
         const endDate = new Date(subscription.current_period_end * 1000);
         
@@ -711,7 +711,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       
       const user = userResults[0];
       
-      if (user) {
+      if (user && typeof user.id === 'number') {
         // Calculate subscription end date from current_period_end (comes in seconds)
         const endDate = new Date(subscription.current_period_end * 1000);
         
@@ -746,7 +746,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       
       const user = userResults[0];
       
-      if (user) {
+      if (user && typeof user.id === 'number') {
         // Set end date to now
         const endDate = new Date();
         
@@ -774,7 +774,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       
       const user = userResults[0];
       
-      if (user) {
+      if (user && typeof user.id === 'number') {
         // Get subscription details from Stripe
         const subscription = await stripe.subscriptions.retrieve(subscriptionId);
         
@@ -800,17 +800,14 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
     
     try {
-      // Find users with matching stripe customer ID
-      const userResults = await db.execute(
-        `SELECT * FROM users WHERE stripe_customer_id = $1 LIMIT 1`, 
-        [customerId]
-      );
+      // Find users with matching stripe customer ID using drizzle-orm
+      const userResults = await db.select().from(users).where(eq(users.stripeCustomerId, customerId)).limit(1);
       
-      const user = userResults.rows[0];
+      const user = userResults[0];
       
-      if (user) {
+      if (user && typeof user.id === 'number') {
         // Keep the current end date
-        const endDate = user.subscriptionEndDate || undefined;
+        const endDate = user.subscriptionEndDate || new Date(); // Use current date as fallback
         
         // Mark as past_due
         await storage.updateSubscriptionStatus(user.id, 'past_due', endDate);
