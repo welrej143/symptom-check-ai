@@ -1,10 +1,16 @@
 import { Shield, LineChart, Loader, AlertCircle, ArrowRight } from "lucide-react";
 import { useAuth } from "@/hooks/use-auth";
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { apiRequest } from "@/lib/queryClient";
 import { useToast } from "@/hooks/use-toast";
 import { loadStripe } from "@stripe/stripe-js";
-import { CardElement, Elements, useStripe, useElements } from "@stripe/react-stripe-js";
+import { 
+  CardElement, 
+  Elements, 
+  useStripe, 
+  useElements,
+  PaymentElement
+} from "@stripe/react-stripe-js";
 
 // Initialize Stripe
 if (!import.meta.env.VITE_STRIPE_PUBLIC_KEY) {
@@ -15,8 +21,64 @@ const stripePromise = loadStripe(import.meta.env.VITE_STRIPE_PUBLIC_KEY);
 // Subscription price in dollars
 const SUBSCRIPTION_PRICE = 9.99;
 
+// Wrapper component with client secret setup
+function StripeSetup() {
+  const [clientSecret, setClientSecret] = useState<string | null>(null);
+  const [error, setError] = useState<string | null>(null);
+  const { toast } = useToast();
+  
+  useEffect(() => {
+    const getClientSecret = async () => {
+      try {
+        // Create payment intent
+        const response = await apiRequest("POST", "/api/create-subscription");
+        const data = await response.json();
+        
+        if (data.clientSecret) {
+          setClientSecret(data.clientSecret);
+        } else {
+          throw new Error("No client secret returned");
+        }
+      } catch (err) {
+        console.error('Error getting client secret:', err);
+        setError('Could not initialize payment. Please try again.');
+        toast({
+          title: "Payment Setup Failed",
+          description: "Could not initialize the payment form. Please try again.",
+          variant: "destructive",
+        });
+      }
+    };
+    
+    getClientSecret();
+  }, []);
+  
+  if (error) {
+    return (
+      <div className="text-red-600 text-sm flex items-center py-4">
+        <AlertCircle className="w-5 h-5 mr-2" />
+        {error}
+      </div>
+    );
+  }
+  
+  if (!clientSecret) {
+    return (
+      <div className="flex justify-center items-center py-6">
+        <Loader className="w-6 h-6 animate-spin text-primary-600" />
+      </div>
+    );
+  }
+  
+  return (
+    <Elements stripe={stripePromise} options={{ clientSecret }}>
+      <CheckoutForm clientSecret={clientSecret} />
+    </Elements>
+  );
+}
+
 // The checkout form component
-function CheckoutForm() {
+function CheckoutForm({ clientSecret = "" }: { clientSecret?: string }) {
   const stripe = useStripe();
   const elements = useElements();
   const [isLoading, setIsLoading] = useState(false);
@@ -31,24 +93,14 @@ function CheckoutForm() {
       return;
     }
     
-    const cardElement = elements.getElement(CardElement);
-    
-    if (!cardElement) {
-      return;
-    }
-    
     setIsLoading(true);
     setError(null);
     
     try {
-      // Create payment intent
-      const { clientSecret } = await apiRequest("POST", "/api/create-subscription")
-        .then(res => res.json());
-      
       // Confirm payment with Stripe
       const result = await stripe.confirmCardPayment(clientSecret, {
         payment_method: {
-          card: cardElement,
+          card: elements.getElement(CardElement)!,
           billing_details: {
             name: user?.username || '',
             email: user?.email || '',
@@ -228,9 +280,7 @@ export default function PremiumCard() {
         {isUpgrading && (
           <div className="mt-6">
             <h4 className="text-base font-medium text-gray-900 mb-3">Complete Your Subscription</h4>
-            <Elements stripe={stripePromise}>
-              <CheckoutForm />
-            </Elements>
+            <StripeSetup />
             <button 
               onClick={() => setIsUpgrading(false)}
               className="w-full mt-3 text-gray-600 text-sm hover:text-gray-800"
