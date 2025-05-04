@@ -186,7 +186,7 @@ export default function PremiumCard() {
             </div>
             <div className="ml-3">
               <h4 className="text-base font-medium text-gray-900">Unlimited detailed analyses</h4>
-              <p className="mt-1 text-sm text-gray-600">Get comprehensive health insights whenever you need them.</p>
+              <p className="mt-1 text-sm text-gray-600">Get comprehensive health insights whenever you need them, with no monthly limits.</p>
             </div>
           </div>
           
@@ -197,6 +197,22 @@ export default function PremiumCard() {
             <div className="ml-3">
               <h4 className="text-base font-medium text-gray-900">Unlimited Symptoms Tracker</h4>
               <p className="mt-1 text-sm text-gray-600">Track your symptoms and health metrics with no limitations.</p>
+            </div>
+          </div>
+          
+          <div className="mt-4 pt-4 border-t border-gray-100">
+            <div className="flex items-center justify-between text-sm">
+              <span className="text-gray-600">Free tier</span>
+              <span className="text-gray-900 font-medium">3 analyses/month</span>
+            </div>
+            <div className="flex items-center justify-between text-sm mt-2">
+              <span className="text-gray-600">Premium tier</span>
+              <span className="text-primary-600 font-medium">Unlimited analyses</span>
+            </div>
+            <div className="mt-3 bg-gray-100 h-[1px]"></div>
+            <div className="flex items-center justify-between text-sm mt-3">
+              <span className="text-gray-600">Premium price</span>
+              <span className="text-primary-900 font-semibold">${SUBSCRIPTION_PRICE}/month</span>
             </div>
           </div>
         </div>

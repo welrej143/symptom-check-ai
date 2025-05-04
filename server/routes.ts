@@ -227,6 +227,41 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // Get user's analysis usage count
+  app.get("/api/usage-count", async (req: Request, res: Response) => {
+    try {
+      // Check if user is authenticated
+      if (!req.isAuthenticated()) {
+        return res.status(401).json({ message: "Authentication required" });
+      }
+      
+      const user = req.user;
+      
+      // For premium users, usage count doesn't matter
+      if (user.isPremium) {
+        return res.json({
+          count: 0,
+          limit: null,
+          unlimited: true
+        });
+      }
+      
+      // Get the current analysis count
+      const count = await storage.getAnalysisCount(user.id);
+      const FREE_ANALYSIS_LIMIT = 3;
+      
+      res.json({
+        count,
+        limit: FREE_ANALYSIS_LIMIT,
+        unlimited: false,
+        remaining: Math.max(0, FREE_ANALYSIS_LIMIT - count)
+      });
+    } catch (error) {
+      console.error("Error getting usage count:", error);
+      res.status(500).json({ message: "Error retrieving usage information" });
+    }
+  });
+
   // Create payment intent for subscription
   app.post("/api/create-subscription", async (req: Request, res: Response) => {
     try {

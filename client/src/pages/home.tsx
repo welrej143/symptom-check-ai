@@ -4,6 +4,7 @@ import FeatureCards from "@/components/feature-cards";
 import { useAuth } from "@/hooks/use-auth";
 import { useToast } from "@/hooks/use-toast";
 import { Shield, ArrowRight } from "lucide-react";
+import UsageIndicator from "@/components/usage-indicator";
 
 interface HomeProps {
   setUserSymptoms: (symptoms: string) => void;
@@ -59,6 +60,9 @@ export default function Home({ setUserSymptoms, initialSymptoms = "", analyzeSym
             <p className="text-lg text-gray-600 mb-6">
               Describe your symptoms and get AI-powered analysis to understand what might be happening with your health.
             </p>
+            {/* Display usage indicator for logged in non-premium users */}
+            {user && !user.isPremium && <UsageIndicator />}
+            
             <SymptomForm 
               onSubmit={handleSymptomSubmit}
               initialSymptoms={initialSymptoms}
