@@ -17,6 +17,13 @@ export async function analyzeSymptoms(symptoms: string): Promise<AnalysisRespons
         status: response.status,
         data: errorData
       };
+      
+      // Explicitly check for usage limit errors (HTTP 402 Payment Required)
+      if (response.status === 402 || 
+          (errorData.message && errorData.message.includes("limit"))) {
+        error.usageExceeded = true;
+      }
+      
       throw error;
     }
     

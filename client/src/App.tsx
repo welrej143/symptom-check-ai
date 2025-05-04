@@ -85,6 +85,27 @@ function App() {
           variant: "default",
           duration: 10000, // Show for 10 seconds
         });
+      } else if (error.response && error.usageExceeded) {
+        // Another way to catch usage exceeded errors
+        toast({
+          title: "Free Analysis Limit Reached",
+          description: (
+            <div className="space-y-2">
+              <p>You've used all your free analyses this month (3 analyses).</p>
+              <p>Upgrade to Premium for unlimited symptom analyses!</p>
+              <div className="pt-2">
+                <button 
+                  onClick={() => navigate("/premium")}
+                  className="bg-primary-600 text-white px-4 py-1.5 rounded-md text-sm font-medium"
+                >
+                  Upgrade Now
+                </button>
+              </div>
+            </div>
+          ),
+          variant: "default",
+          duration: 10000, // Show for 10 seconds
+        });
       } else {
         toast({
           title: "Analysis Failed",
