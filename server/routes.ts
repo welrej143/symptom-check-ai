@@ -429,7 +429,30 @@ export async function registerRoutes(app: Express): Promise<Server> {
             console.log(`Found Stripe subscription: ${subscription.id}, status: ${subscription.status}`);
             
             // Calculate the subscription end date from Stripe's data
-            const endDate = new Date((subscription as any).current_period_end * 1000);
+            let endDate;
+            try {
+              // First try current_period_end
+              if ((subscription as any).current_period_end) {
+                endDate = new Date((subscription as any).current_period_end * 1000);
+              }
+              // If that's not available, try billing_cycle_anchor for incomplete subscriptions
+              else if ((subscription as any).billing_cycle_anchor) {
+                console.log("Using billing_cycle_anchor for subscription end date");
+                const anchor = new Date((subscription as any).billing_cycle_anchor * 1000);
+                endDate = new Date(anchor);
+                endDate.setMonth(endDate.getMonth() + 1);
+              }
+              else {
+                // Set a default date 1 month from now
+                endDate = new Date();
+                endDate.setMonth(endDate.getMonth() + 1);
+              }
+            } catch (dateError) {
+              console.error("Error retrieving subscriptions from Stripe:", dateError);
+              // Fallback to one month from now
+              endDate = new Date();
+              endDate.setMonth(endDate.getMonth() + 1);
+            }
             
             // Determine status from Stripe
             let status = subscription.status;
@@ -485,17 +508,26 @@ export async function registerRoutes(app: Express): Promise<Server> {
               }
             }
             
+            // Only mark as premium if subscription is actually active
+            const isPremium = status === 'active';
+            
             return res.json({
-              isPremium: true,
+              isPremium: isPremium,
               subscriptionStatus: status,
               subscriptionEndDate: endDate,
               subscriptionId: subscription.id,
               planName: planName,
               // Additional subscription details from Stripe
-              currentPeriodStart: new Date((subscription as any).current_period_start * 1000),
+              currentPeriodStart: (subscription as any).current_period_start 
+                ? new Date((subscription as any).current_period_start * 1000)
+                : new Date(),
               currentPeriodEnd: endDate,
               cancelAtPeriodEnd: subscription.cancel_at_period_end,
-              directFromStripe: true
+              directFromStripe: true,
+              // Add payment intent info for incomplete subscriptions
+              paymentIntentStatus: status === 'incomplete' && (subscription as any).latest_invoice?.payment_intent?.status
+                ? (subscription as any).latest_invoice.payment_intent.status
+                : null
             });
           } else {
             console.log(`No active subscriptions found for customer ${user.stripeCustomerId}`);
@@ -546,17 +578,26 @@ export async function registerRoutes(app: Express): Promise<Server> {
                   await storage.updateSubscriptionStatus(user.id, status, endDate, planName);
                 }
                 
+                // Only mark as premium if status is active
+                const isPremium = status === 'active';
+                
                 return res.json({
-                  isPremium: true,
+                  isPremium: isPremium,
                   subscriptionStatus: status,
                   subscriptionEndDate: endDate,
                   planName: planName,
                   subscriptionId: user.stripeSubscriptionId,
                   // Additional subscription details from Stripe
-                  currentPeriodStart: new Date((subscription as any).current_period_start * 1000),
+                  currentPeriodStart: (subscription as any).current_period_start 
+                    ? new Date((subscription as any).current_period_start * 1000)
+                    : new Date(),
                   currentPeriodEnd: endDate,
                   cancelAtPeriodEnd: subscription.cancel_at_period_end,
-                  directFromStripe: true
+                  directFromStripe: true,
+                  // Add payment intent info for incomplete subscriptions
+                  paymentIntentStatus: status === 'incomplete' && (subscription as any).latest_invoice?.payment_intent?.status
+                    ? (subscription as any).latest_invoice.payment_intent.status
+                    : null
                 });
               } catch (error) {
                 console.error(`Error retrieving subscription details from Stripe: ${error}`);
@@ -941,19 +982,39 @@ export async function registerRoutes(app: Express): Promise<Server> {
             // Calculate end date based on the subscription
             let endDate;
             try {
-              // Type casting to any because TypeScript doesn't recognize the property correctly
-              const currentPeriodEnd = (subscription as any).current_period_end;
-              if (currentPeriodEnd) {
-                // Convert to number and multiply by 1000 to get milliseconds
-                const timestamp = Number(currentPeriodEnd) * 1000;
-                if (!isNaN(timestamp) && timestamp > 0) {
-                  endDate = new Date(timestamp);
-                  console.log(`End date from Stripe: ${endDate.toISOString()}`);
-                } else {
-                  throw new Error('Invalid timestamp value');
-                }
+              // For a newly created subscription, check current_period_end on the actual result
+              // For 'incomplete' subscriptions, use billing_cycle_anchor instead as current_period_end may not be set yet
+              let timestamp;
+              
+              // First try current_period_end
+              if ((subscription as any).current_period_end) {
+                timestamp = Number((subscription as any).current_period_end) * 1000;
+              }
+              // If that's not available, try billing_cycle_anchor
+              else if ((subscription as any).billing_cycle_anchor) {
+                console.log("Using billing_cycle_anchor instead of current_period_end");
+                // Calculate one month from billing_cycle_anchor for incomplete subscriptions
+                const anchor = Number((subscription as any).billing_cycle_anchor) * 1000;
+                const anchorDate = new Date(anchor);
+                // Add one month
+                const oneMonthFromAnchor = new Date(anchorDate);
+                oneMonthFromAnchor.setMonth(oneMonthFromAnchor.getMonth() + 1);
+                timestamp = oneMonthFromAnchor.getTime();
+              } 
+              // As a last resort, set a date one month from now
+              else {
+                console.log("No valid timestamp found in subscription, using default date");
+                const now = new Date();
+                now.setMonth(now.getMonth() + 1);
+                timestamp = now.getTime();
+              }
+              
+              // Verify the timestamp and create the date
+              if (!isNaN(timestamp) && timestamp > 0) {
+                endDate = new Date(timestamp);
+                console.log(`End date: ${endDate.toISOString()}`);
               } else {
-                throw new Error('No current_period_end provided');
+                throw new Error('Invalid timestamp value');
               }
             } catch (dateError) {
               console.error('Error creating subscription end date:', dateError);
