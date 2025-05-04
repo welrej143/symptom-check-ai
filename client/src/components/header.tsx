@@ -1,5 +1,5 @@
 import { useLocation } from "wouter";
-import { Zap, UserCircle, LogOut, ChevronDown, Shield, LineChart } from "lucide-react";
+import { Zap, UserCircle, LogOut, ChevronDown, Shield, LineChart, Crown } from "lucide-react";
 import { useAuth } from "@/hooks/use-auth";
 import {
   DropdownMenu,
@@ -47,7 +47,8 @@ export default function Header() {
                   <UserCircle className="h-5 w-5 text-blue-500" />
                   <span className="font-medium">{user.username}</span>
                   {user.isPremium && (
-                    <span className="ml-1 px-1.5 py-0.5 text-xs font-medium bg-gradient-to-r from-primary-500 to-primary-600 text-white rounded-full">
+                    <span className="ml-2 px-2 py-1 text-xs font-bold bg-gradient-to-r from-yellow-400 to-orange-500 text-white rounded shadow-sm border border-yellow-500 flex items-center gap-1">
+                      <Crown className="h-3 w-3" />
                       PRO
                     </span>
                   )}
@@ -62,8 +63,17 @@ export default function Header() {
                   Health Tracker
                 </DropdownMenuItem>
                 <DropdownMenuItem onClick={() => navigate("/premium")}>
-                  <Shield className="h-4 w-4 mr-2" />
-                  {user?.isPremium ? "Premium Status" : "Upgrade to Premium"}
+                  {user?.isPremium ? (
+                    <>
+                      <Crown className="h-4 w-4 mr-2 text-yellow-500" />
+                      Premium Status
+                    </>
+                  ) : (
+                    <>
+                      <Shield className="h-4 w-4 mr-2" />
+                      Upgrade to Premium
+                    </>
+                  )}
                 </DropdownMenuItem>
                 <DropdownMenuSeparator />
                 <DropdownMenuItem onClick={handleLogout} disabled={logoutMutation.isPending}>
