@@ -262,7 +262,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  // Create payment intent for subscription
+  // Create a proper Stripe subscription
   app.post("/api/create-subscription", async (req: Request, res: Response) => {
     try {
       if (!req.isAuthenticated()) {
@@ -297,26 +297,47 @@ export async function registerRoutes(app: Express): Promise<Server> {
         });
       }
 
-      // Create a payment intent for the subscription using the Stripe Price ID
-      // This ensures the subscription is properly tracked in Stripe
+      // Ensure the STRIPE_PRICE_ID is available
       if (!process.env.STRIPE_PRICE_ID) {
         throw new Error('Missing STRIPE_PRICE_ID environment variable');
       }
       
-      const paymentIntent = await stripe.paymentIntents.create({
-        amount: 999, // $9.99
-        currency: 'usd',
+      // Two approaches here:
+      // 1. For test/development, use a payment intent (works without webhook)
+      // 2. For production with webhook, create a subscription
+      
+      // We'll use approach #2 now that webhooks are set up:
+      
+      // Create a subscription with payment_behavior: 'default_incomplete' to collect first payment
+      const subscription = await stripe.subscriptions.create({
         customer: customerId,
+        items: [
+          {
+            price: process.env.STRIPE_PRICE_ID, // The price ID you created in Stripe
+          },
+        ],
+        payment_behavior: 'default_incomplete',
+        payment_settings: {
+          save_default_payment_method: 'on_subscription',
+        },
         metadata: {
           userId: user.id.toString(),
-          isSubscription: 'true',
-          priceId: process.env.STRIPE_PRICE_ID
         },
-        description: 'SymptomCheck AI Premium Subscription',
+        expand: ['latest_invoice.payment_intent'],
       });
+      
+      // Update the user with the subscription ID
+      await storage.updateUserStripeInfo(user.id, {
+        stripeCustomerId: customerId,
+        stripeSubscriptionId: subscription.id,
+      });
+      
+      // Get the client secret from the subscription's latest invoice's payment intent
+      const clientSecret = (subscription.latest_invoice as any).payment_intent.client_secret;
 
       res.json({
-        clientSecret: paymentIntent.client_secret,
+        subscriptionId: subscription.id,
+        clientSecret: clientSecret,
       });
     } catch (error) {
       console.error("Error creating payment intent for subscription:", error);
@@ -352,7 +373,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       }
 
       const user = req.user;
-      const { paymentIntentId } = req.body;
+      const { paymentIntentId, subscriptionId } = req.body;
       
       if (!paymentIntentId) {
         return res.status(400).json({ message: "Payment intent ID is required" });
@@ -376,25 +397,49 @@ export async function registerRoutes(app: Express): Promise<Server> {
         }
       }
       
-      // Calculate subscription end date (1 month from now)
-      const endDate = new Date();
+      // Determine endDate and status
+      let endDate = new Date();
       endDate.setMonth(endDate.getMonth() + 1);
+      let status = 'active';
+      
+      // If we have a subscription ID, use it to get accurate info
+      if (subscriptionId) {
+        try {
+          const subscription = await stripe.subscriptions.retrieve(subscriptionId);
+          
+          // Update end date based on the subscription
+          if ((subscription as any).current_period_end) {
+            endDate = new Date((subscription as any).current_period_end * 1000);
+          }
+          
+          // Update status based on subscription status
+          if (subscription.status === 'active') {
+            status = 'active';
+          } else if (subscription.status === 'past_due') {
+            status = 'past_due';
+          } else if (subscription.status === 'canceled') {
+            status = 'canceled';
+          }
+        } catch (subError) {
+          console.error("Error retrieving subscription:", subError);
+          // Continue with default values if we can't get the subscription
+        }
+      }
       
       // Update user subscription status
-      await storage.updateSubscriptionStatus(user.id, 'active', endDate);
+      await storage.updateSubscriptionStatus(user.id, status, endDate);
       
-      // Also save the subscription ID if needed
-      if (!user.stripeSubscriptionId) {
-        await storage.updateUserStripeInfo(user.id, { 
-          stripeCustomerId: user.stripeCustomerId || '',
-          stripeSubscriptionId: paymentIntentId, // Use the ID we received
-        });
-      }
+      // Save subscription info
+      const newSubscriptionId = subscriptionId || paymentIntentId;
+      await storage.updateUserStripeInfo(user.id, { 
+        stripeCustomerId: user.stripeCustomerId || '',
+        stripeSubscriptionId: newSubscriptionId,
+      });
       
       res.json({ 
         message: "Premium status updated successfully",
         isPremium: true,
-        subscriptionStatus: 'active',
+        subscriptionStatus: status,
         subscriptionEndDate: endDate,
       });
     } catch (error) {
@@ -417,23 +462,33 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.status(400).json({ message: "No active subscription to cancel" });
       }
       
-      // In a production app with real Stripe integration:
-      // if (user.stripeSubscriptionId) {
-      //   await stripe.subscriptions.update(user.stripeSubscriptionId, {
-      //     cancel_at_period_end: true,
-      //   });
-      // }
-      
-      // Mark the subscription as canceled but keep the end date the same
-      // This allows the user to continue using premium features until the end of their billing period
-      // If there's no end date, set one month from now
-      const endDate = user.subscriptionEndDate || new Date(Date.now() + 30 * 24 * 60 * 60 * 1000);
-      
-      await storage.updateSubscriptionStatus(
-        user.id,
-        'canceled',
-        endDate // maintain the same end date or use default
-      );
+      // Cancel with Stripe if we have a subscription ID
+      if (user.stripeSubscriptionId) {
+        await stripe.subscriptions.update(user.stripeSubscriptionId, {
+          cancel_at_period_end: true,
+        });
+        
+        // Get the subscription to get the current_period_end
+        const subscription = await stripe.subscriptions.retrieve(user.stripeSubscriptionId);
+        const endDate = new Date((subscription as any).current_period_end * 1000);
+        
+        // Mark the subscription as canceled but keep the end date from Stripe
+        await storage.updateSubscriptionStatus(
+          user.id,
+          'canceled',
+          endDate
+        );
+      } else {
+        // Fallback if we don't have a subscription ID
+        // If there's no end date, set one month from now
+        const endDate = user.subscriptionEndDate || new Date(Date.now() + 30 * 24 * 60 * 60 * 1000);
+        
+        await storage.updateSubscriptionStatus(
+          user.id,
+          'canceled',
+          endDate
+        );
+      }
       
       res.json({ 
         message: "Subscription canceled successfully. You'll have access until the end of your billing period.",
@@ -460,22 +515,34 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.status(400).json({ message: "No canceled subscription to reactivate" });
       }
       
-      // In a production app with real Stripe integration:
-      // if (user.stripeSubscriptionId) {
-      //   await stripe.subscriptions.update(user.stripeSubscriptionId, {
-      //     cancel_at_period_end: false,
-      //   });
-      // }
-      
-      // If there's no end date, set one month from now
-      const endDate = user.subscriptionEndDate || new Date(Date.now() + 30 * 24 * 60 * 60 * 1000);
-      
-      // Mark the subscription as active again with the same end date
-      await storage.updateSubscriptionStatus(
-        user.id,
-        'active',
-        endDate
-      );
+      // Cancel with Stripe if we have a subscription ID
+      if (user.stripeSubscriptionId) {
+        await stripe.subscriptions.update(user.stripeSubscriptionId, {
+          cancel_at_period_end: false,
+        });
+        
+        // Get the subscription to get the current_period_end
+        const subscription = await stripe.subscriptions.retrieve(user.stripeSubscriptionId);
+        const endDate = new Date((subscription as any).current_period_end * 1000);
+        
+        // Mark the subscription as active again with the end date from Stripe
+        await storage.updateSubscriptionStatus(
+          user.id,
+          'active',
+          endDate
+        );
+      } else {
+        // Fallback if we don't have a subscription ID
+        // If there's no end date, set one month from now
+        const endDate = user.subscriptionEndDate || new Date(Date.now() + 30 * 24 * 60 * 60 * 1000);
+        
+        // Mark the subscription as active again with the same end date
+        await storage.updateSubscriptionStatus(
+          user.id,
+          'active',
+          endDate
+        );
+      }
       
       res.json({ 
         message: "Subscription reactivated successfully.",

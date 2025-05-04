@@ -22,7 +22,7 @@ const stripePromise = loadStripe(import.meta.env.VITE_STRIPE_PUBLIC_KEY);
 const SUBSCRIPTION_PRICE = 9.99;
 
 // Stripe Checkout Form Component
-function StripeCheckoutForm({ clientSecret }: { clientSecret: string }) {
+function StripeCheckoutForm({ clientSecret, subscriptionId }: { clientSecret: string, subscriptionId?: string }) {
   const stripe = useStripe();
   const elements = useElements();
   const [isLoading, setIsLoading] = useState(false);
@@ -65,9 +65,12 @@ function StripeCheckoutForm({ clientSecret }: { clientSecret: string }) {
         });
         setIsLoading(false);
       } else {
-        // Payment successful, update premium status
+        // For real subscription, the payment intent is already associated with the subscription
+        // We don't need to pass the payment ID, just confirm the subscription is active
         const response = await apiRequest("POST", "/api/update-premium-status", {
           paymentIntentId: result.paymentIntent.id,
+          // include the subscription ID if it was passed
+          subscriptionId: subscriptionId || undefined,
         });
         
         // Refresh auth context to update premium status
@@ -140,6 +143,7 @@ function StripeCheckoutForm({ clientSecret }: { clientSecret: string }) {
 // Wrapper component that fetches client secret and displays Stripe Elements
 function StripePaymentOptions() {
   const [clientSecret, setClientSecret] = useState<string | null>(null);
+  const [subscriptionId, setSubscriptionId] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const { toast } = useToast();
@@ -152,6 +156,11 @@ function StripePaymentOptions() {
         
         if (data.clientSecret) {
           setClientSecret(data.clientSecret);
+          
+          // Store the subscription ID if it's returned
+          if (data.subscriptionId) {
+            setSubscriptionId(data.subscriptionId);
+          }
         } else {
           throw new Error("No client secret returned");
         }
@@ -240,7 +249,10 @@ function StripePaymentOptions() {
           }
         }
       }}>
-        <StripeCheckoutForm clientSecret={clientSecret} />
+        <StripeCheckoutForm 
+          clientSecret={clientSecret} 
+          subscriptionId={subscriptionId || undefined} 
+        />
       </Elements>
     </div>
   );
