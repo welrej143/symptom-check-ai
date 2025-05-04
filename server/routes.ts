@@ -520,11 +520,16 @@ export async function registerRoutes(app: Express): Promise<Server> {
       } else {
         // For real payments, verify with Stripe
         try {
+          console.log("Retrieving payment intent from Stripe:", paymentIntentId);
           const paymentIntent = await stripe.paymentIntents.retrieve(paymentIntentId);
+          console.log("Payment intent status:", paymentIntent.status);
           
           if (paymentIntent.status !== 'succeeded') {
+            console.log("Payment intent not successful:", paymentIntent.status);
             return res.status(400).json({ message: "Payment has not been completed successfully" });
           }
+          
+          console.log("Payment is successful, proceeding with subscription creation");
           
           // Create or verify customer ID
           let customerId = user.stripeCustomerId;
@@ -907,15 +912,21 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
   // Helper functions for webhook event handling
   async function handlePaymentIntentSucceeded(paymentIntent: any) {
+    console.log("Payment intent succeeded webhook:", paymentIntent.id);
+    console.log("Payment intent metadata:", paymentIntent.metadata);
+    
     // Check if this is a subscription payment
     if (paymentIntent.metadata && paymentIntent.metadata.isSubscriptionPayment === 'true') {
+      console.log("This is a subscription payment");
       const userId = parseInt(paymentIntent.metadata.userId);
       
       if (userId) {
+        console.log("Processing payment for user ID:", userId);
         // Find the user
         const user = await storage.getUser(userId);
         
         if (user) {
+          console.log("Found user:", user.username);
           // Get price ID from env vars or metadata
           const priceId = paymentIntent.metadata?.priceId || process.env.STRIPE_PRICE_ID;
           
@@ -923,6 +934,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
             console.error("Missing STRIPE_PRICE_ID for subscription creation");
             return;
           }
+          
+          console.log("Using price ID:", priceId);
           
           // If user doesn't have a subscription ID or has a payment intent ID (not a real subscription)
           if (!user.stripeSubscriptionId || user.stripeSubscriptionId.startsWith('pi_')) {
