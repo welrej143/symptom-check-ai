@@ -298,22 +298,31 @@ export async function registerRoutes(app: Express): Promise<Server> {
       }
 
       // Ensure the STRIPE_PRICE_ID is available
-      if (!process.env.STRIPE_PRICE_ID) {
-        throw new Error('Missing STRIPE_PRICE_ID environment variable');
+      const stripePriceId = process.env.STRIPE_PRICE_ID;
+      if (!stripePriceId) {
+        console.error('Missing STRIPE_PRICE_ID environment variable');
+        return res.status(500).json({ 
+          message: "Missing Stripe price ID. Please set the STRIPE_PRICE_ID environment variable.",
+          errorType: "configuration"
+        });
       }
       
-      // Two approaches here:
-      // 1. For test/development, use a payment intent (works without webhook)
-      // 2. For production with webhook, create a subscription
-      
-      // We'll use approach #2 now that webhooks are set up:
+      // Validate the price ID format (should start with "price_")
+      if (!stripePriceId.startsWith('price_')) {
+        console.error('Invalid STRIPE_PRICE_ID format. It should start with "price_", got:', stripePriceId);
+        return res.status(500).json({ 
+          message: "Invalid Stripe price ID format. It should start with 'price_'.",
+          errorType: "configuration",
+          priceIdPrefix: stripePriceId.substring(0, 5) + "..."
+        });
+      }
       
       // Create a subscription with payment_behavior: 'default_incomplete' to collect first payment
       const subscription = await stripe.subscriptions.create({
         customer: customerId,
         items: [
           {
-            price: process.env.STRIPE_PRICE_ID, // The price ID you created in Stripe
+            price: stripePriceId, // The price ID you created in Stripe
           },
         ],
         payment_behavior: 'default_incomplete',
@@ -339,6 +348,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         subscriptionId: subscription.id,
         clientSecret: clientSecret,
       });
+    
     } catch (error) {
       console.error("Error creating payment intent for subscription:", error);
       res.status(500).json({ message: "Error creating payment intent" });
