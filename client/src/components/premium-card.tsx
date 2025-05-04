@@ -75,21 +75,40 @@ function StripeCheckoutForm({ clientSecret, subscriptionId }: { clientSecret: st
       });
       
       if (result.error) {
-        setError(result.error.message || "Something went wrong");
+        // Handle specific Stripe errors
+        setError(result.error.message || "Something went wrong with the payment");
         toast({
           title: "Payment Failed",
           description: result.error.message || "An error occurred during payment",
           variant: "destructive",
         });
         setIsLoading(false);
-      } else {
-        // For real subscription, the payment intent is already associated with the subscription
-        // We don't need to pass the payment ID, just confirm the subscription is active
+        return;
+      }
+      
+      if (!result.paymentIntent) {
+        setError("No payment confirmation received from Stripe");
+        toast({
+          title: "Payment Not Confirmed",
+          description: "We couldn't confirm your payment status. Please contact support.",
+          variant: "destructive",
+        });
+        setIsLoading(false);
+        return;
+      }
+      
+      // Payment successful, update subscription status
+      try {
         const response = await apiRequest("POST", "/api/update-premium-status", {
           paymentIntentId: result.paymentIntent.id,
-          // include the subscription ID if it was passed
           subscriptionId: subscriptionId || undefined,
         });
+        
+        if (!response.ok) {
+          // Server error handling
+          const errorData = await response.json().catch(() => ({}));
+          throw new Error(errorData.message || "Server couldn't process the subscription");
+        }
         
         // Refresh auth context to update premium status
         await refreshSubscriptionStatus();
@@ -104,10 +123,19 @@ function StripeCheckoutForm({ clientSecret, subscriptionId }: { clientSecret: st
         setTimeout(() => {
           window.location.reload();
         }, 1500);
+      } catch (serverError) {
+        console.error("Server error:", serverError);
+        setError("Payment was processed but subscription couldn't be activated. Please contact support.");
+        toast({
+          title: "Subscription Error",
+          description: "Payment succeeded but we couldn't activate your subscription. Please contact support.",
+          variant: "destructive",
+        });
+        setIsLoading(false);
       }
     } catch (err) {
       console.error("Payment error:", err);
-      setError("An error occurred. Please try again.");
+      setError("An unexpected error occurred. Please try again or contact support.");
       toast({
         title: "Payment Failed",
         description: "An error occurred during payment processing",
@@ -176,24 +204,44 @@ function StripePaymentOptions() {
     const getClientSecret = async () => {
       try {
         const response = await apiRequest("POST", "/api/create-subscription");
+        
+        if (!response.ok) {
+          // Handle specific HTTP error statuses
+          if (response.status === 401) {
+            throw new Error("You must be logged in to subscribe.");
+          } else if (response.status === 403) {
+            throw new Error("You already have an active subscription.");
+          } else if (response.status >= 500) {
+            throw new Error("Our payment server is experiencing issues. Please try again later.");
+          }
+          
+          // Parse error response for more details
+          try {
+            const errorData = await response.json();
+            throw new Error(errorData.message || "Could not create subscription");
+          } catch (parseError) {
+            throw new Error("Could not process payment request. Please try again.");
+          }
+        }
+        
         const data = await response.json();
         
-        if (data.clientSecret) {
-          setClientSecret(data.clientSecret);
-          
-          // Store the payment intent ID if it's returned
-          if (data.paymentIntentId) {
-            setSubscriptionId(data.paymentIntentId);
-          }
-        } else {
-          throw new Error("No client secret returned");
+        if (!data.clientSecret) {
+          throw new Error("No client secret returned from payment provider");
+        }
+        
+        setClientSecret(data.clientSecret);
+        
+        // Store the subscription ID if it's returned
+        if (data.subscriptionId) {
+          setSubscriptionId(data.subscriptionId);
         }
       } catch (err) {
         console.error("Error getting client secret:", err);
-        setError("Could not initialize payment. Please try again.");
+        setError(err instanceof Error ? err.message : "Could not initialize payment. Please try again.");
         toast({
           title: "Payment Setup Failed",
-          description: "Could not initialize the payment form. Please try again.",
+          description: err instanceof Error ? err.message : "Could not initialize payment form. Please try again later.",
           variant: "destructive",
         });
       } finally {
@@ -314,18 +362,41 @@ export default function PremiumCard() {
             <div className="flex flex-wrap gap-4 mt-2">
               <div className="bg-white px-3 py-2 rounded-md shadow-sm border border-gray-200 text-sm">
                 <span className="text-gray-500">Status:</span>{" "}
-                <span className="font-medium text-green-600">
-                  {user.subscriptionStatus === "active" ? "Active" : user.subscriptionStatus}
+                <span className={`font-medium ${
+                  user.subscriptionStatus === "active" ? "text-green-600" : 
+                  user.subscriptionStatus === "canceled" ? "text-orange-600" : 
+                  user.subscriptionStatus === "error" ? "text-red-600" : "text-blue-600"
+                }`}>
+                  {user.subscriptionStatus === "active" ? "Active" : 
+                   user.subscriptionStatus === "canceled" ? "Canceled" :
+                   user.subscriptionStatus === "error" ? "Error" : 
+                   user.subscriptionStatus || "Unknown"}
                 </span>
               </div>
               
-              {user.subscriptionEndDate && (
+              {user.planName && (
+                <div className="bg-white px-3 py-2 rounded-md shadow-sm border border-gray-200 text-sm">
+                  <span className="text-gray-500">Plan:</span>{" "}
+                  <span className="font-medium text-gray-800">
+                    {user.planName}
+                  </span>
+                </div>
+              )}
+              
+              {user.subscriptionEndDate ? (
                 <div className="bg-white px-3 py-2 rounded-md shadow-sm border border-gray-200 text-sm">
                   <span className="text-gray-500">
                     {user.subscriptionStatus === "canceled" ? "Access until:" : "Next billing:"}
                   </span>{" "}
                   <span className="font-medium">
                     {new Date(user.subscriptionEndDate).toLocaleDateString()}
+                  </span>
+                </div>
+              ) : (
+                <div className="bg-white px-3 py-2 rounded-md shadow-sm border border-gray-200 text-sm">
+                  <span className="text-gray-500">Billing date:</span>{" "}
+                  <span className="font-medium text-gray-600">
+                    Not available
                   </span>
                 </div>
               )}

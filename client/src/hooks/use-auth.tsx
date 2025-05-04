@@ -57,17 +57,41 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       if (userData.stripeCustomerId) {
         try {
           const res = await apiRequest("GET", "/api/subscription");
-          const subscriptionData = await res.json();
           
-          // Update user with subscription data
-          queryClient.setQueryData(["/api/user"], {
-            ...userData,
-            isPremium: subscriptionData.isPremium,
-            subscriptionStatus: subscriptionData.subscriptionStatus,
-            subscriptionEndDate: subscriptionData.subscriptionEndDate,
-          });
+          if (res.ok) {
+            const subscriptionData = await res.json();
+            
+            // Update user with subscription data from Stripe
+            queryClient.setQueryData(["/api/user"], {
+              ...userData,
+              isPremium: subscriptionData.isPremium,
+              subscriptionStatus: subscriptionData.subscriptionStatus,
+              subscriptionEndDate: subscriptionData.subscriptionEndDate,
+              planName: subscriptionData.planName || "Premium",
+            });
+          } else if (res.status === 404) {
+            // No subscription found in Stripe
+            console.warn("No subscription found in Stripe");
+            
+            // Override any local premium status with Stripe as source of truth
+            queryClient.setQueryData(["/api/user"], {
+              ...userData,
+              isPremium: false,
+              subscriptionStatus: 'inactive',
+            });
+          } else {
+            // Other error
+            console.error("Error fetching subscription:", res.status);
+          }
         } catch (error) {
           console.error("Failed to fetch subscription status:", error);
+          
+          // Use default non-premium state on network/unexpected errors
+          queryClient.setQueryData(["/api/user"], {
+            ...userData,
+            isPremium: false,
+            subscriptionStatus: 'error',
+          });
         }
       }
       
