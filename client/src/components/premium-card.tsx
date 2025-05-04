@@ -399,20 +399,14 @@ export default function PremiumCard() {
                       {user.subscriptionStatus === "canceled" ? "Access until:" : "Next billing:"}
                     </div>
                   </div>
-                  <div className="font-medium pr-16">
+                  <div className="font-medium">
                     {new Date(user.subscriptionEndDate).toLocaleDateString(undefined, {
                       year: 'numeric',
                       month: 'short',
                       day: 'numeric'
                     })}
                   </div>
-                  {user.subscriptionStatus === "active" && (
-                    <div className="absolute top-1/2 right-2 -translate-y-1/2">
-                      <span className="text-xs font-medium bg-blue-100 text-blue-800 py-1 px-2 rounded-full inline-block">
-                        {Math.max(0, Math.ceil((new Date(user.subscriptionEndDate).getTime() - new Date().getTime()) / (1000 * 60 * 60 * 24)))} days
-                      </span>
-                    </div>
-                  )}
+
                 </div>
               ) : (
                 <div className="bg-white px-3 py-2 rounded-md shadow-sm border border-gray-200 text-sm">
