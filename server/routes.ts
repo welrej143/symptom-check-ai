@@ -490,6 +490,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
               subscriptionStatus: status,
               subscriptionEndDate: endDate,
               subscriptionId: subscription.id,
+              planName: planName,
               // Additional subscription details from Stripe
               currentPeriodStart: new Date((subscription as any).current_period_start * 1000),
               currentPeriodEnd: endDate,
@@ -514,17 +515,42 @@ export async function registerRoutes(app: Express): Promise<Server> {
                   status = 'canceled';
                 }
                 
+                // Get the plan name from the first subscription item
+                let planName = "Premium Monthly"; // Default fallback
+                
+                try {
+                  if (subscription.items.data && subscription.items.data.length > 0) {
+                    // Get the first item's price
+                    const firstItem = subscription.items.data[0];
+                    if (firstItem.price && firstItem.price.product) {
+                      // Get the product details to get the product name
+                      const product = await stripe.products.retrieve(firstItem.price.product as string);
+                      if (product && product.name) {
+                        planName = product.name;
+                        console.log(`Found plan name from Stripe: ${planName}`);
+                      }
+                    }
+                  }
+                } catch (productError) {
+                  console.error("Error fetching plan name:", productError);
+                  // Continue with default plan name
+                }
+                
                 // Update our database to match Stripe
                 const userEndDate = user.subscriptionEndDate ? new Date(user.subscriptionEndDate) : undefined;
-                if (status !== user.subscriptionStatus || !datesEqual(endDate, userEndDate)) {
+                if (status !== user.subscriptionStatus || 
+                    !datesEqual(endDate, userEndDate) ||
+                    user.planName !== planName) {
                   console.log(`Updating status from ${user.subscriptionStatus} to ${status} and end date to ${endDate.toISOString()}`);
-                  await storage.updateSubscriptionStatus(user.id, status, endDate);
+                  console.log(`Plan name: ${user.planName} -> ${planName}`);
+                  await storage.updateSubscriptionStatus(user.id, status, endDate, planName);
                 }
                 
                 return res.json({
                   isPremium: true,
                   subscriptionStatus: status,
                   subscriptionEndDate: endDate,
+                  planName: planName,
                   subscriptionId: user.stripeSubscriptionId,
                   // Additional subscription details from Stripe
                   currentPeriodStart: new Date((subscription as any).current_period_start * 1000),
@@ -555,18 +581,42 @@ export async function registerRoutes(app: Express): Promise<Server> {
             status = 'canceled';
           }
           
+          // Get the plan name from the first subscription item
+          let planName = "Premium Monthly"; // Default fallback
+          
+          try {
+            if (subscription.items.data && subscription.items.data.length > 0) {
+              // Get the first item's price
+              const firstItem = subscription.items.data[0];
+              if (firstItem.price && firstItem.price.product) {
+                // Get the product details to get the product name
+                const product = await stripe.products.retrieve(firstItem.price.product as string);
+                if (product && product.name) {
+                  planName = product.name;
+                  console.log(`Found plan name from Stripe: ${planName}`);
+                }
+              }
+            }
+          } catch (productError) {
+            console.error("Error fetching plan name:", productError);
+            // Continue with default plan name
+          }
+          
           // Make sure we're always in sync with Stripe
           const userEndDate = user.subscriptionEndDate ? new Date(user.subscriptionEndDate) : undefined;
           if (status !== user.subscriptionStatus || 
-              !datesEqual(endDate, userEndDate)) {
+              !datesEqual(endDate, userEndDate) ||
+              user.planName !== planName) {
             console.log(`Updating status from ${user.subscriptionStatus} to ${status} and end date to ${endDate.toISOString()}`);
-            await storage.updateSubscriptionStatus(user.id, status, endDate);
+            console.log(`Plan name: ${user.planName} -> ${planName}`);
+            await storage.updateSubscriptionStatus(user.id, status, endDate, planName);
           }
           
           return res.json({
             isPremium: true,
             subscriptionStatus: status,
             subscriptionEndDate: endDate,
+            planName: planName,
             subscriptionId: user.stripeSubscriptionId,
             // Additional subscription details from Stripe
             currentPeriodStart: new Date((subscription as any).current_period_start * 1000),
@@ -586,6 +636,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         isPremium: user.isPremium || false,
         subscriptionStatus: user.subscriptionStatus || 'inactive',
         subscriptionEndDate: user.subscriptionEndDate || undefined,
+        planName: user.planName || "Premium Monthly",
         subscriptionId: user.stripeSubscriptionId || null,
         directFromStripe: false
       });
@@ -825,11 +876,18 @@ export async function registerRoutes(app: Express): Promise<Server> {
         stripeSubscriptionId: newSubscriptionId,
       });
       
+      // Use a default plan name
+      const planName = "Premium Monthly";
+      
+      // Update with plan name too
+      await storage.updateSubscriptionStatus(user.id, status, endDate, planName);
+      
       res.json({ 
         message: "Premium status updated successfully",
         isPremium: true,
         subscriptionStatus: status,
         subscriptionEndDate: endDate,
+        planName: planName,
       });
     } catch (error) {
       console.error("Error updating premium status:", error);
