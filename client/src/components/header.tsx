@@ -1,5 +1,5 @@
 import { useLocation } from "wouter";
-import { Zap, UserCircle, LogOut, ChevronDown, Shield, LineChart, Settings } from "lucide-react";
+import { Zap, UserCircle, LogOut, ChevronDown, Shield, LineChart } from "lucide-react";
 import { useAuth } from "@/hooks/use-auth";
 import {
   DropdownMenu,
@@ -57,10 +57,6 @@ export default function Header() {
               <DropdownMenuContent align="end">
                 <DropdownMenuLabel>My Account</DropdownMenuLabel>
                 <DropdownMenuSeparator />
-                <DropdownMenuItem onClick={() => navigate("/profile")}>
-                  <Settings className="h-4 w-4 mr-2" />
-                  Account Settings
-                </DropdownMenuItem>
                 <DropdownMenuItem onClick={() => navigate("/tracker")}>
                   <LineChart className="h-4 w-4 mr-2" />
                   Health Tracker

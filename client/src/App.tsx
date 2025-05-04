@@ -5,7 +5,6 @@ import Home from "@/pages/home";
 import Results from "@/pages/results";
 import Tracker from "@/pages/tracker";
 import AuthPage from "@/pages/auth-page";
-import ProfilePage from "@/pages/profile";
 import Header from "@/components/header";
 import Footer from "@/components/footer";
 import { useState } from "react";
@@ -156,7 +155,6 @@ function App() {
                     </div>
                   </div>
                 )} />
-                <ProtectedRoute path="/profile" component={ProfilePage} />
                 <Route path="/auth" component={AuthPage} />
                 <Route component={NotFound} />
               </Switch>
