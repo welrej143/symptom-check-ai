@@ -408,20 +408,27 @@ export async function registerRoutes(app: Express): Promise<Server> {
       // If we have a subscription ID, use it to get accurate info
       if (subscriptionId) {
         try {
-          const subscription = await stripe.subscriptions.retrieve(subscriptionId);
-          
-          // Update end date based on the subscription
-          if ((subscription as any).current_period_end) {
-            endDate = new Date((subscription as any).current_period_end * 1000);
-          }
-          
-          // Update status based on subscription status
-          if (subscription.status === 'active') {
-            status = 'active';
-          } else if (subscription.status === 'past_due') {
-            status = 'past_due';
-          } else if (subscription.status === 'canceled') {
-            status = 'canceled';
+          // Check if the ID starts with 'sub_' (a subscription) or 'pi_' (payment intent)
+          if (subscriptionId.startsWith('sub_')) {
+            const subscription = await stripe.subscriptions.retrieve(subscriptionId);
+            
+            // Update end date based on the subscription
+            if ((subscription as any).current_period_end) {
+              endDate = new Date((subscription as any).current_period_end * 1000);
+            }
+            
+            // Update status based on subscription status
+            if (subscription.status === 'active') {
+              status = 'active';
+            } else if (subscription.status === 'past_due') {
+              status = 'past_due';
+            } else if (subscription.status === 'canceled') {
+              status = 'canceled';
+            }
+          } else {
+            // It's a payment intent (pi_) or something else, just use default dates
+            console.log("Using one-time payment model with ID:", subscriptionId);
+            // No need to fetch anything - just set status to active and use default endDate
           }
         } catch (subError) {
           console.error("Error retrieving subscription:", subError);
@@ -466,21 +473,29 @@ export async function registerRoutes(app: Express): Promise<Server> {
       }
       
       // Cancel with Stripe if we have a subscription ID
-      if (user.stripeSubscriptionId) {
-        await stripe.subscriptions.update(user.stripeSubscriptionId, {
-          cancel_at_period_end: true,
-        });
-        
-        // Get the subscription to get the current_period_end
-        const subscription = await stripe.subscriptions.retrieve(user.stripeSubscriptionId);
-        const endDate = new Date((subscription as any).current_period_end * 1000);
-        
-        // Mark the subscription as canceled but keep the end date from Stripe
-        await storage.updateSubscriptionStatus(
-          user.id,
-          'canceled',
-          endDate
-        );
+      if (user.stripeSubscriptionId && user.stripeSubscriptionId.startsWith('sub_')) {
+        try {
+          // Only proceed if it's actually a subscription ID (starts with sub_)
+          await stripe.subscriptions.update(user.stripeSubscriptionId, {
+            cancel_at_period_end: true,
+          });
+          
+          // Get the subscription to get the current_period_end
+          const subscription = await stripe.subscriptions.retrieve(user.stripeSubscriptionId);
+          const endDate = new Date((subscription as any).current_period_end * 1000);
+          
+          // Mark the subscription as canceled but keep the end date from Stripe
+          await storage.updateSubscriptionStatus(
+            user.id,
+            'canceled',
+            endDate
+          );
+        } catch (error) {
+          console.log("Error updating subscription, using fallback approach:", error);
+          // Fall back to manual status update
+          const endDate = user.subscriptionEndDate || new Date(Date.now() + 30 * 24 * 60 * 60 * 1000);
+          await storage.updateSubscriptionStatus(user.id, 'canceled', endDate);
+        }
       } else {
         // Fallback if we don't have a subscription ID
         // If there's no end date, set one month from now
@@ -518,22 +533,30 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.status(400).json({ message: "No canceled subscription to reactivate" });
       }
       
-      // Cancel with Stripe if we have a subscription ID
-      if (user.stripeSubscriptionId) {
-        await stripe.subscriptions.update(user.stripeSubscriptionId, {
-          cancel_at_period_end: false,
-        });
-        
-        // Get the subscription to get the current_period_end
-        const subscription = await stripe.subscriptions.retrieve(user.stripeSubscriptionId);
-        const endDate = new Date((subscription as any).current_period_end * 1000);
-        
-        // Mark the subscription as active again with the end date from Stripe
-        await storage.updateSubscriptionStatus(
-          user.id,
-          'active',
-          endDate
-        );
+      // Reactivate with Stripe if we have a valid subscription ID
+      if (user.stripeSubscriptionId && user.stripeSubscriptionId.startsWith('sub_')) {
+        try {
+          // Only proceed if it's actually a subscription ID (starts with sub_)
+          await stripe.subscriptions.update(user.stripeSubscriptionId, {
+            cancel_at_period_end: false,
+          });
+          
+          // Get the subscription to get the current_period_end
+          const subscription = await stripe.subscriptions.retrieve(user.stripeSubscriptionId);
+          const endDate = new Date((subscription as any).current_period_end * 1000);
+          
+          // Mark the subscription as active again with the end date from Stripe
+          await storage.updateSubscriptionStatus(
+            user.id,
+            'active',
+            endDate
+          );
+        } catch (error) {
+          console.log("Error reactivating subscription, using fallback approach:", error);
+          // Fall back to manual status update
+          const endDate = user.subscriptionEndDate || new Date(Date.now() + 30 * 24 * 60 * 60 * 1000);
+          await storage.updateSubscriptionStatus(user.id, 'active', endDate);
+        }
       } else {
         // Fallback if we don't have a subscription ID
         // If there's no end date, set one month from now
