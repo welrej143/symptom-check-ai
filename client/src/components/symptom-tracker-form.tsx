@@ -15,9 +15,7 @@ interface SymptomTrackerFormProps {
 }
 
 export default function SymptomTrackerForm({ onSubmit, isSubmitting }: SymptomTrackerFormProps) {
-  const [selectedSymptoms, setSelectedSymptoms] = useState<string[]>([
-    "Headache", "Nausea"
-  ]);
+  const [selectedSymptoms, setSelectedSymptoms] = useState<string[]>([]);
   
   const commonSymptoms = [
     "Headache", "Nausea", "Dizziness", "Fatigue", "Light sensitivity",
@@ -110,6 +108,12 @@ export default function SymptomTrackerForm({ onSubmit, isSubmitting }: SymptomTr
               </FormLabel>
               <FormControl>
                 <div className="flex flex-wrap gap-2">
+                  <div className="w-full mb-2 text-xs text-gray-500">
+                    {selectedSymptoms.length === 0 ? 
+                      <span className="text-red-500 font-medium">* Please select at least one symptom</span> : 
+                      <span>Selected symptoms: {selectedSymptoms.length}</span>
+                    }
+                  </div>
                   {commonSymptoms.map((symptom) => (
                     <Badge
                       key={symptom}

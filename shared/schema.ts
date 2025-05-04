@@ -108,7 +108,7 @@ export type SymptomInput = z.infer<typeof symptomInputSchema>;
 // Daily tracking form schema
 export const dailyTrackingFormSchema = z.object({
   symptomSeverity: z.number().min(1).max(10),
-  symptoms: z.array(z.string()),
+  symptoms: z.array(z.string()).min(1, "Please select at least one symptom"),
   energyLevel: z.number().min(1).max(5),
   mood: z.number().min(1).max(5),
   sleepQuality: z.number().min(1).max(5),
