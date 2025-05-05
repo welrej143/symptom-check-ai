@@ -726,7 +726,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         email: user.email,
         isPremium: user.isPremium,
         stripeCustomerId: user.stripeCustomerId,
-        stripeSubscriptionId: user.stripeSubscriptionId,
+        stripeSubscriptionId: user.stripeSubscriptionId || "",
         subscriptionStatus: user.subscriptionStatus
       }, null, 2));
       
