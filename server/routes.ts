@@ -342,23 +342,30 @@ export async function registerRoutes(app: Express): Promise<Server> {
         
         console.log("Subscription created:", subscription.id, "with status:", subscription.status);
         
-        // Get the invoice separately
+        // Get the invoice and payment intent ID separately
         const invoiceId = subscription.latest_invoice as string;
         if (!invoiceId) {
           throw new Error("No invoice found for the created subscription");
         }
         
         console.log("Retrieving invoice:", invoiceId);
-        const invoice = await stripe.invoices.retrieve(invoiceId, {
-          expand: ['payment_intent']
-        });
+        const invoice = await stripe.invoices.retrieve(invoiceId);
         
-        // Get the payment intent client secret
-        if (!invoice.payment_intent || typeof invoice.payment_intent === 'string') {
-          throw new Error("No payment intent found on the subscription invoice");
+        // Get the payment intent ID from the invoice
+        // Note: TypeScript doesn't correctly recognize this property but Stripe's API does return it
+        const paymentIntentId = (invoice as any).payment_intent;
+        if (!paymentIntentId || typeof paymentIntentId !== 'string') {
+          throw new Error("No payment intent ID found on the subscription invoice");
+        }
+        console.log("Retrieving payment intent:", paymentIntentId);
+        
+        // Get the payment intent directly
+        const paymentIntent = await stripe.paymentIntents.retrieve(paymentIntentId);
+        if (!paymentIntent || !paymentIntent.client_secret) {
+          throw new Error("Could not retrieve client secret from payment intent");
         }
         
-        const clientSecret = invoice.payment_intent.client_secret;
+        const clientSecret = paymentIntent.client_secret;
         
         // Update user with the subscription ID
         await storage.updateUserStripeInfo(user.id, {
@@ -371,11 +378,12 @@ export async function registerRoutes(app: Express): Promise<Server> {
           clientSecret: clientSecret,
           subscriptionId: subscription.id,
         });
-      } catch (subscriptionError) {
-        console.error("Failed to create subscription:", subscriptionError);
+      } catch (error) {
+        const errorMessage = error instanceof Error ? error.message : String(error);
+        console.error("Failed to create subscription:", error);
         return res.status(500).json({ 
           message: "Failed to create subscription with payment provider",
-          error: subscriptionError.message
+          error: errorMessage
         });
       }
     } catch (error) {
