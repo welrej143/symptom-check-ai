@@ -75,7 +75,7 @@ export default function UsageIndicator() {
           <div>
             <p className={`font-medium ${isLow ? 'text-amber-800' : 'text-gray-700'}`}>
               {remaining === 0 
-                ? 'You\'ve used all free analyses this month' 
+                ? 'You\'ve used all your free analyses this month' 
                 : `You have ${remaining} free analysis${remaining !== 1 ? 'es' : ''} remaining this month`}
             </p>
             <div className="mt-2 mb-1 bg-gray-200 rounded-full h-1.5 w-full">

@@ -246,7 +246,7 @@ function App() {
       } else {
         toast({
           title: "Analysis Failed",
-          description: "There was a problem analyzing your symptoms. Please try again.",
+          description: "There was a problem analyzing your symptoms. Please try again later.",
           variant: "destructive",
         });
       }
