@@ -1203,35 +1203,101 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // Route to cancel a subscription
   app.post("/api/cancel-subscription", async (req: Request, res: Response) => {
     try {
+      // Check authentication
       if (!req.isAuthenticated()) {
         return res.status(401).json({ message: "Authentication required" });
       }
 
       const user = req.user;
+      console.log(`Processing subscription cancellation for user ${user.id}, subscription status: ${user.subscriptionStatus}`);
       
-      // Ensure the user has an active subscription
-      if (!user.isPremium || user.subscriptionStatus !== 'active') {
-        return res.status(400).json({ message: "No active subscription to cancel" });
+      // First try to get fresh subscription status from Stripe
+      let freshStatusChecked = false;
+      let hasValidSubscription = false;
+      let subscription;
+      
+      if (user.stripeCustomerId && user.stripeSubscriptionId) {
+        try {
+          // Get the latest subscription data from Stripe
+          subscription = await stripe.subscriptions.retrieve(user.stripeSubscriptionId);
+          freshStatusChecked = true;
+          
+          // If we got here, the subscription exists in Stripe
+          hasValidSubscription = true;
+          
+          console.log(`Retrieved subscription from Stripe, status: ${subscription.status}`);
+          
+          // If it's already canceled, inform the user
+          if (subscription.cancel_at_period_end) {
+            return res.status(200).json({ 
+              message: "Your subscription is already scheduled for cancellation at the end of your current billing period.",
+              alreadyCancelled: true,
+              subscription: {
+                id: subscription.id,
+                status: subscription.status,
+                cancelAtPeriodEnd: subscription.cancel_at_period_end,
+                currentPeriodEnd: new Date((subscription as any).current_period_end * 1000)
+              }
+            });
+          }
+        } catch (stripeError) {
+          console.error("Error fetching subscription from Stripe:", stripeError);
+          // Continue with local data if we can't reach Stripe
+        }
       }
       
-      // Cancel with Stripe if we have a subscription ID
+      // If we couldn't check with Stripe or the user doesn't have a valid subscription ID,
+      // fall back to the local database state
+      if (!freshStatusChecked) {
+        // Only 'active' subscriptions can be canceled in the local database
+        hasValidSubscription = !!user.isPremium && 
+                               (user.subscriptionStatus === 'active' || 
+                                user.subscriptionStatus === 'trialing');
+      }
+      
+      // Ensure the user has an active subscription
+      if (!hasValidSubscription) {
+        return res.status(400).json({ 
+          message: "No active subscription to cancel",
+          currentStatus: user.subscriptionStatus || 'none'
+        });
+      }
+      
+      // Proceed with cancellation in Stripe
       if (user.stripeSubscriptionId && user.stripeSubscriptionId.startsWith('sub_')) {
         try {
-          // Only proceed if it's actually a subscription ID (starts with sub_)
-          await stripe.subscriptions.update(user.stripeSubscriptionId, {
+          // Cancel at period end rather than immediately
+          const updatedSubscription = await stripe.subscriptions.update(user.stripeSubscriptionId, {
             cancel_at_period_end: true,
           });
           
-          // Get the subscription to get the current_period_end
-          const subscription = await stripe.subscriptions.retrieve(user.stripeSubscriptionId);
-          const endDate = new Date((subscription as any).current_period_end * 1000);
+          console.log(`Successfully marked subscription ${user.stripeSubscriptionId} for cancellation`);
+          
+          // Calculate end date safely
+          let endDate: Date;
+          try {
+            const timestamp = Number((updatedSubscription as any).current_period_end) * 1000;
+            endDate = new Date(timestamp);
+            
+            // Validate the date
+            if (isNaN(endDate.getTime())) {
+              throw new Error("Invalid date calculated");
+            }
+          } catch (dateError) {
+            console.error("Error calculating end date:", dateError);
+            // Fallback to 30 days from now
+            endDate = new Date();
+            endDate.setDate(endDate.getDate() + 30);
+          }
           
           // Get plan name from the subscription if possible
-          let planName = "Premium"; // Will be updated if we can get it from Stripe
+          let planName = user.planName || "Premium"; // Use existing or default
           
           try {
-            if (subscription.items.data && subscription.items.data.length > 0) {
-              const item = subscription.items.data[0];
+            if (updatedSubscription.items && 
+                updatedSubscription.items.data && 
+                updatedSubscription.items.data.length > 0) {
+              const item = updatedSubscription.items.data[0];
               if (item.price && item.price.product) {
                 const product = await stripe.products.retrieve(item.price.product as string);
                 if (product && product.name) {
@@ -1244,18 +1310,29 @@ export async function registerRoutes(app: Express): Promise<Server> {
             // Continue with existing plan name
           }
           
-          // Mark the subscription as canceled but keep the end date from Stripe
+          // Update the database to reflect cancellation
           await storage.updateSubscriptionStatus(
             user.id,
             'canceled',
             endDate,
             planName
           );
-        } catch (error) {
-          console.error("Error cancelling subscription with Stripe:", error);
+          
+          // Send a successful response
+          return res.status(200).json({
+            success: true,
+            message: "Your subscription has been canceled and will end on " + endDate.toLocaleDateString(),
+            subscription: {
+              status: 'canceled',
+              endDate: endDate,
+              planName: planName
+            }
+          });
+        } catch (stripeError) {
+          console.error("Error cancelling subscription with Stripe:", stripeError);
           return res.status(500).json({ 
             error: "Failed to cancel subscription", 
-            message: "There was an error cancelling your subscription with Stripe. Please try again or contact support."
+            message: "There was an error cancelling your subscription. Please try again or contact support."
           });
         }
       } else {
@@ -1266,60 +1343,185 @@ export async function registerRoutes(app: Express): Promise<Server> {
         });
       }
     } catch (error) {
-      console.error("Error canceling subscription:", error);
-      res.status(500).json({ message: "Error canceling subscription" });
+      // Enhanced error logging
+      console.error("Unexpected error canceling subscription:", error);
+      
+      const errorMessage = error instanceof Error ? error.message : String(error);
+      const errorDetails = {
+        type: error instanceof Error ? error.constructor.name : typeof error,
+        userId: req.user?.id,
+        subscriptionId: req.user?.stripeSubscriptionId
+      };
+      
+      res.status(500).json({ 
+        message: "An unexpected error occurred while processing your request",
+        error: errorMessage,
+        details: errorDetails
+      });
     }
   });
   
   // Route to get payment method update URL
   app.get("/api/payment-method-update", async (req: Request, res: Response) => {
     try {
+      // Verify authentication
       if (!req.isAuthenticated()) {
         return res.status(401).json({ message: "Authentication required" });
       }
       
       const user = req.user;
+      console.log(`Processing payment method update request for user ${user.id}`);
       
-      // Check if user has a Stripe customer ID and subscription ID
-      if (!user.stripeCustomerId || !user.stripeSubscriptionId) {
-        return res.status(404).json({ 
-          error: "No subscription found",
-          message: "No active subscription found to update payment method."
+      // First verify the subscription status with Stripe
+      let subscriptionActive = false;
+      let subscriptionExists = false;
+      let subscriptionId = user.stripeSubscriptionId;
+      let customerId = user.stripeCustomerId;
+      
+      // Verify the subscription exists in Stripe
+      if (user.stripeSubscriptionId && user.stripeCustomerId) {
+        try {
+          const subscription = await stripe.subscriptions.retrieve(user.stripeSubscriptionId);
+          
+          // Check if this is an active or past_due subscription (payment methods can be updated)
+          const validStatuses = ['active', 'past_due', 'incomplete', 'trialing'];
+          subscriptionActive = validStatuses.includes(subscription.status);
+          subscriptionExists = true;
+          
+          console.log(`Found subscription in Stripe with status: ${subscription.status}`);
+          
+          // Use retrieved subscription ID and customer ID to ensure accuracy
+          subscriptionId = subscription.id;
+          customerId = subscription.customer as string;
+        } catch (stripeError) {
+          console.error("Couldn't retrieve subscription from Stripe:", stripeError);
+          // Will fall back to local data
+        }
+      }
+      
+      // If we couldn't verify with Stripe, check local database state
+      if (!subscriptionExists) {
+        // Only allow updates for subscriptions with valid status
+        const validLocalStatuses = ['active', 'past_due', 'incomplete', 'trialing'];
+        subscriptionActive = validLocalStatuses.includes(user.subscriptionStatus || '');
+      }
+      
+      // Check if user has valid subscription data
+      if (!subscriptionActive || !customerId || !subscriptionId) {
+        console.log(`Cannot update payment: active=${subscriptionActive}, customerId=${!!customerId}, subscriptionId=${!!subscriptionId}`);
+        return res.status(400).json({ 
+          error: "Invalid subscription",
+          message: "You need an active subscription to update your payment method.",
+          details: {
+            subscriptionStatus: user.subscriptionStatus || 'none',
+            hasCustomerId: !!customerId,
+            hasSubscriptionId: !!subscriptionId
+          }
         });
       }
       
+      // Get site domain for redirect URLs
+      const siteUrl = process.env.PUBLIC_URL || 'http://localhost:5000';
+      
       try {
+        console.log(`Creating payment method update session for customer ${customerId}`);
+        
         // Create a checkout session for updating the payment method
-        const session = await stripe.checkout.sessions.create({
-          mode: 'setup',
-          payment_method_types: ['card'],
-          customer: user.stripeCustomerId,
-          setup_intent_data: {
-            metadata: {
-              subscription_id: user.stripeSubscriptionId,
-              user_id: user.id.toString()
+        // This uses Stripe's customer portal which provides a better UX than checkout
+        // for payment method updates
+        const session = await stripe.billingPortal.sessions.create({
+          customer: customerId,
+          return_url: `${siteUrl}/?payment_method_updated=true`,
+          flow_data: {
+            type: 'payment_method_update',
+            after_completion: {
+              type: 'redirect',
+              redirect: {
+                return_url: `${siteUrl}/?payment_method_updated=true`
+              }
             }
-          },
-          success_url: `${process.env.PUBLIC_URL || 'http://localhost:5000'}/account?payment_updated=true`,
-          cancel_url: `${process.env.PUBLIC_URL || 'http://localhost:5000'}/account?payment_updated=false`,
+          }
         });
         
+        console.log(`Created billing portal session: ${session.url}`);
+        
+        // Return the URL to the client
         return res.json({ 
           url: session.url,
-          success: true
+          success: true,
+          message: "Payment update session created"
         });
-      } catch (stripeError) {
-        console.error("Error creating Stripe checkout session:", stripeError);
-        return res.status(500).json({ 
+      } catch (stripeError: any) {
+        console.error("Error creating payment update session:", stripeError);
+        
+        // Fallback to the older checkout method if billing portal is not available
+        // This is less ideal but still works
+        if (stripeError.type === 'StripeInvalidRequestError' && stripeError.message.includes('billing_portal')) {
+          try {
+            console.log("Falling back to checkout session for payment method update");
+            
+            const checkoutSession = await stripe.checkout.sessions.create({
+              mode: 'setup',
+              payment_method_types: ['card'],
+              customer: customerId,
+              setup_intent_data: {
+                metadata: {
+                  subscription_id: subscriptionId,
+                  user_id: user.id.toString()
+                }
+              },
+              success_url: `${siteUrl}/?payment_updated=true`,
+              cancel_url: `${siteUrl}/?payment_updated=false`,
+            });
+            
+            return res.json({ 
+              url: checkoutSession.url,
+              success: true,
+              message: "Payment update session created (fallback method)"
+            });
+          } catch (fallbackError) {
+            console.error("Error in fallback payment update method:", fallbackError);
+            return res.status(500).json({ 
+              error: "Payment processor error",
+              message: "Could not create a payment update session. Please try again later."
+            });
+          }
+        }
+        
+        // Return appropriate error based on the Stripe error type
+        let errorMessage = "Could not create a payment update session. Please try again later.";
+        let statusCode = 500;
+        
+        if (stripeError.type === 'StripeInvalidRequestError') {
+          // Often this means the customer or subscription doesn't exist
+          statusCode = 400;
+          errorMessage = "Your subscription information appears to be invalid. Please contact support.";
+        } else if (stripeError.type === 'StripeAuthenticationError') {
+          // This means our API key is invalid
+          statusCode = 500;
+          errorMessage = "Payment system is currently unavailable. Please try again later.";
+        }
+        
+        return res.status(statusCode).json({ 
           error: "Payment processor error",
-          message: "Could not create a payment update session. Please try again later."
+          message: errorMessage
         });
       }
     } catch (error) {
-      console.error("Error in payment method update route:", error);
+      // Enhanced error logging
+      console.error("Unexpected error in payment method update route:", error);
+      
+      const errorMessage = error instanceof Error ? error.message : String(error);
+      const errorDetails = {
+        type: error instanceof Error ? error.constructor.name : typeof error,
+        userId: req.user?.id,
+        subscriptionId: req.user?.stripeSubscriptionId
+      };
+      
       return res.status(500).json({ 
         error: "Server error",
-        message: "An unexpected error occurred. Please try again later."
+        message: "An unexpected error occurred. Please try again later.",
+        details: errorDetails
       });
     }
   });
@@ -1327,79 +1529,152 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // Route to reactivate a canceled subscription
   app.post("/api/reactivate-subscription", async (req: Request, res: Response) => {
     try {
+      // Check authentication
       if (!req.isAuthenticated()) {
         return res.status(401).json({ message: "Authentication required" });
       }
 
       const user = req.user;
+      console.log(`Processing subscription reactivation for user ${user.id}`);
       
-      // Ensure the user has a canceled subscription
-      if (!user.isPremium || user.subscriptionStatus !== 'canceled') {
-        return res.status(400).json({ message: "No canceled subscription to reactivate" });
-      }
+      // First verify the subscription actually exists and is in a cancellable state
+      let validSubscription = false;
+      let subscription: any;
       
-      // Reactivate with Stripe if we have a valid subscription ID
       if (user.stripeSubscriptionId && user.stripeSubscriptionId.startsWith('sub_')) {
         try {
-          // Only proceed if it's actually a subscription ID (starts with sub_)
-          await stripe.subscriptions.update(user.stripeSubscriptionId, {
-            cancel_at_period_end: false,
-          });
+          // Get the latest subscription data from Stripe
+          subscription = await stripe.subscriptions.retrieve(user.stripeSubscriptionId);
+          console.log(`Retrieved subscription from Stripe, status: ${subscription.status}, cancel_at_period_end: ${subscription.cancel_at_period_end}`);
           
-          // Get the subscription to get the current_period_end
-          const subscription = await stripe.subscriptions.retrieve(user.stripeSubscriptionId);
-          const endDate = new Date((subscription as any).current_period_end * 1000);
+          // Check if this subscription can be reactivated (must be active but scheduled for cancellation)
+          validSubscription = subscription.status === 'active' && subscription.cancel_at_period_end === true;
           
-          // Get plan name from the subscription if possible
-          let planName = "Premium"; // Will be updated if we can get it from Stripe
-          
-          try {
-            if (subscription.items.data && subscription.items.data.length > 0) {
-              const item = subscription.items.data[0];
-              if (item.price && item.price.product) {
-                const product = await stripe.products.retrieve(item.price.product as string);
-                if (product && product.name) {
-                  planName = product.name;
-                }
-              }
+          if (!validSubscription) {
+            // If the subscription is completely canceled (not just scheduled for cancellation),
+            // provide a helpful message about creating a new subscription
+            if (subscription.status === 'canceled') {
+              return res.status(400).json({ 
+                message: "This subscription has already ended and cannot be reactivated. Please purchase a new subscription.",
+                canPurchaseNew: true 
+              });
             }
-          } catch (productError) {
-            console.error("Error getting plan name:", productError);
-            // Continue with existing plan name
+            
+            // If it's not scheduled for cancellation, it doesn't need reactivation
+            if (subscription.status === 'active' && !subscription.cancel_at_period_end) {
+              return res.status(400).json({ 
+                message: "This subscription is already active and not scheduled for cancellation.",
+                alreadyActive: true 
+              });
+            }
           }
+        } catch (stripeError) {
+          console.error("Error retrieving subscription from Stripe:", stripeError);
           
-          // Mark the subscription as active again with the end date from Stripe
-          await storage.updateSubscriptionStatus(
-            user.id,
-            'active',
-            endDate,
-            planName
-          );
-          
-          return res.json({ 
-            message: "Subscription reactivated successfully.",
-            subscriptionStatus: 'active',
-            subscriptionEndDate: endDate,
-            planName: planName
-          });
-        } catch (error) {
-          console.error("Error reactivating subscription with Stripe:", error);
-          return res.status(500).json({ 
-            error: "Failed to reactivate subscription", 
-            message: "There was an error reactivating your subscription with Stripe. Please try again or contact support."
-          });
+          // Fall back to local database state
+          validSubscription = !!user.isPremium && user.subscriptionStatus === 'canceled';
         }
       } else {
-        // No valid subscription ID to reactivate
-        return res.status(404).json({ 
-          error: "No valid subscription found", 
-          message: "We couldn't find a valid subscription to reactivate. Please contact support if you believe this is an error."
+        // Check local database state if no Stripe call was made
+        validSubscription = !!user.isPremium && user.subscriptionStatus === 'canceled';
+      }
+      
+      // Ensure the user has a canceled subscription that can be reactivated
+      if (!validSubscription) {
+        return res.status(400).json({ 
+          message: "No canceled subscription found that can be reactivated.",
+          currentStatus: user.subscriptionStatus || 'none' 
         });
       }
       
+      try {
+        console.log(`Reactivating subscription ${user.stripeSubscriptionId}`);
+        
+        // Update the subscription to remove the cancellation at period end
+        const updatedSubscription = await stripe.subscriptions.update(user.stripeSubscriptionId, {
+          cancel_at_period_end: false,
+        });
+        
+        // Calculate end date safely
+        let endDate: Date;
+        try {
+          const timestamp = Number((updatedSubscription as any).current_period_end) * 1000;
+          endDate = new Date(timestamp);
+          
+          // Validate the date
+          if (isNaN(endDate.getTime())) {
+            throw new Error("Invalid date calculated");
+          }
+        } catch (dateError) {
+          console.error("Error calculating end date:", dateError);
+          // Fallback to 30 days from now
+          endDate = new Date();
+          endDate.setMonth(endDate.getMonth() + 1);
+        }
+        
+        // Get plan name from the subscription if possible
+        let planName = user.planName || "Premium"; // Use existing or default
+        
+        try {
+          if (updatedSubscription.items && 
+              updatedSubscription.items.data && 
+              updatedSubscription.items.data.length > 0) {
+            const item = updatedSubscription.items.data[0];
+            if (item.price && item.price.product) {
+              const product = await stripe.products.retrieve(item.price.product as string);
+              if (product && product.name) {
+                planName = product.name;
+              }
+            }
+          }
+        } catch (productError) {
+          console.error("Error getting plan name:", productError);
+          // Continue with existing plan name
+        }
+        
+        // Update the database to reflect active status
+        await storage.updateSubscriptionStatus(
+          user.id,
+          'active',
+          endDate,
+          planName
+        );
+        
+        console.log(`Successfully reactivated subscription for user ${user.id}`);
+        
+        // Return success response with updated details
+        return res.status(200).json({ 
+          success: true,
+          message: "Your subscription has been successfully reactivated.",
+          subscription: {
+            status: 'active',
+            endDate: endDate,
+            planName: planName
+          }
+        });
+      } catch (stripeError) {
+        console.error("Error reactivating subscription with Stripe:", stripeError);
+        return res.status(500).json({ 
+          error: "Failed to reactivate subscription", 
+          message: "There was an error reactivating your subscription. Please try again or contact support."
+        });
+      }
     } catch (error) {
-      console.error("Error reactivating subscription:", error);
-      res.status(500).json({ message: "Error reactivating subscription" });
+      // Enhanced error logging
+      console.error("Unexpected error reactivating subscription:", error);
+      
+      const errorMessage = error instanceof Error ? error.message : String(error);
+      const errorDetails = {
+        type: error instanceof Error ? error.constructor.name : typeof error,
+        userId: req.user?.id,
+        subscriptionId: req.user?.stripeSubscriptionId
+      };
+      
+      res.status(500).json({ 
+        message: "An unexpected error occurred while processing your request",
+        error: errorMessage,
+        details: errorDetails
+      });
     }
   });
 
@@ -1534,7 +1809,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
                 // Update user with the new customer ID
                 await storage.updateUserStripeInfo(user.id, {
                   stripeCustomerId: customerId,
-                  stripeSubscriptionId: user.stripeSubscriptionId || '',
+                  stripeSubscriptionId: user.stripeSubscriptionId || "",
                 });
               }
               

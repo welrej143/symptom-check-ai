@@ -85,44 +85,72 @@ export default function SubscriptionManager({ user, refreshSubscriptionStatus }:
     
   // Handle cancellation of subscription
   const handleCancelSubscription = async () => {
+    // Confirm with the user before canceling
     if (!confirm("Are you sure you want to cancel your subscription? You'll still have access until the end of your billing period.")) {
       return;
     }
     
     setIsCanceling(true);
+    console.log("Sending cancellation request to server");
     
     try {
       const response = await apiRequest("POST", "/api/cancel-subscription");
+      const data = await response.json().catch(e => {
+        console.error("Error parsing cancellation response:", e);
+        return { message: "Server returned an invalid response" };
+      });
+      
+      console.log("Cancellation response:", data);
       
       if (response.ok) {
-        const data = await response.json();
+        // Handle already cancelled subscriptions
+        if (data.alreadyCancelled) {
+          toast({
+            title: "Already Scheduled for Cancellation",
+            description: data.message || "Your subscription is already scheduled to be canceled at the end of your billing period.",
+            variant: "default",
+          });
+        } else {
+          toast({
+            title: "Subscription Canceled",
+            description: data.message || "Your subscription has been canceled. You'll have access until the end of your current billing period.",
+            variant: "default",
+          });
+        }
+        
+        // Refresh subscription status to update the UI
         await refreshSubscriptionStatus();
-        toast({
-          title: "Subscription Canceled",
-          description: data.message || "Your subscription has been canceled. You'll have access until the end of your billing period.",
-          variant: "default",
-        });
       } else {
-        // Parse error response
-        let errorMessage = "Failed to cancel subscription";
-        try {
-          const errorData = await response.json();
-          errorMessage = errorData.message || errorData.error || errorMessage;
-        } catch (parseError) {
-          console.error("Error parsing response:", parseError);
+        // Provide specific error messaging based on status code
+        let errorTitle = "Error";
+        let errorMessage = data.message || data.error || "Failed to cancel subscription";
+        
+        if (response.status === 404) {
+          errorTitle = "Subscription Not Found";
+          errorMessage = "We couldn't find a valid subscription to cancel. Please contact support if you believe this is an error.";
+        } else if (response.status === 400) {
+          errorTitle = "Cannot Cancel";
+          errorMessage = data.message || "This subscription cannot be canceled. It may already be inactive.";
+        } else if (response.status === 401) {
+          errorTitle = "Authentication Required";
+          errorMessage = "Please log in again to cancel your subscription.";
+        } else if (response.status >= 500) {
+          errorTitle = "Server Error";
+          errorMessage = "Our payment system is experiencing issues. Please try again later.";
         }
         
         toast({
-          title: "Error",
+          title: errorTitle,
           description: errorMessage,
           variant: "destructive",
         });
       }
     } catch (error) {
       // Network or other unexpected errors
+      console.error("Cancellation request failed:", error);
       toast({
         title: "Connection Error",
-        description: "Could not connect to subscription service. Please check your internet connection and try again.",
+        description: "Could not connect to the subscription service. Please check your internet connection and try again.",
         variant: "destructive",
       });
     } finally {
@@ -292,39 +320,78 @@ export default function SubscriptionManager({ user, refreshSubscriptionStatus }:
                 {user.subscriptionStatus === "canceled" && (
                   <button
                     onClick={async () => {
+                      // Ask for confirmation before reactivating
+                      if (!confirm("Would you like to reactivate your subscription? Your payment method will be charged at the next billing cycle.")) {
+                        return;
+                      }
+                      
                       setIsLoading(true);
+                      console.log("Sending reactivation request to server");
+                      
                       try {
                         const response = await apiRequest("POST", "/api/reactivate-subscription");
+                        const data = await response.json().catch(e => {
+                          console.error("Error parsing reactivation response:", e);
+                          return { message: "Server returned an invalid response" };
+                        });
+                        
+                        console.log("Reactivation response:", data);
                         
                         if (response.ok) {
-                          const data = await response.json();
+                          // Check if it was already active
+                          if (data.alreadyActive) {
+                            toast({
+                              title: "Already Active",
+                              description: data.message || "Your subscription is already active.",
+                              variant: "default",
+                            });
+                          } else {
+                            toast({
+                              title: "Subscription Reactivated",
+                              description: data.message || "Your subscription has been successfully reactivated.",
+                              variant: "default",
+                            });
+                          }
+                          
+                          // Refresh subscription status to update the UI
                           await refreshSubscriptionStatus();
-                          toast({
-                            title: "Subscription Reactivated",
-                            description: data.message || "Your subscription has been successfully reactivated.",
-                            variant: "default",
-                          });
                         } else {
-                          // Parse error response
-                          let errorMessage = "Failed to reactivate subscription";
-                          try {
-                            const errorData = await response.json();
-                            errorMessage = errorData.message || errorData.error || errorMessage;
-                          } catch (parseError) {
-                            console.error("Error parsing response:", parseError);
+                          // Provide specific error messaging based on status code
+                          let errorTitle = "Error";
+                          let errorMessage = data.message || data.error || "Failed to reactivate subscription";
+                          
+                          if (response.status === 404) {
+                            errorTitle = "Subscription Not Found";
+                            errorMessage = "We couldn't find a valid subscription to reactivate. You may need to create a new subscription.";
+                            
+                            // If the server indicates a new subscription is needed
+                            if (data.canPurchaseNew) {
+                              errorTitle = "Subscription Expired";
+                              errorMessage = "This subscription has already expired and cannot be reactivated. Please purchase a new subscription.";
+                            }
+                          } else if (response.status === 400) {
+                            errorTitle = "Cannot Reactivate";
+                            errorMessage = data.message || "This subscription cannot be reactivated. It may already be active or fully expired.";
+                          } else if (response.status === 401) {
+                            errorTitle = "Authentication Required";
+                            errorMessage = "Please log in again to reactivate your subscription.";
+                          } else if (response.status >= 500) {
+                            errorTitle = "Server Error";
+                            errorMessage = "Our payment system is experiencing issues. Please try again later.";
                           }
                           
                           toast({
-                            title: "Error",
+                            title: errorTitle,
                             description: errorMessage,
                             variant: "destructive",
                           });
                         }
                       } catch (error) {
                         // Network or other unexpected errors
+                        console.error("Reactivation request failed:", error);
                         toast({
                           title: "Connection Error",
-                          description: "Could not connect to subscription service. Please check your internet connection and try again.",
+                          description: "Could not connect to the subscription service. Please check your internet connection and try again.",
                           variant: "destructive",
                         });
                       } finally {
