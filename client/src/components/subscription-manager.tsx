@@ -294,18 +294,20 @@ export default function SubscriptionManager({ user, refreshSubscriptionStatus }:
             
             <div className="pt-4 border-t border-gray-200">
               <div className="flex flex-col sm:flex-row gap-2">
-                <button
-                  onClick={handleUpdatePaymentMethod}
-                  disabled={isLoading}
-                  className="inline-flex items-center justify-center px-4 py-2 border border-gray-300 text-sm font-medium rounded-md text-gray-700 bg-white hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-primary-500"
-                >
-                  {isLoading ? (
-                    <Loader className="animate-spin h-4 w-4 mr-2" />
-                  ) : (
-                    <CreditCard className="h-4 w-4 mr-2" />
-                  )}
-                  Update Payment Method
-                </button>
+                {user.subscriptionStatus !== "canceled" && (
+                  <button
+                    onClick={handleUpdatePaymentMethod}
+                    disabled={isLoading}
+                    className="inline-flex items-center justify-center px-4 py-2 border border-gray-300 text-sm font-medium rounded-md text-gray-700 bg-white hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-primary-500"
+                  >
+                    {isLoading ? (
+                      <Loader className="animate-spin h-4 w-4 mr-2" />
+                    ) : (
+                      <CreditCard className="h-4 w-4 mr-2" />
+                    )}
+                    Update Payment Method
+                  </button>
+                )}
                 
                 {user.subscriptionStatus === "active" && (
                   <button

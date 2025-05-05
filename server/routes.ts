@@ -1389,6 +1389,15 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const user = req.user;
       console.log(`Processing payment method update request for user ${user.id}`);
       
+      // Check if subscription is canceled in our database - prevent updates to canceled subscriptions
+      if (user.subscriptionStatus === "canceled") {
+        console.log(`User ${user.id} has a canceled subscription, cannot update payment method`);
+        return res.status(400).json({
+          error: "Canceled subscription",
+          message: "You cannot update the payment method for a canceled subscription. Please reactivate your subscription first."
+        });
+      }
+      
       // First verify the subscription status with Stripe
       let subscriptionActive = false;
       let subscriptionExists = false;
