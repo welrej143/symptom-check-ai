@@ -1649,12 +1649,14 @@ export async function registerRoutes(app: Express): Promise<Server> {
         }
         
         // Update the database to reflect active status
-        await storage.updateSubscriptionStatus(
+        const updatedUser = await storage.updateSubscriptionStatus(
           user.id,
           'active',
           endDate,
           planName
         );
+        
+        console.log(`User ${user.id} subscription reactivated, isPremium=${updatedUser.isPremium}, active until ${endDate.toISOString()}`);
         
         console.log(`Successfully reactivated subscription for user ${user.id}`);
         
