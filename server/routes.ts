@@ -2016,7 +2016,19 @@ export async function registerRoutes(app: Express): Promise<Server> {
       }
 
       // Get the subscription ID from the session
-      const subscriptionId = session.subscription as string;
+      // It could be an object (if expanded) or a string (if not expanded)
+      let subscriptionId: string;
+      
+      if (typeof session.subscription === 'string') {
+        subscriptionId = session.subscription;
+      } else if (session.subscription && typeof session.subscription === 'object' && session.subscription.id) {
+        // Handle the case where subscription is expanded to a full object
+        subscriptionId = session.subscription.id;
+      } else {
+        console.error("Invalid subscription in session:", session.subscription);
+        return res.status(400).json({ message: "No valid subscription found in session" });
+      }
+      
       if (!subscriptionId) {
         return res.status(400).json({ message: "No subscription found in session" });
       }
@@ -2027,8 +2039,24 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const subscription = await stripe.subscriptions.retrieve(subscriptionId);
       
       // Update the user's subscription details
+      // Handle the customer ID (could be string or object)
+      let customerId: string;
+      if (typeof session.customer === 'string') {
+        customerId = session.customer;
+      } else if (session.customer && typeof session.customer === 'object' && 'id' in session.customer) {
+        customerId = session.customer.id;
+      } else {
+        // If we can't get a customer ID, use the one from the subscription
+        customerId = subscription.customer as string;
+      }
+      
+      if (!customerId) {
+        console.error("Could not determine customer ID from session or subscription");
+        return res.status(400).json({ message: "No valid customer ID found" });
+      }
+      
       await storage.updateUserStripeInfo(req.user.id, {
-        stripeCustomerId: session.customer as string,
+        stripeCustomerId: customerId,
         stripeSubscriptionId: subscriptionId,
       });
 
