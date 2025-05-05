@@ -7,14 +7,148 @@ import Tracker from "@/pages/tracker";
 import AuthPage from "@/pages/auth-page";
 import Header from "@/components/header";
 import Footer from "@/components/footer";
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { AnalysisResponse } from "@shared/schema";
-import { AuthProvider } from "@/hooks/use-auth";
+import { AuthProvider, useAuth } from "@/hooks/use-auth";
 import { ProtectedRoute } from "@/lib/protected-route";
 import LoadingAnalysis from "@/components/loading-analysis";
 import { analyzeSymptoms } from "@/lib/openai";
 import { useToast } from "@/hooks/use-toast";
 import PremiumCard from "@/components/premium-card";
+import { apiRequest } from "@/lib/queryClient";
+
+// Payment verification component (must be defined outside App)
+// This is a separate component that uses Auth context hooks
+function PaymentVerificationWrapper({
+  children,
+  analysisResult,
+  userSymptoms,
+  setUserSymptoms,
+  analyzeUserSymptoms
+}: {
+  children?: React.ReactNode,
+  analysisResult: AnalysisResponse | null,
+  userSymptoms: string,
+  setUserSymptoms: (symptoms: string) => void,
+  analyzeUserSymptoms: (symptoms: string) => Promise<void>
+}) {
+  const [isProcessing, setIsProcessing] = useState(false);
+  const { refreshSubscriptionStatus } = useAuth();
+  const { toast } = useToast();
+  const [location] = useLocation();
+  
+  // Create Home component wrapper to pass props
+  const HomeWrapper = () => (
+    <Home 
+      setUserSymptoms={setUserSymptoms}
+      initialSymptoms={userSymptoms}
+      analyzeSymptoms={analyzeUserSymptoms}
+    />
+  );
+  
+  // Create Results component wrapper to pass props
+  const ResultsWrapper = () => (
+    <Results 
+      analysisResult={analysisResult} 
+      userSymptoms={userSymptoms}
+      setUserSymptoms={setUserSymptoms}
+    />
+  );
+  
+  // Use effect to check for payment verification params
+  useEffect(() => {
+    const checkStripeRedirect = async () => {
+      // Get URL search params
+      const searchParams = new URLSearchParams(window.location.search);
+      const isSuccess = searchParams.get('success') === 'true';
+      const sessionId = searchParams.get('session_id');
+      
+      // If successful payment with session ID, verify with backend
+      if (isSuccess && sessionId) {
+        try {
+          setIsProcessing(true);
+          
+          // Show toast about verification
+          toast({
+            title: "Verifying Your Payment",
+            description: "We're confirming your subscription status...",
+            variant: "default",
+          });
+          
+          // Clear URL params
+          const currentUrl = new URL(window.location.href);
+          currentUrl.search = '';
+          window.history.replaceState({}, '', currentUrl.toString());
+          
+          // Verify payment with backend
+          const response = await apiRequest("GET", `/api/verify-checkout-session?session_id=${sessionId}`);
+          
+          if (!response.ok) {
+            throw new Error("Failed to verify payment");
+          }
+          
+          const data = await response.json();
+          console.log("Verification successful:", data);
+          
+          // Refresh subscription status to reflect changes
+          await refreshSubscriptionStatus();
+          
+          // Show success message
+          toast({
+            title: "Payment Successful!",
+            description: "Your subscription has been activated. You now have access to all premium features!",
+            variant: "default",
+          });
+          
+        } catch (err) {
+          console.error("Error verifying checkout:", err);
+          toast({
+            title: "Verification Failed",
+            description: "We couldn't verify your payment. Please check your subscription status in the premium page.",
+            variant: "destructive",
+          });
+        } finally {
+          setIsProcessing(false);
+        }
+      }
+    };
+    
+    checkStripeRedirect();
+  }, [location, toast, refreshSubscriptionStatus]);
+  
+  // Show a processing indicator if it's verifying
+  if (isProcessing) {
+    return (
+      <div className="flex flex-col items-center justify-center min-h-[60vh]">
+        <div className="animate-spin w-12 h-12 border-4 border-primary-600 border-t-transparent rounded-full mb-4"></div>
+        <h2 className="text-xl font-semibold mb-2">Verifying Your Payment</h2>
+        <p className="text-gray-600 text-center max-w-md">
+          We're confirming your subscription status with our payment provider.
+          This should only take a moment...
+        </p>
+      </div>
+    );
+  }
+  
+  // Otherwise render the normal routes
+  return (
+    <Switch>
+      <Route path="/" component={HomeWrapper} />
+      <Route path="/results" component={ResultsWrapper} />
+      <ProtectedRoute path="/tracker" component={Tracker} />
+      <ProtectedRoute path="/premium" component={() => (
+        <div className="container mx-auto py-8 px-4">
+          <h1 className="text-2xl font-bold mb-6">Premium Subscription</h1>
+          <div className="max-w-md mx-auto">
+            <PremiumCard />
+          </div>
+        </div>
+      )} />
+      <Route path="/auth" component={AuthPage} />
+      <Route component={NotFound} />
+    </Switch>
+  );
+}
 
 function App() {
   const [analysisResult, setAnalysisResult] = useState<AnalysisResponse | null>(null);
@@ -143,22 +277,12 @@ function App() {
             {isAnalyzing ? (
               <LoadingAnalysis progress={progress} />
             ) : (
-              <Switch>
-                <Route path="/" component={HomeWrapper} />
-                <Route path="/results" component={ResultsWrapper} />
-                <ProtectedRoute path="/tracker" component={Tracker} />
-
-                <ProtectedRoute path="/premium" component={() => (
-                  <div className="container mx-auto py-8 px-4">
-                    <h1 className="text-2xl font-bold mb-6">Premium Subscription</h1>
-                    <div className="max-w-md mx-auto">
-                      <PremiumCard />
-                    </div>
-                  </div>
-                )} />
-                <Route path="/auth" component={AuthPage} />
-                <Route component={NotFound} />
-              </Switch>
+              <PaymentVerificationWrapper
+                analysisResult={analysisResult}
+                userSymptoms={userSymptoms}
+                setUserSymptoms={setUserSymptoms}
+                analyzeUserSymptoms={analyzeUserSymptoms}
+              />
             )}
           </main>
           <Footer />
