@@ -186,10 +186,8 @@ function StripeCheckoutForm({ clientSecret, subscriptionId }: { clientSecret: st
   );
 }
 
-// Wrapper component that fetches client secret and displays Stripe Elements
+// Wrapper component that redirects to Stripe Checkout
 function StripePaymentOptions() {
-  const [clientSecret, setClientSecret] = useState<string | null>(null);
-  const [subscriptionId, setSubscriptionId] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const { toast } = useToast();
@@ -201,7 +199,7 @@ function StripePaymentOptions() {
   });
   
   useEffect(() => {
-    const getClientSecret = async () => {
+    const initiateCheckoutSession = async () => {
       try {
         const response = await apiRequest("POST", "/api/create-subscription");
         
@@ -226,30 +224,25 @@ function StripePaymentOptions() {
         
         const data = await response.json();
         
-        if (!data.clientSecret) {
-          throw new Error("No client secret returned from payment provider");
+        if (!data.url) {
+          throw new Error("No checkout URL returned from payment provider");
         }
         
-        setClientSecret(data.clientSecret);
-        
-        // Store the subscription ID if it's returned
-        if (data.subscriptionId) {
-          setSubscriptionId(data.subscriptionId);
-        }
+        // Redirect to Stripe Checkout
+        window.location.href = data.url;
       } catch (err) {
-        console.error("Error getting client secret:", err);
+        console.error("Error setting up checkout:", err);
         setError(err instanceof Error ? err.message : "Could not initialize payment. Please try again.");
         toast({
           title: "Payment Setup Failed",
           description: err instanceof Error ? err.message : "Could not initialize payment form. Please try again later.",
           variant: "destructive",
         });
-      } finally {
         setIsLoading(false);
       }
     };
     
-    getClientSecret();
+    initiateCheckoutSession();
   }, [toast]);
   
   if (isLoading) {
@@ -269,63 +262,21 @@ function StripePaymentOptions() {
     );
   }
   
-  if (!clientSecret) {
-    return (
-      <div className="text-red-600 text-sm flex items-center justify-center py-6">
-        <AlertCircle className="w-5 h-5 mr-2" />
-        <span>Could not connect to payment provider. Please try again later.</span>
-      </div>
-    );
-  }
-  
+  // This should never be displayed as we redirect above, but it's here as a fallback
   return (
     <div className="bg-gray-50 rounded-lg p-5 border border-gray-200 shadow-sm">
       <h3 className="text-lg font-semibold text-gray-900 mb-2">{isPriceLoading ? 'Premium Subscription' : priceData?.productName || 'Premium Subscription'}</h3>
       <p className="text-sm text-gray-600 mb-5">You will be charged {isPriceLoading ? '...' : priceData?.formattedPrice || '$9.99'} per {isPriceLoading ? 'month' : priceData?.interval || 'month'}</p>
       
-      <Elements stripe={stripePromise} options={{ 
-        clientSecret,
-        appearance: {
-          theme: "flat",
-          variables: {
-            colorPrimary: "#2563eb",
-            colorBackground: "#f9fafb",
-            colorText: "#18181b",
-            colorDanger: "#ef4444",
-            fontFamily: "system-ui, -apple-system, sans-serif",
-            borderRadius: "6px",
-            spacingUnit: '4px',
-            spacingGridRow: '20px',
-          },
-          rules: {
-            '.Tab': {
-              border: '1px solid #e5e7eb',
-              boxShadow: 'none',
-              padding: '10px 16px',
-            },
-            '.Tab:hover': {
-              border: '1px solid #c7c7c7',
-            },
-            '.Tab--selected': {
-              borderColor: '#2563eb',
-              boxShadow: '0 0 0 1px #2563eb',
-            },
-            '.Label': {
-              fontWeight: '500',
-              marginBottom: '8px',
-            },
-            '.Input': {
-              padding: '10px 14px',
-              border: '1px solid #e5e7eb',
-            }
-          }
-        }
-      }}>
-        <StripeCheckoutForm 
-          clientSecret={clientSecret} 
-          subscriptionId={subscriptionId || undefined} 
-        />
-      </Elements>
+      <div className="flex justify-center mt-4">
+        <button
+          onClick={() => window.location.reload()}
+          className="bg-blue-600 text-white py-2.5 px-4 rounded-md font-medium hover:bg-blue-700 transition-colors flex items-center"
+        >
+          Retry Payment
+          <ArrowRight className="ml-2 h-4 w-4" />
+        </button>
+      </div>
     </div>
   );
 }

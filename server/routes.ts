@@ -262,7 +262,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  // Create a proper Stripe subscription
+  // Create a Stripe Checkout session for subscription signup
   app.post("/api/create-subscription", async (req: Request, res: Response) => {
     try {
       if (!req.isAuthenticated()) {
@@ -280,6 +280,10 @@ export async function registerRoutes(app: Express): Promise<Server> {
       let customerId = user.stripeCustomerId;
       
       if (!customerId) {
+        if (!user.email) {
+          return res.status(400).json({ message: "User email is required for subscription" });
+        }
+        
         const customer = await stripe.customers.create({
           email: user.email,
           name: user.username,
@@ -317,92 +321,45 @@ export async function registerRoutes(app: Express): Promise<Server> {
         });
       }
       
-      // Create a subscription with Stripe
-      console.log("Creating subscription with Stripe price ID:", stripePriceId);
-      
       try {
-        // Create subscription directly - this is the recommended approach
-        const subscription = await stripe.subscriptions.create({
+        // Create a Stripe Checkout session - this is a simpler approach
+        console.log("Creating Stripe Checkout session for premium subscription");
+        
+        const baseUrl = `${req.protocol}://${req.get('host')}`;
+        const session = await stripe.checkout.sessions.create({
           customer: customerId,
-          items: [
+          payment_method_types: ['card'],
+          line_items: [
             {
               price: stripePriceId,
+              quantity: 1,
             },
           ],
-          payment_behavior: 'default_incomplete',
-          payment_settings: {
-            payment_method_types: ['card'],
-            save_default_payment_method: 'on_subscription'
-          },
-          // No expand here - we'll get the invoice and payment intent separately
+          mode: 'subscription',
+          success_url: `${baseUrl}/premium?success=true&session_id={CHECKOUT_SESSION_ID}`,
+          cancel_url: `${baseUrl}/premium?canceled=true`,
           metadata: {
-            userId: user.id.toString(),
+            userId: user.id.toString()
           },
-        });
-        
-        console.log("Subscription created:", subscription.id, "with status:", subscription.status);
-        
-        // Get the invoice separately
-        const invoiceId = subscription.latest_invoice as string;
-        if (!invoiceId) {
-          throw new Error("No invoice found for the created subscription");
-        }
-        
-        console.log("Retrieving invoice:", invoiceId);
-        // Log the full invoice structure to see what's available
-        const invoice = await stripe.invoices.retrieve(invoiceId);
-        console.log("Invoice properties:", Object.keys(invoice));
-        
-        // Create a payment intent manually if one isn't attached to the invoice
-        console.log("Creating a payment intent for the subscription");
-        
-        const paymentIntent = await stripe.paymentIntents.create({
-          amount: invoice.amount_due,
-          currency: invoice.currency,
-          customer: subscription.customer as string,
-          description: `Payment for invoice ${invoiceId}`,
-          metadata: {
-            invoiceId: invoiceId,
-            subscriptionId: subscription.id
+          subscription_data: {
+            metadata: {
+              userId: user.id.toString()
+            }
           }
         });
         
-        console.log("Payment intent created:", paymentIntent.id);
+        console.log("Checkout session created:", session.id);
         
-        if (!paymentIntent || !paymentIntent.client_secret) {
-          throw new Error("Could not retrieve client secret from payment intent");
-        }
-        
-        // Attach the payment intent to the invoice
-        await stripe.invoices.update(invoiceId, {
-          payment_settings: {
-            payment_method_options: {
-              card: {
-                request_three_d_secure: 'automatic'
-              }
-            },
-            payment_method_types: ['card']
-          }
-        });
-        
-        const clientSecret = paymentIntent.client_secret;
-        
-        // Update user with the subscription ID
-        await storage.updateUserStripeInfo(user.id, {
-          stripeCustomerId: customerId,
-          stripeSubscriptionId: subscription.id,
-        });
-        
-        // Return both the client secret and subscription ID
+        // Return the checkout session URL
         res.json({
-          clientSecret: clientSecret,
-          subscriptionId: subscription.id,
+          sessionId: session.id,
+          url: session.url
         });
       } catch (error) {
         const errorMessage = error instanceof Error ? error.message : String(error);
-        console.error("Failed to create subscription:", error);
+        console.error("Failed to create Stripe Checkout session:", error);
         return res.status(500).json({ 
-          message: "Failed to create subscription with payment provider",
+          message: "Failed to create subscription checkout session",
           error: errorMessage
         });
       }
