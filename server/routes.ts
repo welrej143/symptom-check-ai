@@ -334,7 +334,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
             payment_method_types: ['card'],
             save_default_payment_method: 'on_subscription'
           },
-          expand: ['latest_invoice.payment_intent'],
+          // No expand here - we'll get the invoice and payment intent separately
           metadata: {
             userId: user.id.toString(),
           },
@@ -342,13 +342,23 @@ export async function registerRoutes(app: Express): Promise<Server> {
         
         console.log("Subscription created:", subscription.id, "with status:", subscription.status);
         
-        // Get the client secret from the PaymentIntent
-        const latestInvoice = subscription.latest_invoice as any;
-        if (!latestInvoice || !latestInvoice.payment_intent || !latestInvoice.payment_intent.client_secret) {
+        // Get the invoice separately
+        const invoiceId = subscription.latest_invoice as string;
+        if (!invoiceId) {
+          throw new Error("No invoice found for the created subscription");
+        }
+        
+        console.log("Retrieving invoice:", invoiceId);
+        const invoice = await stripe.invoices.retrieve(invoiceId, {
+          expand: ['payment_intent']
+        });
+        
+        // Get the payment intent client secret
+        if (!invoice.payment_intent || typeof invoice.payment_intent === 'string') {
           throw new Error("No payment intent found on the subscription invoice");
         }
         
-        const clientSecret = latestInvoice.payment_intent.client_secret;
+        const clientSecret = invoice.payment_intent.client_secret;
         
         // Update user with the subscription ID
         await storage.updateUserStripeInfo(user.id, {
