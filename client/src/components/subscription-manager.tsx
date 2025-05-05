@@ -120,6 +120,11 @@ export default function SubscriptionManager({ user, refreshSubscriptionStatus }:
         
         // Refresh subscription status to update the UI
         await refreshSubscriptionStatus();
+        
+        // Refresh the page to ensure UI is fully updated
+        setTimeout(() => {
+          window.location.reload();
+        }, 1000);
       } else {
         // Provide specific error messaging based on status code
         let errorTitle = "Error";
@@ -355,6 +360,11 @@ export default function SubscriptionManager({ user, refreshSubscriptionStatus }:
                           
                           // Refresh subscription status to update the UI
                           await refreshSubscriptionStatus();
+                          
+                          // Refresh the page to ensure UI is fully updated
+                          setTimeout(() => {
+                            window.location.reload();
+                          }, 1000);
                         } else {
                           // Provide specific error messaging based on status code
                           let errorTitle = "Error";
