@@ -2060,9 +2060,40 @@ export async function registerRoutes(app: Express): Promise<Server> {
         stripeSubscriptionId: subscriptionId,
       });
 
-      // Calculate end date from the subscription
-      const endDate = new Date((subscription as any).current_period_end * 1000);
-
+      // Calculate end date from the subscription with safer error handling
+      let endDate: Date;
+      try {
+        if ((subscription as any).current_period_end) {
+          // Convert Unix timestamp (seconds) to milliseconds for JavaScript Date
+          const timestamp = Number((subscription as any).current_period_end) * 1000;
+          endDate = new Date(timestamp);
+          
+          // Validate the date is reasonable (not before now and not too far in future)
+          const now = new Date();
+          const maxFutureDate = new Date();
+          maxFutureDate.setFullYear(maxFutureDate.getFullYear() + 10); // 10 years from now
+          
+          if (endDate < now || endDate > maxFutureDate) {
+            console.warn(`Suspicious end date calculated: ${endDate.toISOString()}, using fallback`);
+            // Fallback to one month from now
+            endDate = new Date();
+            endDate.setMonth(endDate.getMonth() + 1);
+          }
+        } else {
+          // Fallback if no period end is found
+          console.warn("No current_period_end found in subscription, using fallback date");
+          endDate = new Date();
+          endDate.setMonth(endDate.getMonth() + 1); // 1 month from now
+        }
+      } catch (dateError) {
+        console.error("Error parsing subscription date:", dateError);
+        // Fallback to one month from now
+        endDate = new Date();
+        endDate.setMonth(endDate.getMonth() + 1);
+      }
+      
+      console.log(`Using subscription end date: ${endDate.toISOString()}`);
+      
       // Update subscription status
       await storage.updateSubscriptionStatus(req.user.id, subscription.status, endDate, "Premium Monthly");
 
@@ -2078,10 +2109,26 @@ export async function registerRoutes(app: Express): Promise<Server> {
         message: "Your subscription has been successfully processed."
       });
     } catch (error) {
+      // Enhanced error logging for better debugging
       console.error("Error verifying checkout session:", error);
+      
+      // Log important request and state information
+      console.error("Session ID:", req.query.session_id);
+      console.error("User ID:", req.user?.id);
+      
+      // Create a detailed error response
+      const errorMessage = error instanceof Error ? error.message : String(error);
+      const errorDetails = {
+        type: error instanceof Error ? error.constructor.name : typeof error,
+        timestamp: new Date().toISOString(),
+        userId: req.user?.id
+      };
+      
+      // Send appropriate error response
       res.status(500).json({ 
         message: "Error verifying payment session",
-        error: error instanceof Error ? error.message : String(error)
+        error: errorMessage,
+        details: errorDetails
       });
     }
   });
