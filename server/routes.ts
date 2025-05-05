@@ -1311,9 +1311,12 @@ export async function registerRoutes(app: Express): Promise<Server> {
           }
           
           // Update the database to reflect cancellation
+          // Important: Keep the subscription status as 'active' until the end of the billing period
+          // Only the cancel_at_period_end flag will be true in Stripe, but the user should
+          // still have premium access until the current period ends
           await storage.updateSubscriptionStatus(
             user.id,
-            'canceled',
+            'active', // Keep as active instead of 'canceled'
             endDate,
             planName
           );
@@ -1323,7 +1326,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
             success: true,
             message: "Your subscription has been canceled and will end on " + endDate.toLocaleDateString(),
             subscription: {
-              status: 'canceled',
+              status: 'active', // Keep as active until period end
+              willCancelAt: endDate,
+              cancelAtPeriodEnd: true,
               endDate: endDate,
               planName: planName
             }
@@ -1986,9 +1991,10 @@ export async function registerRoutes(app: Express): Promise<Server> {
         console.log(`Raw Stripe subscription status: ${status}`);
         
         // Handle cancel_at_period_end flag (subscription is technically still active but will be canceled)
-        if (subscription.cancel_at_period_end && status === 'active') {
-          status = 'canceled';
-        }
+        // We want to keep the status as 'active' while the subscription is still valid,
+        // even if it's scheduled to be canceled at the end of the period
+        // This ensures users keep their premium benefits until the end date
+        // The cancel_at_period_end flag is tracked separately
         
         // Log status information for debugging
         console.log(`Using subscription status: ${status}`);
