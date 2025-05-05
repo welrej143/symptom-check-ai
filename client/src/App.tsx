@@ -15,7 +15,7 @@ import LoadingAnalysis from "@/components/loading-analysis";
 import { analyzeSymptoms } from "@/lib/openai";
 import { useToast } from "@/hooks/use-toast";
 import PremiumCard from "@/components/premium-card";
-import { apiRequest } from "@/lib/queryClient";
+import { apiRequest, queryClient } from "@/lib/queryClient";
 
 // Payment verification component (must be defined outside App)
 // This is a separate component that uses Auth context hooks
@@ -90,8 +90,11 @@ function PaymentVerificationWrapper({
           const data = await response.json();
           console.log("Verification successful:", data);
           
-          // Refresh subscription status to reflect changes
-          await refreshSubscriptionStatus();
+          // Force complete refresh of user data (this is critical)
+          // The user has now been updated in the database with stripeCustomerId and subscription info
+          // but our cached user object in the auth hook doesn't have this info yet
+          queryClient.removeQueries({ queryKey: ["/api/user"] });
+          queryClient.invalidateQueries({ queryKey: ["/api/user"] });
           
           // Show success message
           toast({
@@ -99,6 +102,12 @@ function PaymentVerificationWrapper({
             description: "Your subscription has been activated. You now have access to all premium features!",
             variant: "default",
           });
+          
+          // Force a page reload to get a completely fresh user state
+          // This ensures all components see the updated premium status
+          setTimeout(() => {
+            window.location.reload();
+          }, 1500);
           
         } catch (err) {
           console.error("Error verifying checkout:", err);
