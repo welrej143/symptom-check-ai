@@ -96,7 +96,78 @@ export default function ConditionCard({ condition }: ConditionCardProps) {
             {/* Show/Hide medications and supplements */}
             {showDetails && (
               <>
-                {condition.medications && condition.medications.length > 0 && (
+                {/* Prescription Medications */}
+                {condition.prescriptionMedications && condition.prescriptionMedications.length > 0 && (
+                  <div className="mt-4">
+                    <h5 className="text-sm font-medium text-gray-900 flex items-center">
+                      <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4 mr-1 text-purple-600" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5M9 7h1m-1 4h1m4-4h1m-1 4h1m-5 10v-5a1 1 0 011-1h2a1 1 0 011 1v5m-4 0h4" />
+                      </svg>
+                      Prescription Medications
+                    </h5>
+                    <div className="mt-2 space-y-2">
+                      {condition.prescriptionMedications.map((med, index) => (
+                        <div key={index} className="bg-purple-50 p-2 rounded-md">
+                          <h6 className="text-sm font-medium text-purple-800">{med.name}</h6>
+                          <p className="text-xs text-gray-600 mt-1">{med.description}</p>
+                          {med.dosage && (
+                            <p className="text-xs text-gray-600 mt-1">
+                              <span className="font-medium">Typical dosage:</span> {med.dosage}
+                            </p>
+                          )}
+                          {med.sideEffects && med.sideEffects.length > 0 && (
+                            <div className="mt-1">
+                              <span className="text-xs font-medium text-gray-700">Possible side effects:</span>
+                              <div className="flex flex-wrap gap-1 mt-1">
+                                {med.sideEffects.map((effect, i) => (
+                                  <span key={i} className="text-xs bg-white px-1.5 py-0.5 rounded text-gray-600">{effect}</span>
+                                ))}
+                              </div>
+                            </div>
+                          )}
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                )}
+                
+                {/* Over-the-Counter Medications */}
+                {condition.otcMedications && condition.otcMedications.length > 0 && (
+                  <div className="mt-4">
+                    <h5 className="text-sm font-medium text-gray-900 flex items-center">
+                      <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4 mr-1 text-blue-500" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z" />
+                      </svg>
+                      Over-The-Counter Medications
+                    </h5>
+                    <div className="mt-2 space-y-2">
+                      {condition.otcMedications.map((med, index) => (
+                        <div key={index} className="bg-blue-50 p-2 rounded-md">
+                          <h6 className="text-sm font-medium text-blue-800">{med.name}</h6>
+                          <p className="text-xs text-gray-600 mt-1">{med.description}</p>
+                          {med.dosage && (
+                            <p className="text-xs text-gray-600 mt-1">
+                              <span className="font-medium">Typical dosage:</span> {med.dosage}
+                            </p>
+                          )}
+                          {med.sideEffects && med.sideEffects.length > 0 && (
+                            <div className="mt-1">
+                              <span className="text-xs font-medium text-gray-700">Possible side effects:</span>
+                              <div className="flex flex-wrap gap-1 mt-1">
+                                {med.sideEffects.map((effect, i) => (
+                                  <span key={i} className="text-xs bg-white px-1.5 py-0.5 rounded text-gray-600">{effect}</span>
+                                ))}
+                              </div>
+                            </div>
+                          )}
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                )}
+                
+                {/* Legacy Medications - for backward compatibility */}
+                {condition.medications && condition.medications.length > 0 && !condition.prescriptionMedications && !condition.otcMedications && (
                   <div className="mt-4">
                     <h5 className="text-sm font-medium text-gray-900 flex items-center">
                       <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4 mr-1 text-blue-500" fill="none" viewBox="0 0 24 24" stroke="currentColor">
@@ -130,6 +201,7 @@ export default function ConditionCard({ condition }: ConditionCardProps) {
                   </div>
                 )}
                 
+                {/* Supplements */}
                 {condition.supplements && condition.supplements.length > 0 && (
                   <div className="mt-4">
                     <h5 className="text-sm font-medium text-gray-900 flex items-center">

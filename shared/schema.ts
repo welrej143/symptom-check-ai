@@ -77,7 +77,13 @@ export const conditionSchema = z.object({
   symptoms: z.array(z.string()),
   causes: z.array(z.string()).optional(),
   urgencyLevel: z.enum(["low", "moderate", "high"]),
-  medications: z.array(z.object({
+  prescriptionMedications: z.array(z.object({
+    name: z.string(),
+    description: z.string(),
+    dosage: z.string().optional(),
+    sideEffects: z.array(z.string()).optional(),
+  })).optional(),
+  otcMedications: z.array(z.object({
     name: z.string(),
     description: z.string(),
     dosage: z.string().optional(),
@@ -88,6 +94,14 @@ export const conditionSchema = z.object({
     description: z.string(),
     dosage: z.string().optional(),
     benefits: z.array(z.string()).optional(),
+  })).optional(),
+  
+  // For backward compatibility with existing data
+  medications: z.array(z.object({
+    name: z.string(),
+    description: z.string(),
+    dosage: z.string().optional(),
+    sideEffects: z.array(z.string()).optional(),
   })).optional(),
 });
 

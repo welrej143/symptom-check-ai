@@ -84,9 +84,17 @@ export async function registerRoutes(app: Express): Promise<Server> {
               "symptoms": ["symptom1", "symptom2", "etc"],
               "causes": ["cause1", "cause2", "etc"],
               "urgencyLevel": "low/moderate/high",
-              "medications": [
+              "prescriptionMedications": [
                 {
-                  "name": "Medication name",
+                  "name": "Prescription medication name",
+                  "description": "Brief description of how this medication helps",
+                  "dosage": "Typical dosage information (optional)",
+                  "sideEffects": ["side effect 1", "side effect 2", "etc"] (optional)
+                }
+              ],
+              "otcMedications": [
+                {
+                  "name": "Over-the-counter medication name",
                   "description": "Brief description of how this medication helps",
                   "dosage": "Typical dosage information (optional)",
                   "sideEffects": ["side effect 1", "side effect 2", "etc"] (optional)
@@ -120,11 +128,12 @@ export async function registerRoutes(app: Express): Promise<Server> {
         3. For each condition, provide 2-4 common causes or risk factors that may lead to this condition
         4. Set urgencyLevel to either "low" (monitor at home), "moderate" (see doctor soon), or "high" (emergency)
         5. Provide 3-5 actionable recommendations
-        6. For each condition, include 1-3 relevant medications that are commonly prescribed
-        7. For each condition, include 1-3 relevant supplements that may help with symptoms
-        8. For the icon field, use only icon names from Lucide React (like "stethoscope", "thermometer", "clipboard", etc.)
-        9. ALWAYS include disclaimer text about consulting healthcare professionals
-        10. If symptoms suggest a potentially life-threatening condition, mark the recommendation with isEmergency: true
+        6. For each condition, include 1-2 relevant prescription medications that would require a doctor's prescription
+        7. For each condition, include 1-2 relevant over-the-counter medications that can be purchased without a prescription
+        8. For each condition, include 1-2 relevant supplements that may help with symptoms
+        9. For the icon field, use only icon names from Lucide React (like "stethoscope", "thermometer", "clipboard", etc.)
+        10. ALWAYS include disclaimer text about consulting healthcare professionals
+        11. If symptoms suggest a potentially life-threatening condition, mark the recommendation with isEmergency: true
         
         Response should be properly formatted JSON only, without any additional text.
       `;
