@@ -287,7 +287,73 @@ function StripePaymentOptions() {
 export default function PremiumCard() {
   const { user, refreshSubscriptionStatus } = useAuth();
   const [isUpgrading, setIsUpgrading] = useState(false);
+  const [isVerifying, setIsVerifying] = useState(false);
+  const [isSuccess, setIsSuccess] = useState(false);
   const { toast } = useToast();
+  
+  // Check for Stripe redirect parameters
+  useEffect(() => {
+    const checkStripeRedirect = async () => {
+      // Get URL search params
+      const searchParams = new URLSearchParams(window.location.search);
+      const isSuccess = searchParams.get('success') === 'true';
+      const isCanceled = searchParams.get('canceled') === 'true';
+      const sessionId = searchParams.get('session_id');
+      
+      // Clear URL params after reading
+      if (isSuccess || isCanceled) {
+        const currentUrl = new URL(window.location.href);
+        currentUrl.search = '';
+        window.history.replaceState({}, '', currentUrl.toString());
+      }
+      
+      // If successful payment with session ID, verify with backend
+      if (isSuccess && sessionId) {
+        try {
+          setIsVerifying(true);
+          const response = await apiRequest("GET", `/api/verify-checkout-session?session_id=${sessionId}`);
+          
+          if (!response.ok) {
+            throw new Error("Failed to verify payment");
+          }
+          
+          const data = await response.json();
+          
+          // Refresh subscription status to reflect changes
+          await refreshSubscriptionStatus();
+          
+          setIsSuccess(true);
+          toast({
+            title: "Payment Successful",
+            description: "Your subscription has been activated successfully!",
+            variant: "default",
+          });
+          
+          // Force reload after a short delay to show the updated UI
+          setTimeout(() => {
+            window.location.reload();
+          }, 1500);
+        } catch (err) {
+          console.error("Error verifying checkout:", err);
+          toast({
+            title: "Verification Failed",
+            description: "We couldn't verify your payment. Please contact support.",
+            variant: "destructive",
+          });
+        } finally {
+          setIsVerifying(false);
+        }
+      } else if (isCanceled) {
+        toast({
+          title: "Payment Canceled",
+          description: "Your payment was canceled. No charges were made.",
+          variant: "default",
+        });
+      }
+    };
+    
+    checkStripeRedirect();
+  }, [toast, refreshSubscriptionStatus]);
   
   // Fetch price information from Stripe
   const { data: priceData, isLoading: isPriceLoading } = useQuery<PriceData>({
@@ -403,6 +469,50 @@ export default function PremiumCard() {
       });
     }
   };
+  
+  // Show loading state when verifying checkout session
+  if (isVerifying) {
+    return (
+      <div className="bg-white rounded-lg shadow-md overflow-hidden">
+        <div className="p-6 flex flex-col items-center justify-center py-10">
+          <Loader className="h-10 w-10 animate-spin text-primary-600 mb-4" />
+          <h3 className="text-lg font-semibold text-gray-900 mb-2">Verifying Your Payment</h3>
+          <p className="text-sm text-gray-600 text-center">
+            We're confirming your subscription payment with our payment provider.
+            This should only take a moment...
+          </p>
+        </div>
+      </div>
+    );
+  }
+  
+  // Show success message after verification
+  if (isSuccess) {
+    return (
+      <div className="bg-white rounded-lg shadow-md overflow-hidden">
+        <div className="p-6 flex flex-col items-center justify-center py-8">
+          <div className="w-16 h-16 bg-green-100 rounded-full flex items-center justify-center mb-4">
+            <svg className="h-8 w-8 text-green-600" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
+            </svg>
+          </div>
+          <h3 className="text-lg font-semibold text-gray-900 mb-2">Payment Successful!</h3>
+          <p className="text-sm text-gray-600 text-center max-w-md mb-4">
+            Thank you for subscribing to Premium! Your payment has been processed successfully. 
+            You now have unlimited access to all premium features.
+          </p>
+          <div className="flex items-center justify-center gap-4">
+            <button 
+              onClick={() => window.location.reload()}
+              className="bg-blue-600 text-white py-2 px-4 rounded-md font-medium hover:bg-blue-700 transition-colors flex items-center"
+            >
+              Refresh Page
+            </button>
+          </div>
+        </div>
+      </div>
+    );
+  }
   
   // Show special message for incomplete subscription
   if (user?.subscriptionStatus === "incomplete") {

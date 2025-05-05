@@ -1991,6 +1991,73 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   }
 
+  // Verify Checkout Session after successful payment
+  app.get("/api/verify-checkout-session", async (req: Request, res: Response) => {
+    try {
+      if (!req.isAuthenticated()) {
+        return res.status(401).json({ message: "Authentication required" });
+      }
+
+      const sessionId = req.query.session_id as string;
+      if (!sessionId) {
+        return res.status(400).json({ message: "Missing session ID" });
+      }
+
+      console.log(`Verifying checkout session ${sessionId} for user ${req.user.id}`);
+
+      // Retrieve the checkout session to verify payment status
+      const session = await stripe.checkout.sessions.retrieve(sessionId, {
+        expand: ['subscription']
+      });
+
+      // Verify that the session belongs to this user (if metadata is available)
+      if (session.metadata?.userId && session.metadata.userId !== req.user.id.toString()) {
+        return res.status(403).json({ message: "Session does not belong to current user" });
+      }
+
+      // Get the subscription ID from the session
+      const subscriptionId = session.subscription as string;
+      if (!subscriptionId) {
+        return res.status(400).json({ message: "No subscription found in session" });
+      }
+
+      console.log(`Found subscription ${subscriptionId} in checkout session`);
+
+      // Get subscription details
+      const subscription = await stripe.subscriptions.retrieve(subscriptionId);
+      
+      // Update the user's subscription details
+      await storage.updateUserStripeInfo(req.user.id, {
+        stripeCustomerId: session.customer as string,
+        stripeSubscriptionId: subscriptionId,
+      });
+
+      // Calculate end date from the subscription
+      const endDate = new Date((subscription as any).current_period_end * 1000);
+
+      // Update subscription status
+      await storage.updateSubscriptionStatus(req.user.id, subscription.status, endDate, "Premium Monthly");
+
+      console.log(`Updated subscription status for user ${req.user.id}: ${subscription.status}`);
+
+      // Return success response with updated subscription details
+      res.json({
+        success: true,
+        isPremium: subscription.status === 'active',
+        subscriptionStatus: subscription.status,
+        subscriptionId: subscriptionId,
+        subscriptionEndDate: endDate,
+        message: "Your subscription has been successfully processed."
+      });
+    } catch (error) {
+      console.error("Error verifying checkout session:", error);
+      res.status(500).json({ 
+        message: "Error verifying payment session",
+        error: error instanceof Error ? error.message : String(error)
+      });
+    }
+  });
+
   // Create HTTP server
   const httpServer = createServer(app);
   return httpServer;
