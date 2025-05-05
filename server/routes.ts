@@ -342,28 +342,48 @@ export async function registerRoutes(app: Express): Promise<Server> {
         
         console.log("Subscription created:", subscription.id, "with status:", subscription.status);
         
-        // Get the invoice and payment intent ID separately
+        // Get the invoice separately
         const invoiceId = subscription.latest_invoice as string;
         if (!invoiceId) {
           throw new Error("No invoice found for the created subscription");
         }
         
         console.log("Retrieving invoice:", invoiceId);
+        // Log the full invoice structure to see what's available
         const invoice = await stripe.invoices.retrieve(invoiceId);
+        console.log("Invoice properties:", Object.keys(invoice));
         
-        // Get the payment intent ID from the invoice
-        // Note: TypeScript doesn't correctly recognize this property but Stripe's API does return it
-        const paymentIntentId = (invoice as any).payment_intent;
-        if (!paymentIntentId || typeof paymentIntentId !== 'string') {
-          throw new Error("No payment intent ID found on the subscription invoice");
-        }
-        console.log("Retrieving payment intent:", paymentIntentId);
+        // Create a payment intent manually if one isn't attached to the invoice
+        console.log("Creating a payment intent for the subscription");
         
-        // Get the payment intent directly
-        const paymentIntent = await stripe.paymentIntents.retrieve(paymentIntentId);
+        const paymentIntent = await stripe.paymentIntents.create({
+          amount: invoice.amount_due,
+          currency: invoice.currency,
+          customer: subscription.customer as string,
+          description: `Payment for invoice ${invoiceId}`,
+          metadata: {
+            invoiceId: invoiceId,
+            subscriptionId: subscription.id
+          }
+        });
+        
+        console.log("Payment intent created:", paymentIntent.id);
+        
         if (!paymentIntent || !paymentIntent.client_secret) {
           throw new Error("Could not retrieve client secret from payment intent");
         }
+        
+        // Attach the payment intent to the invoice
+        await stripe.invoices.update(invoiceId, {
+          payment_settings: {
+            payment_method_options: {
+              card: {
+                request_three_d_secure: 'automatic'
+              }
+            },
+            payment_method_types: ['card']
+          }
+        });
         
         const clientSecret = paymentIntent.client_secret;
         
