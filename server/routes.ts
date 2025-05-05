@@ -1590,6 +1590,14 @@ export async function registerRoutes(app: Express): Promise<Server> {
       try {
         console.log(`Reactivating subscription ${user.stripeSubscriptionId}`);
         
+        // Make sure stripeSubscriptionId is a string and not null
+        if (!user.stripeSubscriptionId) {
+          return res.status(400).json({ 
+            message: "No subscription ID found for this user", 
+            errorType: "no_subscription"
+          });
+        }
+        
         // Update the subscription to remove the cancellation at period end
         const updatedSubscription = await stripe.subscriptions.update(user.stripeSubscriptionId, {
           cancel_at_period_end: false,

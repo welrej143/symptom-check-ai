@@ -93,11 +93,11 @@ export default function Footer() {
                 support@symptomcheckapp.com
               </a>
               <a 
-                href="tel:+18005551234" 
+                href="tel:+639678361036" 
                 className="flex items-center text-sm text-gray-600 hover:text-primary-600 transition-colors"
               >
                 <Phone className="h-4 w-4 mr-2" />
-                1-800-555-1234
+                +63 967 836 1036
               </a>
             </div>
           </div>
@@ -375,37 +375,29 @@ export default function Footer() {
                         We'd love to hear from you! Whether you have questions about our service, need technical support, or want to provide feedback, our team is here to help.
                       </p>
                       
-                      <h3>General Inquiries</h3>
-                      <p>
-                        Email: <a href="mailto:info@symptomcheckapp.com">info@symptomcheckapp.com</a><br />
-                        Phone: 1-800-555-1234<br />
-                        Hours: Monday to Friday, 9:00 AM to 5:00 PM EST
-                      </p>
-                      
-                      <h3>Customer Support</h3>
+                      <h3>Contact Information</h3>
                       <p>
                         Email: <a href="mailto:support@symptomcheckapp.com">support@symptomcheckapp.com</a><br />
-                        Phone: 1-800-555-5678<br />
+                        Phone: <a href="tel:+639678361036">+63 967 836 1036</a><br />
                         Hours: 24/7
                       </p>
                       
-                      <h3>Business Partnerships</h3>
+                      <h3>Frequently Asked Questions</h3>
                       <p>
-                        Email: <a href="mailto:partnerships@symptomcheckapp.com">partnerships@symptomcheckapp.com</a>
+                        <strong>How accurate is SymptomCheck AI?</strong><br />
+                        Our AI model is trained on medical data and provides informational insights, but it's not a substitute for professional medical advice.
                       </p>
-                      
-                      <h3>Media Inquiries</h3>
                       <p>
-                        Email: <a href="mailto:media@symptomcheckapp.com">media@symptomcheckapp.com</a>
+                        <strong>What happens to my health data?</strong><br />
+                        Your health data is stored securely and used only to provide you with personalized insights. We never sell your data to third parties.
                       </p>
-                      
-                      <h3>Corporate Headquarters</h3>
                       <p>
-                        SymptomCheck AI Inc.<br />
-                        123 Health Avenue<br />
-                        Suite 456<br />
-                        San Francisco, CA 94103<br />
-                        United States
+                        <strong>Can I use SymptomCheck AI in an emergency?</strong><br />
+                        No. If you're experiencing a medical emergency, please call emergency services immediately.
+                      </p>
+                      <p>
+                        <strong>How do I cancel my subscription?</strong><br />
+                        You can cancel your subscription at any time from your account settings page.
                       </p>
                       
                       <p>
