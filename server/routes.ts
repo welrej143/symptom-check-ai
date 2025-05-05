@@ -1314,12 +1314,14 @@ export async function registerRoutes(app: Express): Promise<Server> {
           // Important: Keep the subscription status as 'active' until the end of the billing period
           // Only the cancel_at_period_end flag will be true in Stripe, but the user should
           // still have premium access until the current period ends
-          await storage.updateSubscriptionStatus(
+          const updatedUser = await storage.updateSubscriptionStatus(
             user.id,
             'active', // Keep as active instead of 'canceled'
             endDate,
             planName
           );
+          
+          console.log(`User ${user.id} subscription canceled but kept active until ${endDate.toISOString()}, isPremium=${updatedUser.isPremium}`);
           
           // Send a successful response
           return res.status(200).json({

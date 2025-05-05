@@ -86,11 +86,25 @@ export class DatabaseStorage implements IStorage {
   }
   
   async updateSubscriptionStatus(userId: number, status: string, endDate?: Date, planName?: string): Promise<User> {
+    // Get current date to compare with subscription end date
+    const now = new Date();
+    
+    // If there's an end date in the future, the user should retain premium access
+    // until that date, regardless of status (especially for users who cancel but should
+    // retain access until the end of their billing period)
+    const shouldRemainPremium = 
+      // Active subscriptions are always premium
+      status === 'active' || 
+      // If there's an end date in the future, user should remain premium until then
+      (endDate && endDate > now);
+    
+    console.log(`Updating subscription status: userId=${userId}, status=${status}, isPremium=${shouldRemainPremium}, endDate=${endDate?.toISOString()}`);
+      
     const [updatedUser] = await db
       .update(users)
       .set({
         subscriptionStatus: status,
-        isPremium: status === 'active',
+        isPremium: shouldRemainPremium,
         subscriptionEndDate: endDate ? endDate : undefined,
         planName: planName ? planName : undefined,
       })
