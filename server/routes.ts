@@ -1330,7 +1330,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
               willCancelAt: endDate,
               cancelAtPeriodEnd: true,
               endDate: endDate,
-              planName: planName
+              planName: planName,
+              isPremium: true  // User should remain premium until end date
             }
           });
         } catch (stripeError) {
