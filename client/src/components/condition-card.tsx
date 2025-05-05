@@ -105,6 +105,7 @@ export default function ConditionCard({ condition }: ConditionCardProps) {
                       </svg>
                       Prescription Medications
                     </h5>
+                    <p className="text-xs text-gray-500 italic mb-2">Requires a doctor's prescription</p>
                     <div className="mt-2 space-y-2">
                       {condition.prescriptionMedications.map((med, index) => (
                         <div key={index} className="bg-purple-50 p-2 rounded-md">
@@ -140,6 +141,7 @@ export default function ConditionCard({ condition }: ConditionCardProps) {
                       </svg>
                       Over-The-Counter Medications
                     </h5>
+                    <p className="text-xs text-gray-500 italic mb-2">Available without a prescription at pharmacies</p>
                     <div className="mt-2 space-y-2">
                       {condition.otcMedications.map((med, index) => (
                         <div key={index} className="bg-blue-50 p-2 rounded-md">
@@ -175,6 +177,7 @@ export default function ConditionCard({ condition }: ConditionCardProps) {
                       </svg>
                       Common Medications
                     </h5>
+                    <p className="text-xs text-gray-500 italic mb-2">Medications that may help with this condition</p>
                     <div className="mt-2 space-y-2">
                       {condition.medications.map((med, index) => (
                         <div key={index} className="bg-blue-50 p-2 rounded-md">
@@ -210,6 +213,7 @@ export default function ConditionCard({ condition }: ConditionCardProps) {
                       </svg>
                       Helpful Supplements
                     </h5>
+                    <p className="text-xs text-gray-500 italic mb-2">Natural products like vitamins, minerals and herbs</p>
                     <div className="mt-2 space-y-2">
                       {condition.supplements.map((supp, index) => (
                         <div key={index} className="bg-green-50 p-2 rounded-md">

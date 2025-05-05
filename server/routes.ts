@@ -128,9 +128,15 @@ export async function registerRoutes(app: Express): Promise<Server> {
         3. For each condition, provide 2-4 common causes or risk factors that may lead to this condition
         4. Set urgencyLevel to either "low" (monitor at home), "moderate" (see doctor soon), or "high" (emergency)
         5. Provide 3-5 actionable recommendations
-        6. For each condition, include 1-2 relevant prescription medications that would require a doctor's prescription
-        7. For each condition, include 1-2 relevant over-the-counter medications that can be purchased without a prescription
-        8. For each condition, include 1-2 relevant supplements that may help with symptoms
+        6. For each condition, include 1-2 specific prescription medications (NOT general categories like "antidepressants" or "mood stabilizers") 
+          - Always provide actual medication names that require a doctor's prescription
+          - Include specific medication names (e.g., "Sertraline (Zoloft)" rather than just "SSRI")
+        7. For each condition, include 1-2 specific over-the-counter medications with brand names 
+          - These must be actual medications with active pharmaceutical ingredients (e.g., "Ibuprofen (Advil, Motrin)")
+          - Do not include herbal remedies or vitamins in this category (these go in supplements)
+        8. For each condition, include 1-2 relevant supplements 
+          - Include only vitamins, minerals, herbs, and other natural products here
+          - Be specific with names (e.g., "Omega-3 Fish Oil" instead of just "fatty acids")
         9. For the icon field, use only icon names from Lucide React (like "stethoscope", "thermometer", "clipboard", etc.)
         10. ALWAYS include disclaimer text about consulting healthcare professionals
         11. If symptoms suggest a potentially life-threatening condition, mark the recommendation with isEmergency: true
