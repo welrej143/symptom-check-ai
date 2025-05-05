@@ -505,30 +505,53 @@ export default function PremiumCard() {
           
           <div className="mt-4">
             <button 
-              onClick={() => setIsUpgrading(true)}
+              onClick={async () => {
+                try {
+                  setIsUpgrading(true);
+                  const response = await apiRequest("POST", "/api/create-subscription");
+                  if (!response.ok) {
+                    throw new Error("Failed to create subscription");
+                  }
+                  const data = await response.json();
+                  
+                  if (data.url) {
+                    // Redirect to Stripe Checkout
+                    window.location.href = data.url;
+                  } else {
+                    setIsUpgrading(false);
+                    toast({
+                      title: "Error",
+                      description: "Could not retrieve checkout URL",
+                      variant: "destructive",
+                    });
+                  }
+                } catch (err) {
+                  console.error("Error initiating checkout:", err);
+                  setIsUpgrading(false);
+                  toast({
+                    title: "Error",
+                    description: "Failed to start checkout process",
+                    variant: "destructive",
+                  });
+                }
+              }}
               className="bg-blue-600 text-white py-2.5 px-4 rounded-md font-medium hover:bg-blue-700 transition-colors flex items-center justify-center w-full"
+              disabled={isUpgrading}
             >
-              Upgrade with Stripe
-              <ArrowRight className="ml-2 h-4 w-4" />
+              {isUpgrading ? (
+                <>
+                  <Loader className="w-4 h-4 mr-2 animate-spin" />
+                  Preparing Checkout...
+                </>
+              ) : (
+                <>
+                  Upgrade with Stripe
+                  <ArrowRight className="ml-2 h-4 w-4" />
+                </>
+              )}
             </button>
           </div>
         </div>
-        
-        {isUpgrading && (
-          <div className="mt-6">
-            <div className="flex items-center justify-between mb-3">
-              <h4 className="text-base font-medium text-gray-900">Complete Your Subscription</h4>
-              <button 
-                onClick={() => setIsUpgrading(false)}
-                className="text-gray-600 text-sm hover:text-gray-800"
-              >
-                Cancel
-              </button>
-            </div>
-            
-            <StripePaymentOptions />
-          </div>
-        )}
       </div>
     </div>
   );
