@@ -55,32 +55,30 @@ function PaymentVerificationWrapper({
     />
   );
   
-  // Use effect to check for payment verification params
+  // Check for Stripe payment completion
   useEffect(() => {
-    const checkStripeRedirect = async () => {
-      // Get URL search params
-      const searchParams = new URLSearchParams(window.location.search);
-      const isSuccess = searchParams.get('success') === 'true';
-      const sessionId = searchParams.get('session_id');
-      
-      // If successful payment with session ID, verify with backend
+    const searchParams = new URLSearchParams(window.location.search);
+    const isSuccess = searchParams.get('success') === 'true';
+    const sessionId = searchParams.get('session_id');
+    
+    const verifyPayment = async () => {
       if (isSuccess && sessionId) {
         try {
           setIsProcessing(true);
           
-          // Show toast about verification
+          // Show processing toast
           toast({
             title: "Verifying Your Payment",
             description: "We're confirming your subscription status...",
             variant: "default",
           });
           
-          // Clear URL params
+          // Clear URL params to avoid re-processing on refresh
           const currentUrl = new URL(window.location.href);
           currentUrl.search = '';
           window.history.replaceState({}, '', currentUrl.toString());
           
-          // Verify payment with backend
+          // Call backend to verify payment
           const response = await apiRequest("GET", `/api/verify-checkout-session?session_id=${sessionId}`);
           
           if (!response.ok) {
@@ -88,13 +86,10 @@ function PaymentVerificationWrapper({
           }
           
           const data = await response.json();
-          console.log("Verification successful:", data);
+          console.log("Payment verification successful:", data);
           
-          // Force complete refresh of user data (this is critical)
-          // The user has now been updated in the database with stripeCustomerId and subscription info
-          // but our cached user object in the auth hook doesn't have this info yet
-          queryClient.removeQueries({ queryKey: ["/api/user"] });
-          queryClient.invalidateQueries({ queryKey: ["/api/user"] });
+          // Force cache invalidation to get fresh user data
+          await fetch("/api/user", { method: "GET", credentials: "include" });
           
           // Show success message
           toast({
@@ -103,17 +98,16 @@ function PaymentVerificationWrapper({
             variant: "default",
           });
           
-          // Force a page reload to get a completely fresh user state
-          // This ensures all components see the updated premium status
+          // Force page reload to refresh all components
           setTimeout(() => {
             window.location.reload();
           }, 1500);
           
-        } catch (err) {
-          console.error("Error verifying checkout:", err);
+        } catch (err: any) {
+          console.error("Payment verification error:", err);
           toast({
             title: "Verification Failed",
-            description: "We couldn't verify your payment. Please check your subscription status in the premium page.",
+            description: err.message || "We couldn't verify your payment. Please check your account status.",
             variant: "destructive",
           });
         } finally {
@@ -122,10 +116,10 @@ function PaymentVerificationWrapper({
       }
     };
     
-    checkStripeRedirect();
-  }, [location, toast, refreshSubscriptionStatus]);
+    verifyPayment();
+  }, [toast]);
   
-  // Show a processing indicator if it's verifying
+  // Show processing indicator
   if (isProcessing) {
     return (
       <div className="flex flex-col items-center justify-center min-h-[60vh]">
@@ -139,7 +133,7 @@ function PaymentVerificationWrapper({
     );
   }
   
-  // Otherwise render the normal routes
+  // Regular routes if not processing payment
   return (
     <Switch>
       <Route path="/" component={HomeWrapper} />

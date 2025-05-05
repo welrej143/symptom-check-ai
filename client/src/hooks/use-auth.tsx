@@ -178,7 +178,11 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
   // Function to refresh subscription status
   const refreshSubscriptionStatus = async () => {
-    if (!user || !user.stripeCustomerId) return;
+    // Force a complete refresh of user data first
+    await refetchUser();
+    
+    // Skip if user isn't available after refetch
+    if (!user) return;
     
     try {
       const res = await apiRequest("GET", "/api/subscription");
