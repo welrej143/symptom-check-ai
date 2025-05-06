@@ -743,7 +743,9 @@ export default function PremiumCard() {
                 <h3 className="text-base font-medium text-gray-800">Choose your payment method</h3>
                 <div className="mt-2 flex">
                   <div className="px-3 py-1.5 bg-blue-50 rounded-l-md border border-blue-200 border-r-0 flex items-center">
-                    <img src={paypalLogo} alt="PayPal" className="h-6 mr-1.5" />
+                    <div className="h-6 w-6 mr-1.5 flex items-center justify-center">
+                      <img src={paypalLogo} alt="PayPal" className="h-5 w-5" />
+                    </div>
                     <span className="text-sm font-medium text-blue-800">PayPal</span>
                   </div>
                   <div 
@@ -756,7 +758,9 @@ export default function PremiumCard() {
                       });
                     }}
                   >
-                    <img src={stripeLogo} alt="Stripe" className="h-5 ml-1 mr-1.5" />
+                    <div className="h-6 w-6 mr-1.5 flex items-center justify-center">
+                      <img src={stripeLogo} alt="Stripe" className="h-5 w-5" style={{ opacity: 0.7 }} />
+                    </div>
                     <span className="text-sm text-gray-500">Stripe (Soon)</span>
                   </div>
                 </div>
@@ -862,7 +866,9 @@ export default function PremiumCard() {
                   </>
                 ) : (
                   <>
-                    <img src={paypalLogo} alt="PayPal" className="h-5 mr-2 invert" />
+                    <div className="h-5 w-5 mr-2 bg-white rounded-sm flex items-center justify-center">
+                      <img src={paypalLogo} alt="PayPal" className="h-4 w-4" />
+                    </div>
                     Pay with PayPal
                   </>
                 )}
@@ -879,7 +885,9 @@ export default function PremiumCard() {
                 }}
                 className="bg-gray-200 text-gray-600 py-2.5 px-4 rounded-md font-medium hover:bg-gray-300 transition-colors flex items-center justify-center w-full relative"
               >
-                <img src={stripeLogo} alt="Stripe" className="h-5 mr-2" style={{ opacity: 0.6 }} />
+                <div className="h-5 w-5 mr-2 flex items-center justify-center">
+                  <img src={stripeLogo} alt="Stripe" className="h-4 w-4" style={{ opacity: 0.7 }} />
+                </div>
                 Pay with Stripe
                 <span className="absolute -top-2 -right-2 bg-amber-500 text-white text-xs px-1.5 py-0.5 rounded-full">
                   Soon
