@@ -2,8 +2,11 @@ services:
   - type: web
     name: symptom-check-ai
     env: node
+    plan: free
     buildCommand: npm run build
     startCommand: npm start
+    numInstances: 1
+    healthCheckPath: /api/health
     envVars:
       - key: NODE_ENV
         value: production
@@ -20,6 +23,10 @@ services:
       - key: STRIPE_WEBHOOK_SECRET
         sync: false
       - key: STRIPE_PRICE_ID
+        sync: false 
+      - key: PAYPAL_CLIENT_ID
+        sync: false
+      - key: PAYPAL_CLIENT_SECRET
         sync: false
       - key: SESSION_SECRET
         generateValue: true

@@ -8,7 +8,7 @@ import z from "zod";
 import { symptomInputSchema, analysisResponseSchema } from "@shared/schema";
 import { db } from "./db";
 import { users } from "@shared/schema";
-import { eq } from "drizzle-orm";
+import { eq, sql } from "drizzle-orm";
 import { createPaypalOrder, capturePaypalOrder, loadPaypalDefault } from "./paypal";
 
 // Initialize Stripe (temporarily disabled as requested, with a warning message)
@@ -38,6 +38,29 @@ if (!process.env.PAYPAL_CLIENT_ID || !process.env.PAYPAL_CLIENT_SECRET) {
 }
 
 export async function registerRoutes(app: Express): Promise<Server> {
+  // Health check endpoint for Render
+  app.get("/api/health", async (_req: Request, res: Response) => {
+    try {
+      // Test database connection
+      await db.execute(sql`SELECT 1 AS test`);
+      
+      // All systems operational
+      res.status(200).json({
+        status: "healthy",
+        timestamp: new Date().toISOString(),
+        database: "connected",
+        version: process.env.npm_package_version || "unknown"
+      });
+    } catch (error) {
+      console.error("Health check failed:", error);
+      res.status(500).json({
+        status: "unhealthy",
+        timestamp: new Date().toISOString(),
+        error: "Database connection failed",
+        details: process.env.NODE_ENV === 'production' ? undefined : String(error)
+      });
+    }
+  });
   // Set up authentication
   setupAuth(app);
   
