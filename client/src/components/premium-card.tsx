@@ -836,7 +836,7 @@ export default function PremiumCard() {
               <div className="mt-3 bg-gray-100 h-[1px]"></div>
               <div className="flex items-center justify-between text-sm mt-3">
                 <span className="text-gray-600">Premium price</span>
-                <span className="text-primary-900 font-semibold">$9.99/month <span className="text-gray-500 text-xs">or $50/year</span></span>
+                <span className="text-primary-900 font-semibold">$9.99/month</span>
               </div>
             </div>
             
