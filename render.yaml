@@ -27,4 +27,4 @@ services:
 databases:
   - name: symptom-check-db
     databaseName: symptomcheck
-    plan: starter
+    plan: free
