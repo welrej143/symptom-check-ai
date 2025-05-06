@@ -1,7 +1,6 @@
 import { Pool, neonConfig } from '@neondatabase/serverless';
 import { drizzle } from 'drizzle-orm/neon-serverless';
 import { sql } from 'drizzle-orm';
-import { migrate } from 'drizzle-orm/neon-serverless/migrator';
 import ws from "ws";
 import * as schema from "@shared/schema";
 import { users, symptomRecords, dailyTracking } from "@shared/schema";
@@ -42,6 +41,119 @@ let db: ReturnType<typeof drizzle>;
 
 const MAX_RETRIES = 5;
 const RETRY_DELAY_MS = 3000;
+
+/**
+ * Helper function to check if a table exists in the database
+ */
+async function checkTableExists(tableName: string): Promise<boolean> {
+  try {
+    const result = await db.execute(sql`
+      SELECT EXISTS (
+        SELECT FROM information_schema.tables 
+        WHERE table_schema = 'public'
+        AND table_name = ${tableName}
+      )
+    `);
+    
+    return result.rows[0].exists === true;
+  } catch (error) {
+    console.error(`Error checking if table ${tableName} exists:`, error);
+    return false;
+  }
+}
+
+/**
+ * Function to ensure all required database tables exist
+ * This is a fallback in case migrations aren't working in production
+ */
+async function ensureTablesExist() {
+  try {
+    console.log("Checking and creating database tables if needed...");
+    
+    // Check if users table exists, if not create it
+    const userTableExists = await checkTableExists('users');
+    if (!userTableExists) {
+      console.log("Creating users table...");
+      await db.execute(sql`
+        CREATE TABLE IF NOT EXISTS users (
+          id SERIAL PRIMARY KEY,
+          username TEXT NOT NULL UNIQUE,
+          email TEXT NOT NULL,
+          password TEXT NOT NULL,
+          created_at TIMESTAMP NOT NULL DEFAULT NOW(),
+          stripe_customer_id TEXT,
+          stripe_subscription_id TEXT,
+          is_premium BOOLEAN DEFAULT FALSE,
+          subscription_status TEXT DEFAULT 'inactive',
+          subscription_end_date TIMESTAMP,
+          plan_name TEXT DEFAULT 'Premium Monthly',
+          analysis_count INTEGER DEFAULT 0 NOT NULL,
+          analysis_count_reset_date TIMESTAMP
+        )
+      `);
+      console.log("Users table created successfully");
+    }
+    
+    // Check if symptom_records table exists, if not create it
+    const symptomRecordsTableExists = await checkTableExists('symptom_records');
+    if (!symptomRecordsTableExists) {
+      console.log("Creating symptom_records table...");
+      await db.execute(sql`
+        CREATE TABLE IF NOT EXISTS symptom_records (
+          id SERIAL PRIMARY KEY,
+          user_id INTEGER REFERENCES users(id),
+          symptoms TEXT NOT NULL,
+          date TIMESTAMP NOT NULL DEFAULT NOW()
+        )
+      `);
+      console.log("Symptom records table created successfully");
+    }
+    
+    // Check if daily_tracking table exists, if not create it
+    const dailyTrackingTableExists = await checkTableExists('daily_tracking');
+    if (!dailyTrackingTableExists) {
+      console.log("Creating daily_tracking table...");
+      await db.execute(sql`
+        CREATE TABLE IF NOT EXISTS daily_tracking (
+          id SERIAL PRIMARY KEY,
+          user_id INTEGER REFERENCES users(id),
+          date DATE NOT NULL,
+          symptoms TEXT NOT NULL,
+          symptom_severity INTEGER NOT NULL,
+          energy_level INTEGER NOT NULL,
+          mood INTEGER NOT NULL,
+          sleep_quality INTEGER NOT NULL,
+          notes TEXT
+        )
+      `);
+      console.log("Daily tracking table created successfully");
+    }
+    
+    // Check if session table exists, if not create it
+    const sessionTableExists = await checkTableExists('session');
+    if (!sessionTableExists) {
+      console.log("Creating session table...");
+      await db.execute(sql`
+        CREATE TABLE IF NOT EXISTS session (
+          sid VARCHAR NOT NULL PRIMARY KEY,
+          sess JSON NOT NULL,
+          expire TIMESTAMP(6) NOT NULL
+        )
+      `);
+      // Create index on expire column
+      await db.execute(sql`
+        CREATE INDEX IF NOT EXISTS IDX_session_expire ON session (expire)
+      `);
+      console.log("Session table created successfully");
+    }
+    
+    console.log("All required tables are in place");
+  } catch (error) {
+    console.error("Error ensuring tables exist:", error);
+    // Don't throw the error - we want to continue even if this fails
+    // The application might still work with existing tables
+  }
+}
 
 async function initializeDatabase(retryCount = 0): Promise<void> {
   try {
