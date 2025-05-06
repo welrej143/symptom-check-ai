@@ -675,7 +675,42 @@ export default function PremiumCard() {
               </button>
             </div>
             
-            <PayPalPaymentOptions />
+            <div className="mt-4">
+              {/* Monthly Subscription Option */}
+              <div className="mb-4 p-4 border border-gray-200 rounded-lg bg-white">
+                <div className="flex justify-between items-center mb-2">
+                  <h3 className="font-medium text-gray-900">Monthly Subscription</h3>
+                  <span className="font-semibold text-primary-900">$9.99/month</span>
+                </div>
+                <p className="text-sm text-gray-600 mb-3">Get unlimited symptom analyses and health tracking. Cancel anytime.</p>
+                <PayPalButton 
+                  amount="9.99"
+                  currency="USD"
+                  intent="CAPTURE"
+                  onSuccess={(data) => handlePaymentSuccess(data, "monthly")}
+                />
+              </div>
+              
+              {/* Yearly Subscription Option */}
+              <div className="p-4 border border-primary-200 rounded-lg bg-primary-50">
+                <div className="flex justify-between items-center mb-2">
+                  <div>
+                    <h3 className="font-medium text-gray-900">Yearly Subscription</h3>
+                    <span className="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-green-100 text-green-800 mt-1">
+                      Save 16%
+                    </span>
+                  </div>
+                  <span className="font-semibold text-primary-900">$50.00/year</span>
+                </div>
+                <p className="text-sm text-gray-600 mb-3">Best value! Get unlimited symptom analyses and health tracking for a full year.</p>
+                <PayPalButton 
+                  amount="50.00"
+                  currency="USD"
+                  intent="CAPTURE"
+                  onSuccess={(data) => handlePaymentSuccess(data, "yearly")}
+                />
+              </div>
+            </div>
           </div>
         )}
       </div>

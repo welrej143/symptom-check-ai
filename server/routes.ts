@@ -45,6 +45,20 @@ export async function registerRoutes(app: Express): Promise<Server> {
   const openai = new OpenAI({
     apiKey: process.env.OPENAI_API_KEY || "sk-dummy",
   });
+  
+  // PayPal setup and order routes
+  app.get("/api/paypal/setup", async (req, res) => {
+    await loadPaypalDefault(req, res);
+  });
+  
+  app.post("/api/paypal/order", async (req, res) => {
+    // Request body should contain: { intent, amount, currency }
+    await createPaypalOrder(req, res);
+  });
+  
+  app.post("/api/paypal/order/:orderID/capture", async (req, res) => {
+    await capturePaypalOrder(req, res);
+  });
 
   // Analyze symptoms route
   app.post("/api/analyze-symptoms", async (req: Request, res: Response) => {
