@@ -9,6 +9,7 @@ import { symptomInputSchema, analysisResponseSchema } from "@shared/schema";
 import { db } from "./db";
 import { users } from "@shared/schema";
 import { eq } from "drizzle-orm";
+import { createPaypalOrder, capturePaypalOrder, loadPaypalDefault } from "./paypal";
 
 // Initialize Stripe
 if (!process.env.STRIPE_SECRET_KEY) {
