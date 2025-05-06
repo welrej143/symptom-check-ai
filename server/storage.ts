@@ -173,27 +173,47 @@ export class DatabaseStorage implements IStorage {
       // More verbose logging to trace the issue
       console.log("Attempting to create user with username:", insertUser.username);
       
-      // Ensure the dates are properly formatted - this could be causing issues
-      const formattedInsertUser = {
-        ...insertUser,
-        // Add any default values that might be missing
-        analysisCount: 0,
-        isPremium: false,
-        subscriptionStatus: 'inactive',
-      };
+      // Try to use the standard ORM approach first
+      try {
+        console.log("Attempting to create user with Drizzle ORM");
+        const [user] = await db
+          .insert(users)
+          .values({
+            username: insertUser.username,
+            email: insertUser.email,
+            password: insertUser.password,
+            createdAt: new Date(),
+            analysisCount: 0,
+            isPremium: false,
+            subscriptionStatus: 'inactive'
+          })
+          .returning();
+          
+        if (user) {
+          console.log("User created successfully with ORM, ID:", user.id);
+          return user;
+        }
+        
+        // If we get here, the insert worked but returned no user (shouldn't happen)
+        console.warn("ORM insert succeeded but returned no user, falling back to SQL");
+      } catch (ormError) {
+        // ORM approach failed, try SQL approach
+        console.warn("ORM insert failed, falling back to SQL:", ormError);
+      }
       
-      // Execute a direct SQL query instead of using the ORM
-      // This gives us more control and visibility into the process
+      // If ORM fails, use direct SQL as a fallback
+      // This is a more reliable approach that gives us more control
+      console.log("Using direct SQL to create user");
       const result = await db.execute(sql`
         INSERT INTO users (username, email, password, created_at, analysis_count, is_premium, subscription_status)
         VALUES (
-          ${formattedInsertUser.username}, 
-          ${formattedInsertUser.email}, 
-          ${formattedInsertUser.password}, 
+          ${insertUser.username}, 
+          ${insertUser.email}, 
+          ${insertUser.password}, 
           NOW(), 
-          ${formattedInsertUser.analysisCount}, 
-          ${formattedInsertUser.isPremium}, 
-          ${formattedInsertUser.subscriptionStatus}
+          0, 
+          false, 
+          'inactive'
         )
         RETURNING *
       `);
@@ -205,21 +225,23 @@ export class DatabaseStorage implements IStorage {
       
       console.log("User created successfully with ID:", result.rows[0].id);
       
-      // Map the database results to our User type
+      // Create a properly typed User object
+      const row = result.rows[0];
+      
       const user: User = {
-        id: result.rows[0].id,
-        username: result.rows[0].username,
-        email: result.rows[0].email,
-        password: result.rows[0].password,
-        createdAt: new Date(result.rows[0].created_at),
-        stripeCustomerId: result.rows[0].stripe_customer_id || null,
-        stripeSubscriptionId: result.rows[0].stripe_subscription_id || null,
-        isPremium: result.rows[0].is_premium || false,
-        subscriptionStatus: result.rows[0].subscription_status || 'inactive',
-        subscriptionEndDate: result.rows[0].subscription_end_date ? new Date(result.rows[0].subscription_end_date) : null,
-        planName: result.rows[0].plan_name || 'Premium Monthly',
-        analysisCount: result.rows[0].analysis_count || 0,
-        analysisCountResetDate: result.rows[0].analysis_count_reset_date ? new Date(result.rows[0].analysis_count_reset_date) : null,
+        id: typeof row.id === 'number' ? row.id : parseInt(row.id as string, 10),
+        username: String(row.username),
+        email: String(row.email),
+        password: String(row.password),
+        createdAt: new Date(row.created_at as string),
+        stripeCustomerId: row.stripe_customer_id ? String(row.stripe_customer_id) : null,
+        stripeSubscriptionId: row.stripe_subscription_id ? String(row.stripe_subscription_id) : null,
+        isPremium: Boolean(row.is_premium),
+        subscriptionStatus: String(row.subscription_status || 'inactive'),
+        subscriptionEndDate: row.subscription_end_date ? new Date(row.subscription_end_date as string) : null,
+        planName: String(row.plan_name || 'Premium Monthly'),
+        analysisCount: typeof row.analysis_count === 'number' ? row.analysis_count : parseInt(row.analysis_count as string, 10) || 0,
+        analysisCountResetDate: row.analysis_count_reset_date ? new Date(row.analysis_count_reset_date as string) : null,
       };
       
       return user;

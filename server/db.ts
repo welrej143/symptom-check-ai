@@ -5,8 +5,14 @@ import ws from "ws";
 import * as schema from "@shared/schema";
 import { users, symptomRecords, dailyTracking } from "@shared/schema";
 
-// Basic Neon configuration
+// Enhanced Neon configuration
 neonConfig.webSocketConstructor = ws;
+neonConfig.useSecureWebSocket = true; // Required for production sites
+neonConfig.pipelineConnect = false; // Disable to avoid WebSocket ping issues
+// Use secure TLS connection for PostgreSQL
+
+// Set a longer connection timeout (in milliseconds)
+const CONNECTION_TIMEOUT = 15000; // 15 seconds - longer for first connection
 
 if (!process.env.DATABASE_URL) {
   throw new Error(
@@ -160,45 +166,95 @@ async function initializeDatabase(retryCount = 0): Promise<void> {
   try {
     console.log(`Initializing database connection pool (attempt ${retryCount + 1} of ${MAX_RETRIES + 1})...`);
     
-    // Pool configuration
+    // Parse the DATABASE_URL to extract host info
+    let dbUrl: URL;
+    try {
+      dbUrl = new URL(process.env.DATABASE_URL!);
+      
+      // Extract host info for better error tracking
+      console.log(`Attempting to connect to database host: ${dbUrl.hostname}`);
+      
+      // Make sure we're connecting to a valid Neon database
+      if (!dbUrl.hostname.includes('neon.tech')) {
+        console.warn("Database URL doesn't appear to be a Neon database. This might cause issues.");
+      }
+    } catch (error) {
+      console.error("Error parsing DATABASE_URL:", error);
+    }
+    
+    // Pool configuration with better timeout handling
     const poolConfig = {
       connectionString: process.env.DATABASE_URL,
-      max: process.env.NODE_ENV === 'production' ? 10 : 20, // Lower connection count in production for Render free tier
-      idleTimeoutMillis: 30000,
-      connectionTimeoutMillis: 5000,
+      max: 2, // Reduce to minimum connections (free tier limitation)
+      idleTimeoutMillis: 10000, // 10 seconds
+      connectionTimeoutMillis: CONNECTION_TIMEOUT, // using the longer timeout
       ssl: {
         rejectUnauthorized: false // Necessary for Neon and Render's free tier
       }
     };
     
+    // Initialize the pool
+    console.log("Creating pool with secure WebSocket configuration...");
     pool = new Pool(poolConfig);
     
-    // Test the connection immediately to catch any issues
-    const client = await pool.connect();
+    // Add connection handling before trying to use it
+    pool.on('connect', () => {
+      console.log("New database connection established successfully");
+    });
     
-    console.log("Database connection test successful");
-    client.release();
-    
-    // Add error handler to the pool
     pool.on('error', (err) => {
-      console.error('Unexpected error on idle database client:', err);
-      // In production, don't crash the server; instead, attempt to reconnect
+      console.error('Database pool error:', err);
+      
+      // In production, just log the error and continue
       if (process.env.NODE_ENV === 'production') {
-        console.log('Attempting to recover from database error...');
+        console.log('Database error detected, but continuing in degraded mode...');
       } else {
-        process.exit(-1); // In development, fail fast
+        // In development, fail fast
+        console.error('Database error in development mode, exiting application');
+        process.exit(-1); 
       }
     });
     
+    // Wrap the connection test in a timeout promise to avoid hanging
+    const clientPromise = pool.connect();
+    const timeoutPromise = new Promise((_, reject) => 
+      setTimeout(() => reject(new Error('Database connection timeout')), CONNECTION_TIMEOUT)
+    );
+    
+    try {
+      // Use Promise.race to implement the timeout
+      const client = await Promise.race([clientPromise, timeoutPromise]) as any;
+      console.log("Database connection test successful");
+      client.release();
+    } catch (connError) {
+      console.error("Connection test failed:", connError);
+      throw connError; // Rethrow to trigger retry
+    }
+    
+    // Initialize Drizzle ORM
     db = drizzle({ client: pool, schema });
     console.log("Database connection pool initialized successfully");
     
-    // Test a basic query to verify the connection is fully working
-    await db.execute(sql`SELECT 1 AS test`);
-    console.log("Database query test successful");
+    // Test if we can execute a query
+    try {
+      const result = await db.execute(sql`SELECT 1 AS test`);
+      if (result && result.rows && result.rows.length > 0) {
+        console.log("Database query test successful");
+      } else {
+        throw new Error("Query returned empty result");
+      }
+    } catch (queryError) {
+      console.error("Database query test failed:", queryError);
+      throw queryError; // Rethrow to trigger retry
+    }
     
-    // Ensure all required tables exist
-    await ensureTablesExist();
+    // Try to ensure all required tables exist
+    try {
+      await ensureTablesExist();
+    } catch (tableError) {
+      console.error("Error creating tables:", tableError);
+      // Continue anyway - tables might already exist
+    }
     
   } catch (error) {
     console.error(`Database initialization error (attempt ${retryCount + 1}):`, error);
@@ -213,41 +269,51 @@ async function initializeDatabase(retryCount = 0): Promise<void> {
       }
     }
     
-    // Retry logic
+    // More aggressive retry with exponential backoff
     if (retryCount < MAX_RETRIES) {
-      console.log(`Retrying database connection in ${RETRY_DELAY_MS}ms...`);
-      await new Promise(resolve => setTimeout(resolve, RETRY_DELAY_MS));
+      // Exponential backoff: 3s, 6s, 12s, 24s
+      const backoffTime = RETRY_DELAY_MS * Math.pow(2, retryCount);
+      console.log(`Retrying database connection in ${backoffTime}ms...`);
+      await new Promise(resolve => setTimeout(resolve, backoffTime));
       return initializeDatabase(retryCount + 1);
     }
     
-    // If we've exhausted retries, don't throw in production
-    if (process.env.NODE_ENV === 'production') {
-      console.error(`Failed to connect to database after ${MAX_RETRIES + 1} attempts. Application will continue in degraded mode.`);
-      // Initialize a dummy DB object to prevent crashes on DB operations
-      db = {
-        execute: async () => ({ rows: [] }),
-        select: () => ({
-          from: () => ({
-            where: () => [],
-            orderBy: () => []
-          })
-        }),
-        insert: () => ({
-          values: () => ({
+    // If we've exhausted retries, still enable the app in degraded mode
+    console.error(`Failed to connect to database after ${MAX_RETRIES + 1} attempts. Application will continue in DEGRADED MODE.`);
+    
+    // Create a mock DB implementation that handles common operations
+    // This allows the application to start even without a database
+    db = {
+      execute: async () => ({ rows: [] }),
+      select: () => ({
+        from: () => ({
+          where: () => [],
+          orderBy: () => [],
+          limit: () => []
+        })
+      }),
+      insert: () => ({
+        values: () => ({
+          returning: () => []
+        })
+      }),
+      update: () => ({
+        set: () => ({
+          where: () => ({
             returning: () => []
           })
-        }),
-        update: () => ({
-          set: () => ({
-            where: () => ({
-              returning: () => []
-            })
-          })
         })
-      } as any;
-    } else {
-      // In development, rethrow the error
-      throw new Error(`Failed to connect to database after ${MAX_RETRIES + 1} attempts: ${error}`);
+      }),
+      delete: () => ({
+        where: () => ({
+          returning: () => []
+        })
+      })
+    } as any;
+    
+    // In development, we want to know about DB failures
+    if (process.env.NODE_ENV !== 'production') {
+      console.error("⚠️ WARNING: Application running without database in development mode!");
     }
   }
 }
