@@ -2525,7 +2525,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         userId: user.id
       });
 
-      // Determine subscription end date based on type
+      // Determine subscription end date (only monthly subscriptions are supported)
       const currentDate = new Date();
       let endDate: Date;
       let planId: string = '';
@@ -2534,16 +2534,12 @@ export async function registerRoutes(app: Express): Promise<Server> {
         endDate = new Date(currentDate);
         endDate.setMonth(currentDate.getMonth() + 1);
         planId = 'P-8BT4315YWFQ34227NAMSUPI'; // Monthly plan ID from your PayPal account
-      } else if (subscriptionType === 'yearly') {
-        endDate = new Date(currentDate);
-        endDate.setFullYear(currentDate.getFullYear() + 1);
-        planId = 'P-8BT4315YWFQ34227NAMSUPI'; // Use the same plan ID for now, should be updated when you create the yearly plan
       } else {
-        return res.status(400).json({ message: "Invalid subscription type" });
+        return res.status(400).json({ message: "Invalid subscription type. Only monthly subscriptions are supported." });
       }
 
       // Update user subscription status
-      const planName = subscriptionType === 'monthly' ? 'Premium Monthly' : 'Premium Yearly';
+      const planName = 'Premium Monthly'; // Only monthly subscriptions are supported
       await storage.updateSubscriptionStatus(user.id, 'active', endDate, planName);
       
       // Update PayPal customer info (stripeCustomerId is reused for PayPal)
