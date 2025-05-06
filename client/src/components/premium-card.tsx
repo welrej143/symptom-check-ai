@@ -758,9 +758,7 @@ export default function PremiumCard() {
                       });
                     }}
                   >
-                    <div className="h-6 w-6 mr-1.5 flex items-center justify-center">
-                      <img src={stripeLogo} alt="Stripe" className="h-5 w-5" style={{ opacity: 0.7 }} />
-                    </div>
+                    <img src={stripeLogo} alt="Stripe" className="h-5 w-5 mr-1.5" style={{ opacity: 0.7 }} />
                     <span className="text-sm text-gray-500">Stripe (Soon)</span>
                   </div>
                 </div>
@@ -885,9 +883,7 @@ export default function PremiumCard() {
                 }}
                 className="bg-gray-200 text-gray-600 py-2.5 px-4 rounded-md font-medium hover:bg-gray-300 transition-colors flex items-center justify-center w-full relative"
               >
-                <div className="h-5 w-5 mr-2 flex items-center justify-center">
-                  <img src={stripeLogo} alt="Stripe" className="h-4 w-4" style={{ opacity: 0.7 }} />
-                </div>
+                <img src={stripeLogo} alt="Stripe" className="h-5 w-5 mr-2" style={{ opacity: 0.7 }} />
                 Pay with Stripe
                 <span className="absolute -top-2 -right-2 bg-amber-500 text-white text-xs px-1.5 py-0.5 rounded-full">
                   Soon
