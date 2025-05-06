@@ -2516,17 +2516,28 @@ export async function registerRoutes(app: Express): Promise<Server> {
       if (!orderId) {
         return res.status(400).json({ message: "Missing order information" });
       }
+      
+      // Log payment information for debugging
+      console.log("Processing PayPal payment:", {
+        orderId,
+        payerId,
+        subscriptionType,
+        userId: user.id
+      });
 
       // Determine subscription end date based on type
       const currentDate = new Date();
       let endDate: Date;
+      let planId: string = '';
       
       if (subscriptionType === 'monthly') {
         endDate = new Date(currentDate);
         endDate.setMonth(currentDate.getMonth() + 1);
+        planId = 'P-8BT4315YWFQ34227NAMSUPI'; // Monthly plan ID from your PayPal account
       } else if (subscriptionType === 'yearly') {
         endDate = new Date(currentDate);
         endDate.setFullYear(currentDate.getFullYear() + 1);
+        planId = 'P-8BT4315YWFQ34227NAMSUPI'; // Use the same plan ID for now, should be updated when you create the yearly plan
       } else {
         return res.status(400).json({ message: "Invalid subscription type" });
       }
