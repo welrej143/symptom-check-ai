@@ -47,38 +47,168 @@ export class DatabaseStorage implements IStorage {
   sessionStore: session.Store;
 
   constructor() {
-    try {
-      console.log("Initializing PostgreSQL session store...");
-      const PostgresStore = connectPg(session);
-      this.sessionStore = new PostgresStore({
-        pool,
-        tableName: 'session',
-        createTableIfMissing: true
-      });
-      console.log("PostgreSQL session store initialized successfully");
-    } catch (error) {
-      console.error("Failed to initialize PostgreSQL session store:", error);
-      throw error;
-    }
+    let retries = 0;
+    const maxRetries = 3;
+    
+    // Function to attempt session store initialization with retry logic
+    const initSessionStore = () => {
+      try {
+        console.log("Initializing PostgreSQL session store...");
+        
+        // Check if pool is initialized
+        if (!pool) {
+          console.error("Database pool not initialized for session store");
+          throw new Error("Database pool not available");
+        }
+        
+        const PostgresStore = connectPg(session);
+        
+        // Use more robust options for the session store
+        this.sessionStore = new PostgresStore({
+          pool,
+          tableName: 'session',
+          createTableIfMissing: true,
+          // Add explicit error handling
+          errorLog: (err) => console.error("Session store error:", err),
+          pruneSessionInterval: 60 * 15 // Prune expired sessions every 15 min
+        });
+        
+        console.log("PostgreSQL session store initialized successfully");
+        return true;
+      } catch (error) {
+        console.error(`Failed to initialize PostgreSQL session store (attempt ${retries + 1}/${maxRetries}):`, error);
+        
+        if (retries < maxRetries) {
+          retries++;
+          console.log(`Retrying session store initialization in 500ms...`);
+          // Wait before retrying
+          setTimeout(initSessionStore, 500);
+          return false;
+        } else {
+          console.error("Failed to initialize session store after multiple attempts");
+          
+          // In production, use a fallback in-memory store instead of crashing
+          if (process.env.NODE_ENV === 'production') {
+            console.log("Falling back to in-memory session store for production");
+            
+            const MemoryStore = require('memorystore')(session);
+            this.sessionStore = new MemoryStore({
+              checkPeriod: 86400000 // prune expired entries every 24h
+            });
+            
+            console.log("In-memory session store initialized as fallback");
+            return true;
+          } else {
+            // In development, throw the error to fail fast
+            throw error;
+          }
+        }
+      }
+    };
+    
+    // Start the initialization process
+    initSessionStore();
   }
 
   // User methods
   async getUser(id: number): Promise<User | undefined> {
-    const [user] = await db.select().from(users).where(eq(users.id, id));
-    return user || undefined;
+    try {
+      // Add defensive check before database query
+      if (!db) {
+        console.error("Database instance not initialized in getUser");
+        throw new Error("Database connection not available");
+      }
+      
+      try {
+        const [user] = await db.select().from(users).where(eq(users.id, id));
+        return user || undefined;
+      } catch (err) {
+        console.error(`Error in getUser for id ${id}:`, err);
+        // Continue execution to avoid breaking authentication flow
+        return undefined;
+      }
+    } catch (error) {
+      console.error("Critical error in getUser:", error);
+      // We must return undefined to allow the authentication flow to continue
+      return undefined;
+    }
   }
 
   async getUserByUsername(username: string): Promise<User | undefined> {
-    const [user] = await db.select().from(users).where(eq(users.username, username));
-    return user || undefined;
+    try {
+      // Add defensive check before database query
+      if (!db) {
+        console.error("Database instance not initialized in getUserByUsername");
+        throw new Error("Database connection not available");
+      }
+      
+      // More verbose error handling
+      try {
+        const [user] = await db.select().from(users).where(eq(users.username, username));
+        return user || undefined;
+      } catch (err) {
+        console.error(`Error in getUserByUsername for ${username}:`, err);
+        // Continue execution to avoid breaking authentication flow
+        return undefined;
+      }
+    } catch (error) {
+      console.error("Critical error in getUserByUsername:", error);
+      // We must return undefined to allow the authentication flow to continue
+      return undefined;
+    }
   }
 
   async createUser(insertUser: InsertUser): Promise<User> {
-    const [user] = await db
-      .insert(users)
-      .values(insertUser)
-      .returning();
-    return user;
+    try {
+      // Add defensive check before database query
+      if (!db) {
+        console.error("Database instance not initialized in createUser");
+        throw new Error("Database connection not available");
+      }
+      
+      // Retry logic for handling transient database errors
+      let retries = 3;
+      let lastError: any;
+      
+      while (retries > 0) {
+        try {
+          const [user] = await db
+            .insert(users)
+            .values(insertUser)
+            .returning();
+          
+          if (!user) {
+            throw new Error("User creation failed: no user returned from insert");
+          }
+          
+          return user;
+        } catch (err: any) {
+          lastError = err;
+          console.error(`Error in createUser (retry ${3-retries+1}/3):`, err);
+          retries--;
+          
+          // Only retry certain errors
+          if (err.code === '23505') { // Unique constraint violation
+            throw new Error("Username already exists");
+          }
+          
+          // Wait before retrying
+          if (retries > 0) {
+            await new Promise(resolve => setTimeout(resolve, 1000));
+          }
+        }
+      }
+      
+      throw lastError || new Error("Failed to create user after multiple attempts");
+    } catch (error: any) {
+      // Format the error for better reporting
+      if (error.message === "Username already exists") {
+        throw error;
+      }
+      
+      console.error("Critical error in createUser:", error);
+      throw new Error(`Registration failed: ${error.message}`);
+    }
   }
   
   async updateUserStripeInfo(userId: number, stripeInfo: { stripeCustomerId: string, stripeSubscriptionId: string }): Promise<User> {
