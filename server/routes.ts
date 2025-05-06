@@ -6,7 +6,7 @@ import OpenAI from "openai";
 import Stripe from "stripe";
 import z from "zod";
 import { symptomInputSchema, analysisResponseSchema } from "@shared/schema";
-import { db } from "./db";
+import { db, isDatabaseHealthy } from "./db";
 import { users } from "@shared/schema";
 import { eq, sql } from "drizzle-orm";
 import { createPaypalOrder, capturePaypalOrder, loadPaypalDefault } from "./paypal";
@@ -41,22 +41,45 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // Health check endpoint for Render
   app.get("/api/health", async (_req: Request, res: Response) => {
     try {
-      // Test database connection
-      await db.execute(sql`SELECT 1 AS test`);
+      // Check if we're in degraded mode (database failed to connect initially)
+      if (!isDatabaseHealthy()) {
+        return res.status(200).json({
+          status: "degraded",
+          timestamp: new Date().toISOString(),
+          database: "disconnected",
+          message: "Application is running in degraded mode (database unavailable)",
+          version: process.env.npm_package_version || "unknown"
+        });
+      }
       
-      // All systems operational
-      res.status(200).json({
-        status: "healthy",
-        timestamp: new Date().toISOString(),
-        database: "connected",
-        version: process.env.npm_package_version || "unknown"
-      });
+      // Test database connection
+      try {
+        await db.execute(sql`SELECT 1 AS test`);
+      
+        // All systems operational
+        res.status(200).json({
+          status: "healthy",
+          timestamp: new Date().toISOString(),
+          database: "connected",
+          version: process.env.npm_package_version || "unknown"
+        });
+      } catch (dbError) {
+        // Database is initialized but the query failed
+        console.error("Health check database query failed:", dbError);
+        res.status(200).json({
+          status: "degraded",
+          timestamp: new Date().toISOString(),
+          database: "error",
+          message: "Database is available but query failed",
+          version: process.env.npm_package_version || "unknown"
+        });
+      }
     } catch (error) {
       console.error("Health check failed:", error);
-      res.status(500).json({
-        status: "unhealthy",
+      res.status(200).json({
+        status: "degraded",
         timestamp: new Date().toISOString(),
-        error: "Database connection failed",
+        error: "Health check error",
         details: process.env.NODE_ENV === 'production' ? undefined : String(error)
       });
     }

@@ -9,11 +9,11 @@ import {
   type DailyTracking,
   type InsertDailyTracking
 } from "@shared/schema";
-import { db } from "./db";
+import { db, pool } from "./db";
 import { eq, gte, asc, and } from "drizzle-orm";
 import session from "express-session";
 import connectPg from "connect-pg-simple";
-import { pool } from "./db";
+import { sql } from "drizzle-orm";
 
 // Storage interface
 export interface IStorage {
@@ -42,9 +42,13 @@ export interface IStorage {
   sessionStore: session.Store;
 }
 
+// Need to use dynamic import for memory store
+import memoryStoreModule from 'memorystore';
+
 // Database storage implementation
 export class DatabaseStorage implements IStorage {
-  sessionStore!: session.Store; // Using definite assignment assertion
+  // Initialize with a default session store - it will be replaced during initialization
+  sessionStore!: session.Store; // Using the definite assignment assertion
 
   constructor() {
     let retries = 0;
@@ -91,7 +95,7 @@ export class DatabaseStorage implements IStorage {
           if (process.env.NODE_ENV === 'production') {
             console.log("Falling back to in-memory session store for production");
             
-            const MemoryStore = require('memorystore')(session);
+            const MemoryStore = memoryStoreModule(session);
             this.sessionStore = new MemoryStore({
               checkPeriod: 86400000 // prune expired entries every 24h
             });

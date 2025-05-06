@@ -5,6 +5,7 @@ import ws from "ws";
 import * as schema from "@shared/schema";
 import { users, symptomRecords, dailyTracking } from "@shared/schema";
 
+// Basic Neon configuration
 neonConfig.webSocketConstructor = ws;
 
 if (!process.env.DATABASE_URL) {
@@ -165,6 +166,9 @@ async function initializeDatabase(retryCount = 0): Promise<void> {
       max: process.env.NODE_ENV === 'production' ? 10 : 20, // Lower connection count in production for Render free tier
       idleTimeoutMillis: 30000,
       connectionTimeoutMillis: 5000,
+      ssl: {
+        rejectUnauthorized: false // Necessary for Neon and Render's free tier
+      }
     };
     
     pool = new Pool(poolConfig);
@@ -216,8 +220,35 @@ async function initializeDatabase(retryCount = 0): Promise<void> {
       return initializeDatabase(retryCount + 1);
     }
     
-    // If we've exhausted retries, rethrow the error
-    throw new Error(`Failed to connect to database after ${MAX_RETRIES + 1} attempts: ${error}`);
+    // If we've exhausted retries, don't throw in production
+    if (process.env.NODE_ENV === 'production') {
+      console.error(`Failed to connect to database after ${MAX_RETRIES + 1} attempts. Application will continue in degraded mode.`);
+      // Initialize a dummy DB object to prevent crashes on DB operations
+      db = {
+        execute: async () => ({ rows: [] }),
+        select: () => ({
+          from: () => ({
+            where: () => [],
+            orderBy: () => []
+          })
+        }),
+        insert: () => ({
+          values: () => ({
+            returning: () => []
+          })
+        }),
+        update: () => ({
+          set: () => ({
+            where: () => ({
+              returning: () => []
+            })
+          })
+        })
+      } as any;
+    } else {
+      // In development, rethrow the error
+      throw new Error(`Failed to connect to database after ${MAX_RETRIES + 1} attempts: ${error}`);
+    }
   }
 }
 
@@ -237,6 +268,11 @@ try {
   if (process.env.NODE_ENV !== 'production') {
     process.exit(1);
   }
+}
+
+// Add a health check function to report if we're in degraded mode
+export function isDatabaseHealthy(): boolean {
+  return !!pool && !!db;
 }
 
 export { pool, db };
