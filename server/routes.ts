@@ -11,11 +11,31 @@ import { users } from "@shared/schema";
 import { eq } from "drizzle-orm";
 import { createPaypalOrder, capturePaypalOrder, loadPaypalDefault } from "./paypal";
 
-// Initialize Stripe
-if (!process.env.STRIPE_SECRET_KEY) {
-  throw new Error("Missing required Stripe secret: STRIPE_SECRET_KEY");
+// Initialize Stripe (temporarily disabled as requested, with a warning message)
+// Using ! assertion to avoid TypeScript errors, but we'll check before using it in each route
+let stripe: Stripe = new Stripe(process.env.STRIPE_SECRET_KEY || 'dummy_key_for_type_checking');
+let stripeEnabled = false;
+
+try {
+  if (process.env.STRIPE_SECRET_KEY) {
+    stripe = new Stripe(process.env.STRIPE_SECRET_KEY);
+    // Stripe is initialized but we'll disable its usage per request
+    console.log("Stripe initialized successfully (but temporarily disabled per request)");
+    // Setting to false as requested - we'll only use PayPal for now
+    stripeEnabled = false;
+  } else {
+    console.warn("Stripe secret key not found, Stripe payments will be disabled");
+    stripeEnabled = false;
+  }
+} catch (error) {
+  console.error("Failed to initialize Stripe:", error);
+  stripeEnabled = false;
 }
-const stripe = new Stripe(process.env.STRIPE_SECRET_KEY);
+
+// Check for PayPal credentials
+if (!process.env.PAYPAL_CLIENT_ID || !process.env.PAYPAL_CLIENT_SECRET) {
+  console.warn("PAYPAL_CLIENT_ID or PAYPAL_CLIENT_SECRET not found. PayPal integration may not work correctly.");
+}
 
 export async function registerRoutes(app: Express): Promise<Server> {
   // Set up authentication
@@ -2452,6 +2472,70 @@ export async function registerRoutes(app: Express): Promise<Server> {
         error: errorMessage,
         details: errorDetails
       });
+    }
+  });
+
+  // PayPal integration routes
+  app.get("/api/paypal/setup", async (req, res) => {
+    await loadPaypalDefault(req, res);
+  });
+
+  app.post("/api/paypal/order", async (req, res) => {
+    // Request body should contain: { intent, amount, currency }
+    await createPaypalOrder(req, res);
+  });
+
+  app.post("/api/paypal/order/:orderID/capture", async (req, res) => {
+    await capturePaypalOrder(req, res);
+  });
+
+  // Process PayPal payment success
+  app.post("/api/process-paypal-payment", async (req, res) => {
+    try {
+      if (!req.isAuthenticated()) {
+        return res.status(401).json({ message: "Authentication required" });
+      }
+
+      const user = req.user;
+      const { paymentId, payerId, orderId, subscriptionType } = req.body;
+      
+      if (!orderId) {
+        return res.status(400).json({ message: "Missing order information" });
+      }
+
+      // Determine subscription end date based on type
+      const currentDate = new Date();
+      let endDate: Date;
+      
+      if (subscriptionType === 'monthly') {
+        endDate = new Date(currentDate);
+        endDate.setMonth(currentDate.getMonth() + 1);
+      } else if (subscriptionType === 'yearly') {
+        endDate = new Date(currentDate);
+        endDate.setFullYear(currentDate.getFullYear() + 1);
+      } else {
+        return res.status(400).json({ message: "Invalid subscription type" });
+      }
+
+      // Update user subscription status
+      const planName = subscriptionType === 'monthly' ? 'Premium Monthly' : 'Premium Yearly';
+      await storage.updateSubscriptionStatus(user.id, 'active', endDate, planName);
+      
+      // Update PayPal customer info (stripeCustomerId is reused for PayPal)
+      await storage.updateUserStripeInfo(user.id, {
+        stripeCustomerId: payerId || 'paypal-customer', 
+        stripeSubscriptionId: orderId
+      });
+
+      res.json({ 
+        success: true, 
+        message: "Subscription activated successfully",
+        endDate,
+        planName
+      });
+    } catch (error) {
+      console.error("Error processing PayPal payment:", error);
+      res.status(500).json({ message: "Failed to process payment" });
     }
   });
 
