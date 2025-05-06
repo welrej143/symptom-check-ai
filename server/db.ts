@@ -1,8 +1,10 @@
 import { Pool, neonConfig } from '@neondatabase/serverless';
 import { drizzle } from 'drizzle-orm/neon-serverless';
 import { sql } from 'drizzle-orm';
+import { migrate } from 'drizzle-orm/neon-serverless/migrator';
 import ws from "ws";
 import * as schema from "@shared/schema";
+import { users, symptomRecords, dailyTracking } from "@shared/schema";
 
 neonConfig.webSocketConstructor = ws;
 
@@ -78,6 +80,9 @@ async function initializeDatabase(retryCount = 0): Promise<void> {
     // Test a basic query to verify the connection is fully working
     await db.execute(sql`SELECT 1 AS test`);
     console.log("Database query test successful");
+    
+    // Ensure all required tables exist
+    await ensureTablesExist();
     
   } catch (error) {
     console.error(`Database initialization error (attempt ${retryCount + 1}):`, error);
