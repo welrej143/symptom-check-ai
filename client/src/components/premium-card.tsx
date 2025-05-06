@@ -1,4 +1,4 @@
-import { Shield, LineChart, Loader, AlertCircle, ArrowRight, Calendar, CreditCard } from "lucide-react";
+import { Shield, LineChart, Loader, AlertCircle, ArrowRight, Calendar, CreditCard, AlertTriangle } from "lucide-react";
 import { useAuth } from "@/hooks/use-auth";
 import { useState, useEffect } from "react";
 import { apiRequest } from "@/lib/queryClient";
@@ -12,6 +12,7 @@ import {
 } from "@stripe/react-stripe-js";
 import SubscriptionManager from "./subscription-manager";
 import { useQuery } from "@tanstack/react-query";
+import PayPalButton from "./PayPalButton";
 
 // Initialize Stripe
 if (!import.meta.env.VITE_STRIPE_PUBLIC_KEY) {
@@ -186,22 +187,24 @@ function StripeCheckoutForm({ clientSecret, subscriptionId }: { clientSecret: st
   );
 }
 
-// Wrapper component that redirects to Stripe Checkout
-function StripePaymentOptions() {
+// PayPal Payment component (replacing Stripe Checkout)
+function PayPalPaymentOptions() {
   const [error, setError] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState(true);
+  const [paymentInfo, setPaymentInfo] = useState<{
+    amount: string;
+    currency: string;
+    subscriptionType: string;
+  } | null>(null);
   const { toast } = useToast();
-  
-  // Fetch price information from Stripe
-  const { data: priceData, isLoading: isPriceLoading } = useQuery<PriceData>({
-    queryKey: ['/api/pricing'],
-    staleTime: 1000 * 60 * 60, // 1 hour cache
-  });
+  const { refreshSubscriptionStatus } = useAuth();
   
   useEffect(() => {
-    const initiateCheckoutSession = async () => {
+    const getPaymentInfo = async () => {
       try {
-        const response = await apiRequest("POST", "/api/create-subscription");
+        const response = await apiRequest("POST", "/api/create-subscription", {
+          subscriptionType: "monthly" // Default to monthly subscription
+        });
         
         if (!response.ok) {
           // Handle specific HTTP error statuses
@@ -224,14 +227,19 @@ function StripePaymentOptions() {
         
         const data = await response.json();
         
-        if (!data.url) {
-          throw new Error("No checkout URL returned from payment provider");
+        if (!data.amount || !data.currency) {
+          throw new Error("Invalid payment information received");
         }
         
-        // Redirect to Stripe Checkout
-        window.location.href = data.url;
+        setPaymentInfo({
+          amount: data.amount,
+          currency: data.currency,
+          subscriptionType: data.subscriptionType || "monthly"
+        });
+        
+        setIsLoading(false);
       } catch (err) {
-        console.error("Error setting up checkout:", err);
+        console.error("Error setting up payment:", err);
         setError(err instanceof Error ? err.message : "Could not initialize payment. Please try again.");
         toast({
           title: "Payment Setup Failed",
@@ -242,8 +250,46 @@ function StripePaymentOptions() {
       }
     };
     
-    initiateCheckoutSession();
+    getPaymentInfo();
   }, [toast]);
+  
+  const handlePaymentSuccess = async (data: any) => {
+    try {
+      // Process successful PayPal payment
+      const response = await apiRequest("POST", "/api/process-paypal-payment", {
+        orderId: data.id,
+        payerId: data.payer?.payer_id,
+        subscriptionType: paymentInfo?.subscriptionType || "monthly"
+      });
+      
+      if (!response.ok) {
+        throw new Error("Failed to process payment");
+      }
+      
+      const result = await response.json();
+      
+      // Refresh subscription status
+      await refreshSubscriptionStatus();
+      
+      toast({
+        title: "Payment Successful",
+        description: "Your subscription has been activated successfully!",
+        variant: "default",
+      });
+      
+      // Reload the page after a short delay
+      setTimeout(() => {
+        window.location.reload();
+      }, 1500);
+    } catch (err) {
+      console.error("Error processing PayPal payment:", err);
+      toast({
+        title: "Payment Processing Error",
+        description: "Your payment was received but we couldn't activate your subscription. Please contact support.",
+        variant: "destructive",
+      });
+    }
+  };
   
   if (isLoading) {
     return (
@@ -262,19 +308,39 @@ function StripePaymentOptions() {
     );
   }
   
-  // This should never be displayed as we redirect above, but it's here as a fallback
   return (
     <div className="bg-gray-50 rounded-lg p-5 border border-gray-200 shadow-sm">
-      <h3 className="text-lg font-semibold text-gray-900 mb-2">{isPriceLoading ? 'Premium Subscription' : priceData?.productName || 'Premium Subscription'}</h3>
-      <p className="text-sm text-gray-600 mb-5">You will be charged {isPriceLoading ? '...' : priceData?.formattedPrice || '$9.99'} per {isPriceLoading ? 'month' : priceData?.interval || 'month'}</p>
+      <h3 className="text-lg font-semibold text-gray-900 mb-2">Premium Subscription</h3>
+      <p className="text-sm text-gray-600 mb-5">You will be charged ${paymentInfo?.amount || '9.99'} per {paymentInfo?.subscriptionType === 'yearly' ? 'year' : 'month'}</p>
+      
+      {/* Temporarily disabled Stripe message */}
+      <div className="mb-4 p-3 bg-amber-50 border border-amber-200 rounded-md">
+        <div className="flex">
+          <AlertTriangle className="h-5 w-5 text-amber-500 mr-2 flex-shrink-0 mt-0.5" />
+          <p className="text-sm text-amber-800">
+            <span className="font-medium">Note:</span> Stripe payments are temporarily unavailable. Please use PayPal for now.
+          </p>
+        </div>
+      </div>
+      
+      {/* PayPal Button */}
+      {paymentInfo && (
+        <div className="mt-4">
+          <PayPalButton 
+            amount={paymentInfo.amount}
+            currency={paymentInfo.currency}
+            intent="CAPTURE"
+            onSuccess={handlePaymentSuccess}
+          />
+        </div>
+      )}
       
       <div className="flex justify-center mt-4">
         <button
           onClick={() => window.location.reload()}
-          className="bg-blue-600 text-white py-2.5 px-4 rounded-md font-medium hover:bg-blue-700 transition-colors flex items-center"
+          className="text-gray-600 text-sm hover:text-gray-900 underline"
         >
-          Retry Payment
-          <ArrowRight className="ml-2 h-4 w-4" />
+          Refresh Payment Options
         </button>
       </div>
     </div>
@@ -290,6 +356,51 @@ export default function PremiumCard() {
   const [isVerifying, setIsVerifying] = useState(false);
   const [isSuccess, setIsSuccess] = useState(false);
   const { toast } = useToast();
+  
+  // Handle successful PayPal payment
+  const handlePaymentSuccess = async (data: any, subscriptionType: string) => {
+    try {
+      setIsVerifying(true);
+      
+      // Process successful PayPal payment
+      const response = await apiRequest("POST", "/api/process-paypal-payment", {
+        orderId: data.id,
+        payerId: data.payer?.payer_id,
+        subscriptionType: subscriptionType
+      });
+      
+      if (!response.ok) {
+        throw new Error("Failed to process payment");
+      }
+      
+      // Refresh subscription status
+      await refreshSubscriptionStatus();
+      
+      setIsSuccess(true);
+      setIsVerifying(false);
+      setIsUpgrading(false);
+      
+      toast({
+        title: "Payment Successful",
+        description: "Your subscription has been activated successfully!",
+        variant: "default",
+      });
+      
+      // Reload the page after a short delay
+      setTimeout(() => {
+        window.location.reload();
+      }, 1500);
+    } catch (err) {
+      console.error("Error processing PayPal payment:", err);
+      setIsVerifying(false);
+      
+      toast({
+        title: "Payment Processing Error",
+        description: "Your payment was received but we couldn't activate your subscription. Please contact support.",
+        variant: "destructive",
+      });
+    }
+  };
   
   // Check for Stripe redirect parameters
   useEffect(() => {
@@ -564,7 +675,7 @@ export default function PremiumCard() {
               </button>
             </div>
             
-            <StripePaymentOptions />
+            <PayPalPaymentOptions />
           </div>
         )}
       </div>
@@ -574,94 +685,137 @@ export default function PremiumCard() {
   return (
     <div className="bg-white rounded-lg shadow-md overflow-hidden">
       <div className="p-6">
-        <h3 className="text-lg font-semibold text-gray-900 mb-4">Explore Premium Features</h3>
-        
-        <div className="space-y-4">
-          <div className="flex items-start">
-            <div className="flex-shrink-0">
-              <Shield className="h-6 w-6 text-primary-600" />
+        {isUpgrading ? (
+          <div>
+            <div className="flex items-center justify-between mb-3">
+              <h4 className="text-lg font-medium text-gray-900">Complete Your Payment</h4>
+              <button 
+                onClick={() => setIsUpgrading(false)}
+                className="text-gray-600 text-sm hover:text-gray-800"
+              >
+                Cancel
+              </button>
             </div>
-            <div className="ml-3">
-              <h4 className="text-base font-medium text-gray-900">Unlimited detailed analyses</h4>
-              <p className="mt-1 text-sm text-gray-600">Get comprehensive health insights whenever you need them, with no monthly limits.</p>
+            
+            {/* PayPal Payment Options */}
+            <div className="mt-4">
+              {/* Note about Stripe payments being temporarily disabled */}
+              <div className="mb-4 p-3 bg-amber-50 border border-amber-200 rounded-md">
+                <div className="flex">
+                  <AlertTriangle className="h-5 w-5 text-amber-500 mr-2 flex-shrink-0 mt-0.5" />
+                  <p className="text-sm text-amber-800">
+                    <span className="font-medium">Note:</span> Stripe payments are temporarily unavailable. Please use PayPal for now.
+                  </p>
+                </div>
+              </div>
+              
+              {/* Monthly Subscription Option */}
+              <div className="mb-4 p-4 border border-gray-200 rounded-lg bg-white">
+                <div className="flex justify-between items-center mb-2">
+                  <h3 className="font-medium text-gray-900">Monthly Subscription</h3>
+                  <span className="font-semibold text-primary-900">$9.99/month</span>
+                </div>
+                <p className="text-sm text-gray-600 mb-3">Get unlimited symptom analyses and health tracking. Cancel anytime.</p>
+                <PayPalButton 
+                  amount="9.99"
+                  currency="USD"
+                  intent="CAPTURE"
+                  onSuccess={(data) => handlePaymentSuccess(data, "monthly")}
+                />
+              </div>
+              
+              {/* Yearly Subscription Option */}
+              <div className="p-4 border border-primary-200 rounded-lg bg-primary-50">
+                <div className="flex justify-between items-center mb-2">
+                  <div>
+                    <h3 className="font-medium text-gray-900">Yearly Subscription</h3>
+                    <span className="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-green-100 text-green-800 mt-1">
+                      Save 16%
+                    </span>
+                  </div>
+                  <span className="font-semibold text-primary-900">$50.00/year</span>
+                </div>
+                <p className="text-sm text-gray-600 mb-3">Best value! Get unlimited symptom analyses and health tracking for a full year.</p>
+                <PayPalButton 
+                  amount="50.00"
+                  currency="USD"
+                  intent="CAPTURE"
+                  onSuccess={(data) => handlePaymentSuccess(data, "yearly")}
+                />
+              </div>
             </div>
           </div>
-          
-          <div className="flex items-start">
-            <div className="flex-shrink-0">
-              <LineChart className="h-6 w-6 text-primary-600" />
+        ) : (
+          <div className="space-y-4">
+            <h3 className="text-lg font-semibold text-gray-900 mb-4">Explore Premium Features</h3>
+            
+            <div className="flex items-start">
+              <div className="flex-shrink-0">
+                <Shield className="h-6 w-6 text-primary-600" />
+              </div>
+              <div className="ml-3">
+                <h4 className="text-base font-medium text-gray-900">Unlimited detailed analyses</h4>
+                <p className="mt-1 text-sm text-gray-600">Get comprehensive health insights whenever you need them, with no monthly limits.</p>
+              </div>
             </div>
-            <div className="ml-3">
-              <h4 className="text-base font-medium text-gray-900">Unlimited Symptoms Tracker</h4>
-              <p className="mt-1 text-sm text-gray-600">Track your symptoms and health metrics with no limitations.</p>
+            
+            <div className="flex items-start">
+              <div className="flex-shrink-0">
+                <LineChart className="h-6 w-6 text-primary-600" />
+              </div>
+              <div className="ml-3">
+                <h4 className="text-base font-medium text-gray-900">Unlimited Symptoms Tracker</h4>
+                <p className="mt-1 text-sm text-gray-600">Track your symptoms and health metrics with no limitations.</p>
+              </div>
+            </div>
+            
+            <div className="mt-4 pt-4 border-t border-gray-100">
+              <div className="flex items-center justify-between text-sm">
+                <span className="text-gray-600">Free tier</span>
+                <span className="text-gray-900 font-medium">3 analyses/month</span>
+              </div>
+              <div className="flex items-center justify-between text-sm mt-2">
+                <span className="text-gray-600">Premium tier</span>
+                <span className="text-primary-600 font-medium">Unlimited analyses</span>
+              </div>
+              <div className="mt-3 bg-gray-100 h-[1px]"></div>
+              <div className="flex items-center justify-between text-sm mt-3">
+                <span className="text-gray-600">Premium price</span>
+                <span className="text-primary-900 font-semibold">$9.99/month <span className="text-gray-500 text-xs">or $50/year</span></span>
+              </div>
+            </div>
+            
+            {/* Upgrade message with PayPal vs Stripe info */}
+            <div className="mb-4 p-3 bg-amber-50 border border-amber-200 rounded-md">
+              <div className="flex">
+                <AlertTriangle className="h-5 w-5 text-amber-500 mr-2 flex-shrink-0 mt-0.5" />
+                <p className="text-sm text-amber-800">
+                  <span className="font-medium">Note:</span> Stripe payments are temporarily unavailable. Please use PayPal for now.
+                </p>
+              </div>
+            </div>
+            
+            <div className="mt-4">
+              <button 
+                onClick={() => setIsUpgrading(true)}
+                className="bg-blue-600 text-white py-2.5 px-4 rounded-md font-medium hover:bg-blue-700 transition-colors flex items-center justify-center w-full"
+                disabled={isUpgrading}
+              >
+                {isUpgrading ? (
+                  <>
+                    <Loader className="w-4 h-4 mr-2 animate-spin" />
+                    Preparing Checkout...
+                  </>
+                ) : (
+                  <>
+                    Upgrade with PayPal
+                    <ArrowRight className="ml-2 h-4 w-4" />
+                  </>
+                )}
+              </button>
             </div>
           </div>
-          
-          <div className="mt-4 pt-4 border-t border-gray-100">
-            <div className="flex items-center justify-between text-sm">
-              <span className="text-gray-600">Free tier</span>
-              <span className="text-gray-900 font-medium">3 analyses/month</span>
-            </div>
-            <div className="flex items-center justify-between text-sm mt-2">
-              <span className="text-gray-600">Premium tier</span>
-              <span className="text-primary-600 font-medium">Unlimited analyses</span>
-            </div>
-            <div className="mt-3 bg-gray-100 h-[1px]"></div>
-            <div className="flex items-center justify-between text-sm mt-3">
-              <span className="text-gray-600">Premium price</span>
-              <span className="text-primary-900 font-semibold">{isPriceLoading ? '...' : priceData?.formattedPrice || '$9.99'}/{isPriceLoading ? 'month' : priceData?.interval || 'month'}</span>
-            </div>
-          </div>
-          
-          <div className="mt-4">
-            <button 
-              onClick={async () => {
-                try {
-                  setIsUpgrading(true);
-                  const response = await apiRequest("POST", "/api/create-subscription");
-                  if (!response.ok) {
-                    throw new Error("Failed to create subscription");
-                  }
-                  const data = await response.json();
-                  
-                  if (data.url) {
-                    // Redirect to Stripe Checkout
-                    window.location.href = data.url;
-                  } else {
-                    setIsUpgrading(false);
-                    toast({
-                      title: "Error",
-                      description: "Could not retrieve checkout URL",
-                      variant: "destructive",
-                    });
-                  }
-                } catch (err) {
-                  console.error("Error initiating checkout:", err);
-                  setIsUpgrading(false);
-                  toast({
-                    title: "Error",
-                    description: "Failed to start checkout process",
-                    variant: "destructive",
-                  });
-                }
-              }}
-              className="bg-blue-600 text-white py-2.5 px-4 rounded-md font-medium hover:bg-blue-700 transition-colors flex items-center justify-center w-full"
-              disabled={isUpgrading}
-            >
-              {isUpgrading ? (
-                <>
-                  <Loader className="w-4 h-4 mr-2 animate-spin" />
-                  Preparing Checkout...
-                </>
-              ) : (
-                <>
-                  Upgrade with Stripe
-                  <ArrowRight className="ml-2 h-4 w-4" />
-                </>
-              )}
-            </button>
-          </div>
-        </div>
+        )}
       </div>
     </div>
   );
