@@ -734,13 +734,31 @@ export default function PremiumCard() {
             
             {/* PayPal Payment Options */}
             <div className="mt-4">
-              {/* Note about Stripe payments being temporarily disabled */}
-              <div className="mb-4 p-3 bg-amber-50 border border-amber-200 rounded-md">
-                <div className="flex">
-                  <AlertTriangle className="h-5 w-5 text-amber-500 mr-2 flex-shrink-0 mt-0.5" />
-                  <p className="text-sm text-amber-800">
-                    <span className="font-medium">Note:</span> Stripe payments are temporarily unavailable. Please use PayPal for now.
-                  </p>
+              {/* Payment options heading */}
+              <div className="mb-4">
+                <h3 className="text-base font-medium text-gray-800">Choose your payment method</h3>
+                <div className="mt-2 flex">
+                  <div className="px-3 py-1.5 bg-blue-50 rounded-l-md border border-blue-200 border-r-0 flex items-center">
+                    <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5 text-blue-600 mr-1.5" viewBox="0 0 24 24" fill="currentColor">
+                      <path d="M10.5 18V16.5H13.5V18H10.5ZM9 13.5H15V15H9V13.5ZM7.5 9.75H16.5V11.25H7.5V9.75ZM6 6H18V7.5H6V6ZM3 21V3H21V21H3ZM4.5 19.5H19.5V4.5H4.5V19.5Z"/>
+                    </svg>
+                    <span className="text-sm font-medium text-blue-800">PayPal</span>
+                  </div>
+                  <div 
+                    className="px-3 py-1.5 bg-gray-100 rounded-r-md border border-gray-200 flex items-center cursor-pointer"
+                    onClick={() => {
+                      toast({
+                        title: "Stripe Coming Soon",
+                        description: "Credit card payments with Stripe will be available soon. Please use PayPal for now.",
+                        variant: "default",
+                      });
+                    }}
+                  >
+                    <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5 text-gray-500 mr-1.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 10h18M7 15h1m4 0h1m-7 4h12a3 3 0 003-3V8a3 3 0 00-3-3H6a3 3 0 00-3 3v8a3 3 0 003 3z" />
+                    </svg>
+                    <span className="text-sm text-gray-500">Credit Card (Soon)</span>
+                  </div>
                 </div>
               </div>
               
@@ -830,7 +848,8 @@ export default function PremiumCard() {
               </div>
             </div>
             
-            <div className="mt-4">
+            <div className="mt-4 grid grid-cols-1 md:grid-cols-2 gap-3">
+              {/* PayPal Button - Primary Option */}
               <button 
                 onClick={() => setIsUpgrading(true)}
                 className="bg-blue-600 text-white py-2.5 px-4 rounded-md font-medium hover:bg-blue-700 transition-colors flex items-center justify-center w-full"
@@ -843,10 +862,32 @@ export default function PremiumCard() {
                   </>
                 ) : (
                   <>
-                    Upgrade with PayPal
-                    <ArrowRight className="ml-2 h-4 w-4" />
+                    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor" className="w-5 h-5 mr-2">
+                      <path d="M10.5 18V16.5H13.5V18H10.5ZM9 13.5H15V15H9V13.5ZM7.5 9.75H16.5V11.25H7.5V9.75ZM6 6H18V7.5H6V6ZM3 21V3H21V21H3ZM4.5 19.5H19.5V4.5H4.5V19.5Z"/>
+                    </svg>
+                    Pay with PayPal
                   </>
                 )}
+              </button>
+              
+              {/* Stripe Button - Greyed Out with Popup */}
+              <button 
+                onClick={() => {
+                  toast({
+                    title: "Stripe Coming Soon",
+                    description: "Credit card payments with Stripe will be available soon. Please use PayPal for now.",
+                    variant: "default",
+                  });
+                }}
+                className="bg-gray-200 text-gray-600 py-2.5 px-4 rounded-md font-medium hover:bg-gray-300 transition-colors flex items-center justify-center w-full relative"
+              >
+                <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5 mr-2" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 10h18M7 15h1m4 0h1m-7 4h12a3 3 0 003-3V8a3 3 0 00-3-3H6a3 3 0 00-3 3v8a3 3 0 003 3z" />
+                </svg>
+                Pay with Card
+                <span className="absolute -top-2 -right-2 bg-amber-500 text-white text-xs px-1.5 py-0.5 rounded-full">
+                  Soon
+                </span>
               </button>
             </div>
           </div>
