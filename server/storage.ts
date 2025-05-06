@@ -170,44 +170,63 @@ export class DatabaseStorage implements IStorage {
         throw new Error("Database connection not available");
       }
       
-      // Retry logic for handling transient database errors
-      let retries = 3;
-      let lastError: any;
+      // More verbose logging to trace the issue
+      console.log("Attempting to create user with username:", insertUser.username);
       
-      while (retries > 0) {
-        try {
-          const [user] = await db
-            .insert(users)
-            .values(insertUser)
-            .returning();
-          
-          if (!user) {
-            throw new Error("User creation failed: no user returned from insert");
-          }
-          
-          return user;
-        } catch (err: any) {
-          lastError = err;
-          console.error(`Error in createUser (retry ${3-retries+1}/3):`, err);
-          retries--;
-          
-          // Only retry certain errors
-          if (err.code === '23505') { // Unique constraint violation
-            throw new Error("Username already exists");
-          }
-          
-          // Wait before retrying
-          if (retries > 0) {
-            await new Promise(resolve => setTimeout(resolve, 1000));
-          }
-        }
+      // Ensure the dates are properly formatted - this could be causing issues
+      const formattedInsertUser = {
+        ...insertUser,
+        // Add any default values that might be missing
+        analysisCount: 0,
+        isPremium: false,
+        subscriptionStatus: 'inactive',
+      };
+      
+      // Execute a direct SQL query instead of using the ORM
+      // This gives us more control and visibility into the process
+      const result = await db.execute(sql`
+        INSERT INTO users (username, email, password, created_at, analysis_count, is_premium, subscription_status)
+        VALUES (
+          ${formattedInsertUser.username}, 
+          ${formattedInsertUser.email}, 
+          ${formattedInsertUser.password}, 
+          NOW(), 
+          ${formattedInsertUser.analysisCount}, 
+          ${formattedInsertUser.isPremium}, 
+          ${formattedInsertUser.subscriptionStatus}
+        )
+        RETURNING *
+      `);
+      
+      if (!result.rows || result.rows.length === 0) {
+        console.error("User creation returned no rows");
+        throw new Error("User creation failed: database returned no results");
       }
       
-      throw lastError || new Error("Failed to create user after multiple attempts");
+      console.log("User created successfully with ID:", result.rows[0].id);
+      
+      // Map the database results to our User type
+      const user: User = {
+        id: result.rows[0].id,
+        username: result.rows[0].username,
+        email: result.rows[0].email,
+        password: result.rows[0].password,
+        createdAt: new Date(result.rows[0].created_at),
+        stripeCustomerId: result.rows[0].stripe_customer_id || null,
+        stripeSubscriptionId: result.rows[0].stripe_subscription_id || null,
+        isPremium: result.rows[0].is_premium || false,
+        subscriptionStatus: result.rows[0].subscription_status || 'inactive',
+        subscriptionEndDate: result.rows[0].subscription_end_date ? new Date(result.rows[0].subscription_end_date) : null,
+        planName: result.rows[0].plan_name || 'Premium Monthly',
+        analysisCount: result.rows[0].analysis_count || 0,
+        analysisCountResetDate: result.rows[0].analysis_count_reset_date ? new Date(result.rows[0].analysis_count_reset_date) : null,
+      };
+      
+      return user;
     } catch (error: any) {
       // Format the error for better reporting
-      if (error.message === "Username already exists") {
-        throw error;
+      if (error.code === '23505') { // Unique constraint violation
+        throw new Error("Username already exists");
       }
       
       console.error("Critical error in createUser:", error);
