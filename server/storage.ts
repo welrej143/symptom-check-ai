@@ -47,11 +47,19 @@ export class DatabaseStorage implements IStorage {
   sessionStore: session.Store;
 
   constructor() {
-    const PostgresStore = connectPg(session);
-    this.sessionStore = new PostgresStore({
-      pool,
-      createTableIfMissing: true
-    });
+    try {
+      console.log("Initializing PostgreSQL session store...");
+      const PostgresStore = connectPg(session);
+      this.sessionStore = new PostgresStore({
+        pool,
+        tableName: 'session',
+        createTableIfMissing: true
+      });
+      console.log("PostgreSQL session store initialized successfully");
+    } catch (error) {
+      console.error("Failed to initialize PostgreSQL session store:", error);
+      throw error;
+    }
   }
 
   // User methods

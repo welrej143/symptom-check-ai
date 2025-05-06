@@ -29,20 +29,41 @@ async function comparePasswords(supplied: string, stored: string) {
 }
 
 export function setupAuth(app: Express) {
-  const sessionSettings: session.SessionOptions = {
-    secret: process.env.SESSION_SECRET || "symptomcheck-secret-key",
-    resave: false,
-    saveUninitialized: false,
-    cookie: {
-      secure: process.env.NODE_ENV === "production",
-      maxAge: 24 * 60 * 60 * 1000, // 24 hours
+  try {
+    console.log("Setting up authentication...");
+    // Make sure we have a session secret
+    if (!process.env.SESSION_SECRET && process.env.NODE_ENV === "production") {
+      console.warn("SESSION_SECRET is not set in production, using a fallback secret (not recommended)");
     }
-  };
-
-  app.set("trust proxy", 1);
-  app.use(session(sessionSettings));
-  app.use(passport.initialize());
-  app.use(passport.session());
+    
+    // Configure session options
+    const sessionSettings: session.SessionOptions = {
+      secret: process.env.SESSION_SECRET || "symptomcheck-secret-key",
+      resave: false,
+      saveUninitialized: false,
+      cookie: {
+        secure: process.env.NODE_ENV === "production",
+        maxAge: 24 * 60 * 60 * 1000, // 24 hours
+        sameSite: process.env.NODE_ENV === "production" ? 'none' : 'lax',
+      },
+      store: storage.sessionStore, // Use the session store from our storage layer
+    };
+    
+    // Set trust proxy for secure cookies in production behind proxy
+    app.set("trust proxy", 1);
+    
+    // Initialize session middleware
+    app.use(session(sessionSettings));
+    
+    // Initialize Passport and restore authentication state from session
+    app.use(passport.initialize());
+    app.use(passport.session());
+    
+    console.log("Authentication setup completed successfully");
+  } catch (error) {
+    console.error("Failed to set up authentication:", error);
+    throw error;
+  }
 
   passport.use(
     new LocalStrategy(async (username, password, done) => {

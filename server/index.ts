@@ -92,11 +92,34 @@ app.use((req, res, next) => {
       detail: err.detail || err.details,
     };
     
-    console.error('Server error:', JSON.stringify(errorDetails));
+    // Check if error is related to session/authentication which could indicate session table issue
+    const isAuthError = 
+      err.name === 'TypeError' && 
+      (err.message?.includes('passport') || 
+       err.message?.includes('session') || 
+       err.message?.includes('properties of undefined'));
     
-    res.status(status).json(errorDetails);
-    if (process.env.NODE_ENV !== 'production') {
-      throw err;
+    if (isAuthError) {
+      console.error('Authentication/Session error:', JSON.stringify({
+        ...errorDetails,
+        // Always include stack for auth errors even in production
+        stack: err.stack, 
+        hint: "This may indicate the session table is not properly initialized"
+      }));
+    } else {
+      console.error('Server error:', JSON.stringify(errorDetails));
+    }
+    
+    // In production, return a simplified error response to the client
+    if (process.env.NODE_ENV === 'production') {
+      res.status(status).json({
+        message: isAuthError ? "Authentication error. Please try logging in again." : message,
+        status
+      });
+    } else {
+      // In development, return full error details
+      res.status(status).json(errorDetails);
+      throw err; // Re-throw in development for better debugging
     }
   });
 
