@@ -315,7 +315,7 @@ function PayPalPaymentOptions() {
   return (
     <div className="bg-gray-50 rounded-lg p-5 border border-gray-200 shadow-sm">
       <h3 className="text-lg font-semibold text-gray-900 mb-2">Premium Subscription</h3>
-      <p className="text-sm text-gray-600 mb-5">You will be charged ${paymentInfo?.amount || '9.99'} per {paymentInfo?.subscriptionType === 'yearly' ? 'year' : 'month'}</p>
+      <p className="text-sm text-gray-600 mb-5">You will be charged ${paymentInfo?.amount || '9.99'} per month</p>
       
       {/* Temporarily disabled Stripe message */}
       <div className="mb-4 p-3 bg-amber-50 border border-amber-200 rounded-md">
@@ -476,268 +476,68 @@ export default function PremiumCard() {
     staleTime: 1000 * 60 * 60, // 1 hour cache
   });
   
-  // Check if user has an active subscription or with a specific status other than "inactive" or "incomplete"
-  if (user?.isPremium || (user?.subscriptionStatus && user.subscriptionStatus !== "" && 
-      user.subscriptionStatus !== "inactive" && user.subscriptionStatus !== "incomplete")) {
-    return (
-      <div className="space-y-5">
-        <div className="bg-gradient-to-br from-primary-50 to-primary-100 rounded-lg shadow-md overflow-hidden border border-primary-200">
-          <div className="p-6">
-            <div className="flex items-center mb-4">
-              <Shield className="h-6 w-6 text-primary-600 mr-2" />
-              <h3 className="text-lg font-semibold text-gray-900">
-                {user.subscriptionStatus === "incomplete" ? "Premium (Processing)" : 
-                 user.subscriptionStatus === "past_due" ? "Premium (Payment Required)" :
-                 user.subscriptionStatus === "canceled" ? "Premium (Canceled)" :
-                 user.subscriptionStatus === "inactive" ? "Premium (Inactive)" :
-                 "Premium Member"}
-              </h3>
-            </div>
-            
-            <p className="text-sm text-gray-700">
-              {user.subscriptionStatus === "active" ? (
-                "You're enjoying all premium benefits including unlimited symptom analyses and complete health tracking."
-              ) : user.subscriptionStatus === "incomplete" ? (
-                "Your subscription payment is being processed. Premium features will be available once completed."
-              ) : user.subscriptionStatus === "past_due" ? (
-                "Your subscription payment has failed. Please update your payment method to continue using premium features."
-              ) : user.subscriptionStatus === "canceled" ? (
-                "Your subscription is canceled. You'll have access until the end of your billing period."
-              ) : user.subscriptionStatus === "inactive" ? (
-                "Your subscription is inactive. Please update your payment method to reactivate your premium features."
-              ) : (
-                "You've subscribed to premium. Enjoy unlimited symptom analyses and complete health tracking."
-              )}
-            </p>
-            
-            {/* Status badge - only show this simple indicator */}
-            <div className="mt-4 inline-flex items-center px-2.5 py-1 rounded-full bg-white border border-gray-200 shadow-sm">
-              <span className={`w-2 h-2 rounded-full mr-2 ${
-                user.subscriptionStatus === "active" ? "bg-green-500" : 
-                user.subscriptionStatus === "canceled" ? "bg-orange-500" : 
-                user.subscriptionStatus === "incomplete" ? "bg-amber-500" :
-                user.subscriptionStatus === "past_due" ? "bg-red-500" :
-                user.subscriptionStatus === "inactive" ? "bg-blue-500" :
-                "bg-gray-500"
-              }`}></span>
-              <span className={`text-xs font-medium ${
-                user.subscriptionStatus === "active" ? "text-green-700" : 
-                user.subscriptionStatus === "canceled" ? "text-orange-700" : 
-                user.subscriptionStatus === "incomplete" ? "text-amber-700" :
-                user.subscriptionStatus === "past_due" ? "text-red-700" :
-                user.subscriptionStatus === "inactive" ? "text-blue-700" :
-                "text-gray-700"
-              }`}>
-                {user.subscriptionStatus === "active" ? "Active" : 
-                user.subscriptionStatus === "canceled" ? "Canceled" :
-                user.subscriptionStatus === "incomplete" ? "Incomplete" :
-                user.subscriptionStatus === "past_due" ? "Past Due" :
-                user.subscriptionStatus === "inactive" ? "Inactive" :
-                user.subscriptionStatus || "Unknown"}
-              </span>
-            </div>
-          </div>
-        </div>
-        
-        {/* Subscription management section */}
-        <div className="mt-6">
-          <h3 className="text-lg font-semibold text-gray-900 mb-4">Manage Your Subscription</h3>
-          <SubscriptionManager user={user} refreshSubscriptionStatus={refreshSubscriptionStatus} />
-        </div>
-      </div>
-    );
+  // Check if user has an active subscription
+  if (user?.isPremium) {
+    return <SubscriptionManager user={user} refreshSubscriptionStatus={refreshSubscriptionStatus} />;
   }
   
-  // For temporary demo purposes - quick upgrade button
-  const handleQuickUpgrade = async () => {
-    if (!user) {
-      toast({
-        title: "Authentication Required",
-        description: "Please sign in to upgrade to premium",
-        variant: "destructive",
-      });
-      return;
-    }
-    
-    try {
-      const response = await apiRequest("POST", "/api/update-premium-status", {
-        paymentIntentId: "pi_simulated_" + Date.now(),
-        paymentMethod: "card"
-      });
-      
-      await refreshSubscriptionStatus();
-      
-      toast({
-        title: "Payment Successful (Demo)",
-        description: "Your subscription is being processed. You'll have access to premium features soon.",
-        variant: "default",
-      });
-      
-      // Reload to show premium features
-      setTimeout(() => window.location.reload(), 1500);
-    } catch (err) {
-      console.error("Error updating premium status:", err);
-      toast({
-        title: "Upgrade Failed",
-        description: "Could not upgrade to premium. Please try again.",
-        variant: "destructive",
-      });
-    }
-  };
-  
-  // Show loading state when verifying checkout session
+  // Show verification message if payment is being verified
   if (isVerifying) {
     return (
-      <div className="bg-white rounded-lg shadow-md overflow-hidden">
-        <div className="p-6 flex flex-col items-center justify-center py-10">
-          <Loader className="h-10 w-10 animate-spin text-primary-600 mb-4" />
-          <h3 className="text-lg font-semibold text-gray-900 mb-2">Verifying Your Payment</h3>
-          <p className="text-sm text-gray-600 text-center">
-            We're confirming your subscription payment with our payment provider.
-            This should only take a moment...
+      <div className="bg-white rounded-lg shadow-sm border border-primary-100 p-6">
+        <div className="flex flex-col items-center justify-center py-10 text-center space-y-4">
+          <Loader className="h-10 w-10 animate-spin text-primary-600" />
+          <h3 className="text-lg font-semibold text-gray-900 mt-4">Verifying Payment</h3>
+          <p className="text-gray-600 max-w-md">
+            We're processing your payment and activating your subscription. This might take a moment...
           </p>
         </div>
       </div>
     );
   }
   
-  // Show success message after verification
+  // Show success message if payment was successful
   if (isSuccess) {
     return (
-      <div className="bg-white rounded-lg shadow-md overflow-hidden">
-        <div className="p-6 flex flex-col items-center justify-center py-8">
-          <div className="w-16 h-16 bg-green-100 rounded-full flex items-center justify-center mb-4">
-            <svg className="h-8 w-8 text-green-600" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+      <div className="bg-white rounded-lg shadow-sm border border-green-100 p-6">
+        <div className="flex flex-col items-center justify-center py-10 text-center space-y-4">
+          <div className="bg-green-100 p-3 rounded-full">
+            <svg className="h-10 w-10 text-green-600" fill="none" viewBox="0 0 24 24" stroke="currentColor">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
             </svg>
           </div>
-          <h3 className="text-lg font-semibold text-gray-900 mb-2">Payment Successful!</h3>
-          <p className="text-sm text-gray-600 text-center max-w-md mb-4">
-            Thank you for subscribing to Premium! Your payment has been processed successfully. 
-            You now have unlimited access to all premium features.
+          <h3 className="text-lg font-semibold text-gray-900 mt-4">Payment Successful!</h3>
+          <p className="text-gray-600 max-w-md">
+            Your subscription has been activated successfully. You now have access to all premium features!
           </p>
-          <div className="flex items-center justify-center gap-4">
-            <button 
-              onClick={() => window.location.reload()}
-              className="bg-blue-600 text-white py-2 px-4 rounded-md font-medium hover:bg-blue-700 transition-colors flex items-center"
-            >
-              Refresh Page
-            </button>
-          </div>
+          <button
+            onClick={() => window.location.reload()}
+            className="mt-4 inline-flex items-center px-4 py-2 border border-transparent text-sm font-medium rounded-md shadow-sm text-white bg-primary-600 hover:bg-primary-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-primary-500"
+          >
+            Refresh Page
+          </button>
         </div>
-      </div>
-    );
-  }
-  
-  // Show special message for incomplete subscription
-  if (user?.subscriptionStatus === "incomplete") {
-    return (
-      <div className="bg-white rounded-lg shadow-md overflow-hidden">
-        <div className="p-6">
-          <div className="flex items-center mb-4">
-            <AlertCircle className="h-6 w-6 text-amber-500 mr-2" />
-            <h3 className="text-lg font-semibold text-gray-900">Incomplete Subscription</h3>
-          </div>
-          
-          <div className="bg-amber-50 border border-amber-200 rounded-lg p-4 mb-6">
-            <p className="text-sm text-amber-800">
-              Your subscription payment is incomplete. You need to add a payment method to complete your subscription.
-            </p>
-          </div>
-          
-          <div className="space-y-4">
-            <div className="mt-4">
-              <button 
-                onClick={() => setIsUpgrading(true)}
-                className="bg-blue-600 text-white py-2.5 px-4 rounded-md font-medium hover:bg-blue-700 transition-colors flex items-center justify-center w-full"
-              >
-                Complete Payment
-                <CreditCard className="ml-2 h-4 w-4" />
-              </button>
-            </div>
-            
-            <div className="flex items-center justify-center mt-2">
-              <button 
-                onClick={() => window.location.reload()}
-                className="text-sm text-gray-600 hover:text-gray-900 underline"
-              >
-                Refresh status
-              </button>
-            </div>
-          </div>
-        </div>
-        
-        {isUpgrading && (
-          <div className="px-6 pb-6">
-            <div className="flex items-center justify-between mb-3">
-              <h4 className="text-base font-medium text-gray-900">Complete Your Payment</h4>
-              <button 
-                onClick={() => setIsUpgrading(false)}
-                className="text-gray-600 text-sm hover:text-gray-800"
-              >
-                Cancel
-              </button>
-            </div>
-            
-            <div className="mt-4">
-              {/* Monthly Subscription Option */}
-              <div className="mb-4 p-4 border border-gray-200 rounded-lg bg-white">
-                <div className="flex justify-between items-center mb-2">
-                  <h3 className="font-medium text-gray-900">Monthly Subscription</h3>
-                  <span className="font-semibold text-primary-900">$9.99/month</span>
-                </div>
-                <p className="text-sm text-gray-600 mb-3">Get unlimited symptom analyses and health tracking. Cancel anytime.</p>
-                <PayPalButton 
-                  amount="9.99"
-                  currency="USD"
-                  intent="CAPTURE"
-                  onSuccess={(data) => handlePaymentSuccess(data, "monthly")}
-                />
-              </div>
-              
-              {/* Yearly Subscription Option */}
-              <div className="p-4 border border-primary-200 rounded-lg bg-primary-50">
-                <div className="flex justify-between items-center mb-2">
-                  <div>
-                    <h3 className="font-medium text-gray-900">Yearly Subscription</h3>
-                    <span className="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-green-100 text-green-800 mt-1">
-                      Save 16%
-                    </span>
-                  </div>
-                  <span className="font-semibold text-primary-900">$50.00/year</span>
-                </div>
-                <p className="text-sm text-gray-600 mb-3">Best value! Get unlimited symptom analyses and health tracking for a full year.</p>
-                <PayPalButton 
-                  amount="50.00"
-                  currency="USD"
-                  intent="CAPTURE"
-                  onSuccess={(data) => handlePaymentSuccess(data, "yearly")}
-                />
-              </div>
-            </div>
-          </div>
-        )}
       </div>
     );
   }
 
   return (
-    <div className="bg-white rounded-lg shadow-md overflow-hidden">
+    <div className="bg-white rounded-lg shadow-sm border border-gray-200 overflow-hidden">
       <div className="p-6">
         {isUpgrading ? (
           <div>
-            <div className="flex items-center justify-between mb-3">
-              <h4 className="text-lg font-medium text-gray-900">Complete Your Payment</h4>
+            <div className="flex justify-between items-center mb-6">
+              <h3 className="text-lg font-semibold text-gray-900">Complete Subscription</h3>
               <button 
                 onClick={() => setIsUpgrading(false)}
-                className="text-gray-600 text-sm hover:text-gray-800"
+                className="text-sm text-gray-500 hover:text-gray-700"
               >
                 Cancel
               </button>
             </div>
             
-            {/* PayPal Payment Options */}
-            <div className="mt-4">
+            {/* Payment method selection */}
+            <div className="mb-6">
               {/* Payment options heading */}
               <div className="mb-4">
                 <h3 className="text-base font-medium text-gray-800">Choose your payment method</h3>
@@ -764,10 +564,10 @@ export default function PremiumCard() {
                 </div>
               </div>
               
-              {/* Monthly Subscription Option */}
-              <div className="mb-4 p-4 border border-gray-200 rounded-lg bg-white">
+              {/* Premium Subscription Option */}
+              <div className="p-4 border border-primary-200 rounded-lg bg-white">
                 <div className="flex justify-between items-center mb-2">
-                  <h3 className="font-medium text-gray-900">Monthly Subscription</h3>
+                  <h3 className="font-medium text-gray-900">Premium Subscription</h3>
                   <span className="font-semibold text-primary-900">$9.99/month</span>
                 </div>
                 <p className="text-sm text-gray-600 mb-3">Get unlimited symptom analyses and health tracking. Cancel anytime.</p>
@@ -776,26 +576,6 @@ export default function PremiumCard() {
                   currency="USD"
                   intent="CAPTURE"
                   onSuccess={(data) => handlePaymentSuccess(data, "monthly")}
-                />
-              </div>
-              
-              {/* Yearly Subscription Option */}
-              <div className="p-4 border border-primary-200 rounded-lg bg-primary-50">
-                <div className="flex justify-between items-center mb-2">
-                  <div>
-                    <h3 className="font-medium text-gray-900">Yearly Subscription</h3>
-                    <span className="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-green-100 text-green-800 mt-1">
-                      Save 16%
-                    </span>
-                  </div>
-                  <span className="font-semibold text-primary-900">$50.00/year</span>
-                </div>
-                <p className="text-sm text-gray-600 mb-3">Best value! Get unlimited symptom analyses and health tracking for a full year.</p>
-                <PayPalButton 
-                  amount="50.00"
-                  currency="USD"
-                  intent="CAPTURE"
-                  onSuccess={(data) => handlePaymentSuccess(data, "yearly")}
                 />
               </div>
             </div>
