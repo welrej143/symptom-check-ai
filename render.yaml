@@ -35,3 +35,4 @@ databases:
   - name: symptom-check-db
     databaseName: symptomcheck
     plan: free
+    ipAllowList: [] # Allow all connections from anywhere

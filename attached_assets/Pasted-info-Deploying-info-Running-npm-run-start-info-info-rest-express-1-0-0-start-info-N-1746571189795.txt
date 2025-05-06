@@ -1,0 +1,612 @@
+info
+==> Deploying...
+info
+==> Running 'npm run start'
+info
+info
+> rest-express@1.0.0 start
+info
+> NODE_ENV=production node dist/index.js
+info
+info
+Initializing database connection pool (attempt 1 of 6)...
+info
+Initializing PostgreSQL session store...
+info
+PostgreSQL session store initialized successfully
+info
+Stripe initialized successfully (but temporarily disabled per request)
+info
+Setting up authentication...
+info
+Authentication setup completed successfully
+info
+Setting up authentication...
+info
+Authentication setup completed successfully
+info
+10:38:21 PM [express] serving on port 5000
+error
+Database initialization error (attempt 1): ErrorEvent {
+info
+  [Symbol(kTarget)]: WebSocket {
+info
+    _events: [Object: null prototype] {
+error
+      error: [Function],
+info
+      message: [Function],
+info
+      close: [Function],
+info
+      open: [Function]
+info
+    },
+info
+    _eventsCount: 4,
+info
+    _maxListeners: undefined,
+info
+    _binaryType: 'arraybuffer',
+info
+    _closeCode: 1006,
+info
+    _closeFrameReceived: false,
+info
+    _closeFrameSent: false,
+info
+    _closeMessage: <Buffer >,
+info
+    _closeTimer: null,
+info
+    _errorEmitted: true,
+info
+    _extensions: {},
+info
+    _paused: false,
+info
+    _protocol: '',
+info
+    _readyState: 3,
+info
+    _receiver: null,
+info
+    _sender: null,
+info
+    _socket: null,
+info
+    _bufferedAmount: 0,
+info
+    _isServer: false,
+info
+    _redirects: 0,
+info
+    _autoPong: true,
+info
+    _url: 'wss://dpg-d0cvp6umcj7s73b1gubg-a/v2',
+info
+    _req: null,
+info
+    [Symbol(shapeMode)]: false,
+info
+    [Symbol(kCapture)]: false
+info
+  },
+error
+  [Symbol(kType)]: 'error',
+error
+  [Symbol(kError)]: Error: connect ECONNREFUSED 10.224.190.55:443
+info
+      at TCPConnectWrap.afterConnect [as oncomplete] (node:net:1634:16) {
+info
+    errno: -111,
+info
+    code: 'ECONNREFUSED',
+info
+    syscall: 'connect',
+info
+    address: '10.224.190.55',
+info
+    port: 443
+info
+  },
+info
+  [Symbol(kMessage)]: 'connect ECONNREFUSED 10.224.190.55:443'
+info
+}
+error
+Closed existing connection pool due to error
+info
+Retrying database connection in 3000ms...
+info
+Initializing database connection pool (attempt 2 of 6)...
+error
+Database initialization error (attempt 2): ErrorEvent {
+info
+  [Symbol(kTarget)]: WebSocket {
+info
+    _events: [Object: null prototype] {
+error
+      error: [Function],
+info
+      message: [Function],
+info
+      close: [Function],
+info
+      open: [Function]
+info
+    },
+info
+    _eventsCount: 4,
+info
+    _maxListeners: undefined,
+info
+    _binaryType: 'arraybuffer',
+info
+    _closeCode: 1006,
+info
+    _closeFrameReceived: false,
+info
+    _closeFrameSent: false,
+info
+    _closeMessage: <Buffer >,
+info
+    _closeTimer: null,
+info
+    _errorEmitted: true,
+info
+    _extensions: {},
+error
+Closed existing connection pool due to error
+info
+    _paused: false,
+info
+    _protocol: '',
+info
+    _readyState: 3,
+info
+Retrying database connection in 3000ms...
+info
+    _receiver: null,
+info
+    _sender: null,
+info
+    _socket: null,
+info
+    _bufferedAmount: 0,
+info
+    _isServer: false,
+info
+    _redirects: 0,
+info
+    _autoPong: true,
+info
+    _url: 'wss://dpg-d0cvp6umcj7s73b1gubg-a/v2',
+info
+    _req: null,
+info
+    [Symbol(shapeMode)]: false,
+info
+    [Symbol(kCapture)]: false
+info
+  },
+error
+  [Symbol(kType)]: 'error',
+error
+  [Symbol(kError)]: Error: connect ECONNREFUSED 10.224.190.55:443
+info
+      at TCPConnectWrap.afterConnect [as oncomplete] (node:net:1634:16) {
+info
+    errno: -111,
+info
+    code: 'ECONNREFUSED',
+info
+    syscall: 'connect',
+info
+    address: '10.224.190.55',
+info
+    port: 443
+info
+  },
+info
+  [Symbol(kMessage)]: 'connect ECONNREFUSED 10.224.190.55:443'
+info
+}
+info
+Initializing database connection pool (attempt 3 of 6)...
+error
+Database initialization error (attempt 3): ErrorEvent {
+info
+  [Symbol(kTarget)]: WebSocket {
+info
+    _events: [Object: null prototype] {
+error
+Closed existing connection pool due to error
+error
+      error: [Function],
+info
+      message: [Function],
+info
+      close: [Function],
+info
+Retrying database connection in 3000ms...
+info
+      open: [Function]
+info
+    },
+info
+    _eventsCount: 4,
+info
+    _maxListeners: undefined,
+info
+    _binaryType: 'arraybuffer',
+info
+    _closeCode: 1006,
+info
+    _closeFrameReceived: false,
+info
+    _closeFrameSent: false,
+info
+    _closeMessage: <Buffer >,
+info
+    _closeTimer: null,
+info
+    _errorEmitted: true,
+info
+    _extensions: {},
+info
+    _paused: false,
+info
+    _protocol: '',
+info
+    _readyState: 3,
+info
+    _receiver: null,
+info
+    _sender: null,
+info
+    _socket: null,
+info
+    _bufferedAmount: 0,
+info
+    _isServer: false,
+info
+    _redirects: 0,
+info
+    _autoPong: true,
+info
+    _url: 'wss://dpg-d0cvp6umcj7s73b1gubg-a/v2',
+info
+    _req: null,
+info
+    [Symbol(shapeMode)]: false,
+info
+    [Symbol(kCapture)]: false
+info
+  },
+error
+  [Symbol(kType)]: 'error',
+error
+  [Symbol(kError)]: Error: connect ECONNREFUSED 10.224.190.55:443
+info
+      at TCPConnectWrap.afterConnect [as oncomplete] (node:net:1634:16) {
+info
+    errno: -111,
+info
+    code: 'ECONNREFUSED',
+info
+    syscall: 'connect',
+info
+    address: '10.224.190.55',
+info
+    port: 443
+info
+  },
+info
+  [Symbol(kMessage)]: 'connect ECONNREFUSED 10.224.190.55:443'
+info
+}
+info
+Health check failed: TypeError: Cannot read properties of undefined (reading 'execute')
+info
+    at file:///opt/render/project/src/dist/index.js:706:16
+info
+    at Layer.handle [as handle_request] (/opt/render/project/src/node_modules/express/lib/router/layer.js:95:5)
+info
+    at next (/opt/render/project/src/node_modules/express/lib/router/route.js:149:13)
+info
+    at Route.dispatch (/opt/render/project/src/node_modules/express/lib/router/route.js:119:3)
+info
+    at Layer.handle [as handle_request] (/opt/render/project/src/node_modules/express/lib/router/layer.js:95:5)
+info
+    at /opt/render/project/src/node_modules/express/lib/router/index.js:284:15
+info
+    at Function.process_params (/opt/render/project/src/node_modules/express/lib/router/index.js:346:12)
+info
+    at next (/opt/render/project/src/node_modules/express/lib/router/index.js:280:10)
+info
+    at file:///opt/render/project/src/dist/index.js:2687:3
+info
+    at Layer.handle [as handle_request] (/opt/render/project/src/node_modules/express/lib/router/layer.js:95:5)
+info
+10:38:28 PM [express] GET /api/health 500 in 4ms :: {"status":"unhealthy","timestamp":"2025-05-06T22:…
+info
+Initializing database connection pool (attempt 4 of 6)...
+error
+Database initialization error (attempt 4): ErrorEvent {
+info
+  [Symbol(kTarget)]: WebSocket {
+info
+    _events: [Object: null prototype] {
+error
+      error: [Function],
+info
+      message: [Function],
+info
+      close: [Function],
+info
+      open: [Function]
+info
+    },
+error
+Closed existing connection pool due to error
+info
+    _eventsCount: 4,
+info
+Retrying database connection in 3000ms...
+info
+    _maxListeners: undefined,
+info
+    _binaryType: 'arraybuffer',
+info
+    _closeCode: 1006,
+info
+    _closeFrameReceived: false,
+info
+    _closeFrameSent: false,
+info
+    _closeMessage: <Buffer >,
+info
+    _closeTimer: null,
+info
+    _errorEmitted: true,
+info
+    _extensions: {},
+info
+    _paused: false,
+info
+    _protocol: '',
+info
+    _readyState: 3,
+info
+    _receiver: null,
+info
+    _sender: null,
+info
+    _socket: null,
+info
+    _bufferedAmount: 0,
+info
+    _isServer: false,
+info
+    _redirects: 0,
+info
+    _autoPong: true,
+info
+    _url: 'wss://dpg-d0cvp6umcj7s73b1gubg-a/v2',
+info
+    _req: null,
+info
+    [Symbol(shapeMode)]: false,
+info
+    [Symbol(kCapture)]: false
+info
+  },
+error
+  [Symbol(kType)]: 'error',
+error
+  [Symbol(kError)]: Error: connect ECONNREFUSED 10.224.190.55:443
+info
+      at TCPConnectWrap.afterConnect [as oncomplete] (node:net:1634:16) {
+info
+    errno: -111,
+info
+    code: 'ECONNREFUSED',
+info
+    syscall: 'connect',
+info
+    address: '10.224.190.55',
+info
+    port: 443
+info
+  },
+info
+  [Symbol(kMessage)]: 'connect ECONNREFUSED 10.224.190.55:443'
+info
+}
+info
+Initializing database connection pool (attempt 5 of 6)...
+error
+Database initialization error (attempt 5): ErrorEvent {
+info
+  [Symbol(kTarget)]: WebSocket {
+info
+    _events: [Object: null prototype] {
+error
+      error: [Function],
+info
+      message: [Function],
+info
+      close: [Function],
+info
+      open: [Function]
+info
+    },
+info
+    _eventsCount: 4,
+info
+    _maxListeners: undefined,
+info
+    _binaryType: 'arraybuffer',
+info
+    _closeCode: 1006,
+info
+    _closeFrameReceived: false,
+error
+Closed existing connection pool due to error
+info
+    _closeFrameSent: false,
+info
+    _closeMessage: <Buffer >,
+info
+    _closeTimer: null,
+info
+    _errorEmitted: true,
+info
+    _extensions: {},
+info
+    _paused: false,
+info
+    _protocol: '',
+info
+    _readyState: 3,
+info
+    _receiver: null,
+info
+    _sender: null,
+info
+    _socket: null,
+info
+    _bufferedAmount: 0,
+info
+    _isServer: false,
+info
+    _redirects: 0,
+info
+    _autoPong: true,
+info
+    _url: 'wss://dpg-d0cvp6umcj7s73b1gubg-a/v2',
+info
+    _req: null,
+info
+    [Symbol(shapeMode)]: false,
+info
+    [Symbol(kCapture)]: false
+info
+Retrying database connection in 3000ms...
+info
+  },
+error
+  [Symbol(kType)]: 'error',
+error
+  [Symbol(kError)]: Error: connect ECONNREFUSED 10.224.190.55:443
+info
+      at TCPConnectWrap.afterConnect [as oncomplete] (node:net:1634:16) {
+info
+    errno: -111,
+info
+    code: 'ECONNREFUSED',
+info
+    syscall: 'connect',
+info
+    address: '10.224.190.55',
+info
+    port: 443
+info
+  },
+info
+  [Symbol(kMessage)]: 'connect ECONNREFUSED 10.224.190.55:443'
+info
+}
+info
+Initializing database connection pool (attempt 6 of 6)...
+error
+Database initialization error (attempt 6): ErrorEvent {
+info
+  [Symbol(kTarget)]: WebSocket {
+info
+    _events: [Object: null prototype] {
+error
+      error: [Function],
+info
+      message: [Function],
+info
+      close: [Function],
+info
+      open: [Function]
+info
+    },
+info
+    _eventsCount: 4,
+info
+    _maxListeners: undefined,
+info
+    _binaryType: 'arraybuffer',
+info
+    _closeCode: 1006,
+info
+    _closeFrameReceived: false,
+info
+    _closeFrameSent: false,
+info
+    _closeMessage: <Buffer >,
+info
+    _closeTimer: null,
+info
+    _errorEmitted: true,
+info
+    _extensions: {},
+info
+    _paused: false,
+info
+    _protocol: '',
+info
+    _readyState: 3,
+error
+Closed existing connection pool due to error
+info
+    _receiver: null,
+info
+    _sender: null,
+info
+    _socket: null,
+info
+    _bufferedAmount: 0,
+info
+    _isServer: false,
+info
+    _redirects: 0,
+info
+    _autoPong: true,
+info
+    _url: 'wss://dpg-d0cvp6umcj7s73b1gubg-a/v2',
+info
+    _req: null,
+info
+    [Symbol(shapeMode)]: false,
+info
+    [Symbol(kCapture)]: false
+info
+  },
+error
+  [Symbol(kType)]: 'error',
+error
+  [Symbol(kError)]: Error: connect ECONNREFUSED 10.224.190.55:443
+info
+      at TCPConnectWrap.afterConnect [as oncomplete] (node:net:1634:16) {
+info
+    errno: -111,
+info
+    code: 'ECONNREFUSED',
+info
+    syscall: 'connect',
+info
+    address: '10.224.190.55',
+info
+    port: 443
+info
+  },
+info
+  [Symbol(kMessage)]: 'connect ECONNREFUSED 10.224.190.55:443'
+info
+}

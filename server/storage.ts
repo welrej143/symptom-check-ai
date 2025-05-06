@@ -44,7 +44,7 @@ export interface IStorage {
 
 // Database storage implementation
 export class DatabaseStorage implements IStorage {
-  sessionStore: session.Store;
+  sessionStore!: session.Store; // Using definite assignment assertion
 
   constructor() {
     let retries = 0;
