@@ -85,14 +85,14 @@ export default function BugReportPage() {
   };
 
   return (
-    <div className="container max-w-3xl py-10">
-      <h1 className="text-3xl font-bold mb-6 flex items-center gap-2">
+    <div className="container max-w-3xl py-10 mx-auto">
+      <h1 className="text-3xl font-bold mb-6 flex items-center gap-2 justify-center">
         <BugIcon className="h-8 w-8 text-red-500" />
         Report a Bug
       </h1>
       
-      <Card>
-        <CardHeader>
+      <Card className="mx-auto">
+        <CardHeader className="text-center">
           <CardTitle>Bug Report Form</CardTitle>
           <CardDescription>
             Help us improve SymptomCheck AI by reporting any issues you encounter. 
@@ -180,8 +180,8 @@ export default function BugReportPage() {
             </Form>
           )}
         </CardContent>
-        <CardFooter className="flex justify-between border-t pt-4">
-          <p className="text-xs text-gray-500">
+        <CardFooter className="flex justify-center border-t pt-4">
+          <p className="text-xs text-gray-500 text-center">
             Your feedback helps us improve SymptomCheck AI. Thank you for your help!
           </p>
         </CardFooter>
