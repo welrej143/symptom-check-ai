@@ -5,6 +5,8 @@ import Home from "@/pages/home";
 import Results from "@/pages/results";
 import Tracker from "@/pages/tracker";
 import AuthPage from "@/pages/auth-page";
+import AdminLogin from "@/pages/admin-login";
+import AdminDashboard from "@/pages/admin-dashboard";
 import Header from "@/components/header";
 import Footer from "@/components/footer";
 import { useState, useEffect } from "react";
@@ -36,24 +38,6 @@ function PaymentVerificationWrapper({
   const { refreshSubscriptionStatus } = useAuth();
   const { toast } = useToast();
   const [location] = useLocation();
-  
-  // Create Home component wrapper to pass props
-  const HomeWrapper = () => (
-    <Home 
-      setUserSymptoms={setUserSymptoms}
-      initialSymptoms={userSymptoms}
-      analyzeSymptoms={analyzeUserSymptoms}
-    />
-  );
-  
-  // Create Results component wrapper to pass props
-  const ResultsWrapper = () => (
-    <Results 
-      analysisResult={analysisResult} 
-      userSymptoms={userSymptoms}
-      setUserSymptoms={setUserSymptoms}
-    />
-  );
   
   // Check for Stripe payment completion
   useEffect(() => {
@@ -134,39 +118,7 @@ function PaymentVerificationWrapper({
   }
   
   // Regular routes if not processing payment
-  return (
-    <Switch>
-      <Route path="/" component={HomeWrapper} />
-      <Route path="/results" component={ResultsWrapper} />
-      <ProtectedRoute path="/tracker" component={Tracker} />
-      <ProtectedRoute path="/premium" component={() => (
-        <div className="container mx-auto py-8 px-4">
-          <h1 className="text-2xl font-bold mb-6">Premium Subscription</h1>
-          <div className="max-w-md mx-auto">
-            <PremiumCard />
-          </div>
-        </div>
-      )} />
-      <Route path="/auth" component={AuthPage} />
-      
-      {/* Admin routes */}
-      <Route path="/admin/login">
-        {() => {
-          const AdminLogin = require("@/pages/admin-login").default;
-          return <AdminLogin />;
-        }}
-      </Route>
-      <Route path="/admin">
-        {() => {
-          const AdminDashboard = require("@/pages/admin-dashboard").default;
-          return <AdminDashboard />;
-        }}
-      </Route>
-      
-      {/* 404 route */}
-      <Route component={NotFound} />
-    </Switch>
-  );
+  return children as React.ReactElement;
 }
 
 function App() {
@@ -301,7 +253,29 @@ function App() {
                 userSymptoms={userSymptoms}
                 setUserSymptoms={setUserSymptoms}
                 analyzeUserSymptoms={analyzeUserSymptoms}
-              />
+              >
+                <Switch>
+                  <Route path="/" component={HomeWrapper} />
+                  <Route path="/results" component={ResultsWrapper} />
+                  <ProtectedRoute path="/tracker" component={Tracker} />
+                  <ProtectedRoute path="/premium" component={() => (
+                    <div className="container mx-auto py-8 px-4">
+                      <h1 className="text-2xl font-bold mb-6">Premium Subscription</h1>
+                      <div className="max-w-md mx-auto">
+                        <PremiumCard />
+                      </div>
+                    </div>
+                  )} />
+                  <Route path="/auth" component={AuthPage} />
+                  
+                  {/* Admin routes */}
+                  <Route path="/admin/login" component={AdminLogin} />
+                  <Route path="/admin" component={AdminDashboard} />
+                  
+                  {/* 404 route */}
+                  <Route component={NotFound} />
+                </Switch>
+              </PaymentVerificationWrapper>
             )}
           </main>
           <Footer />

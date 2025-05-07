@@ -201,7 +201,7 @@ async function initializeDatabase(retryCount = 0): Promise<void> {
       console.log("New database connection established successfully");
     });
     
-    pool.on('error', (err) => {
+    pool.on('error', (err: unknown) => {
       console.error('Database pool error:', err);
       
       // In production, just log the error and continue
