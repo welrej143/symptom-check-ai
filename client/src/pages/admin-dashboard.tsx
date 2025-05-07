@@ -9,7 +9,29 @@ import { Label } from "@/components/ui/label";
 import { Switch } from "@/components/ui/switch";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Separator } from "@/components/ui/separator";
-import { Loader2, UsersRound, FileText, BarChart, CreditCard, LogOut, Eye, EyeOff } from "lucide-react";
+import { 
+  Loader2, 
+  UsersRound, 
+  FileText, 
+  BarChart, 
+  CreditCard, 
+  LogOut, 
+  Eye, 
+  EyeOff, 
+  User, 
+  Calendar,
+  BadgeCheck,
+  AlertCircle
+} from "lucide-react";
+import { 
+  Table, 
+  TableBody, 
+  TableCaption, 
+  TableCell, 
+  TableHead, 
+  TableHeader, 
+  TableRow 
+} from "@/components/ui/table";
 
 interface PaymentSettings {
   stripeEnabled: boolean;
@@ -28,8 +50,24 @@ interface Statistics {
   trackingCount: number;
 }
 
+interface User {
+  id: number;
+  username: string;
+  email: string;
+  isPremium: boolean;
+  subscriptionStatus: string;
+  subscriptionEndDate: string | null;
+  planName: string | null;
+  stripeCustomerId: string | null;
+  stripeSubscriptionId: string | null;
+  analysisCount: number;
+  analysisCountResetDate: string | null;
+  createdAt: string;
+}
+
 interface DashboardData {
   statistics: Statistics;
+  users: User[];
   paymentSettings: PaymentSettings;
 }
 

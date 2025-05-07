@@ -8,7 +8,7 @@ import z from "zod";
 import { symptomInputSchema, analysisResponseSchema, symptomRecords, dailyTracking } from "@shared/schema";
 import { db, isDatabaseHealthy } from "./db";
 import { users } from "@shared/schema";
-import { eq, sql } from "drizzle-orm";
+import { eq, sql, desc } from "drizzle-orm";
 import { SessionData } from "express-session";
 import { createPaypalOrder, capturePaypalOrder, loadPaypalDefault } from "./paypal";
 import { getPayPalMode, updatePayPalMode } from './paypal-loader';
@@ -83,6 +83,24 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const recordCount = await db.select({ count: sql`count(*)` }).from(symptomRecords);
       const trackingCount = await db.select({ count: sql`count(*)` }).from(dailyTracking);
       
+      // Get registered users with sensitive information excluded
+      const registeredUsers = await db.select({
+        id: users.id,
+        username: users.username,
+        email: users.email,
+        isPremium: users.isPremium,
+        subscriptionStatus: users.subscriptionStatus,
+        subscriptionEndDate: users.subscriptionEndDate,
+        planName: users.planName, // Changed from subscriptionPlan to planName to match schema
+        stripeCustomerId: users.stripeCustomerId,
+        stripeSubscriptionId: users.stripeSubscriptionId,
+        analysisCount: users.analysisCount,
+        analysisCountResetDate: users.analysisCountResetDate,
+        createdAt: users.createdAt
+      })
+      .from(users)
+      .orderBy(desc(users.createdAt));
+      
       // Get payment settings
       const paymentSettings = await storage.getPaymentSettings();
       
@@ -93,6 +111,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
           recordCount: recordCount[0]?.count || 0,
           trackingCount: trackingCount[0]?.count || 0,
         },
+        users: registeredUsers, // Add users to the response
         paymentSettings,
       });
     } catch (error) {
