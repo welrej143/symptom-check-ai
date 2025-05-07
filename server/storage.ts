@@ -449,8 +449,8 @@ export class DatabaseStorage implements IStorage {
     try {
       if (keys.length === 0) return {};
       
-      // Just use a simpler approach by building a parameterized query
-      const placeholders = Array(keys.length).fill('?').join(',');
+      // Use PostgreSQL-style placeholders ($1, $2, etc.)
+      const placeholders = keys.map((_, i) => `$${i + 1}`).join(',');
       const query = `SELECT * FROM app_settings WHERE key IN (${placeholders})`;
       
       // Execute the query directly with the db pool
