@@ -157,6 +157,41 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
   
+  // Get bug reports for admin dashboard
+  app.get("/api/admin/bug-reports", requireAdmin, async (_req: Request, res: Response) => {
+    try {
+      const reports = await storage.getBugReports();
+      res.json(reports);
+    } catch (error) {
+      console.error("Error fetching bug reports:", error);
+      res.status(500).json({ 
+        error: "Failed to fetch bug reports",
+        details: error instanceof Error ? error.message : "Unknown error"
+      });
+    }
+  });
+  
+  // Update bug report status
+  app.post("/api/admin/bug-reports/:id/status", requireAdmin, async (req: Request, res: Response) => {
+    try {
+      const { id } = req.params;
+      const { status } = req.body;
+      
+      if (!id || !status) {
+        return res.status(400).json({ error: "Missing required parameters" });
+      }
+      
+      const report = await storage.updateBugReportStatus(parseInt(id), status);
+      res.json(report);
+    } catch (error) {
+      console.error("Error updating bug report status:", error);
+      res.status(500).json({ 
+        error: "Failed to update bug report status",
+        details: error instanceof Error ? error.message : "Unknown error"
+      });
+    }
+  });
+  
   // Health check endpoint
   app.get("/api/health", async (_req: Request, res: Response) => {
     try {
