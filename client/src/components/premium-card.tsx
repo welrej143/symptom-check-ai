@@ -618,7 +618,7 @@ export default function PremiumCard() {
                 </div>
                 <p className="text-sm text-gray-600 mb-3">Get unlimited symptom analyses and health tracking. Cancel anytime.</p>
                 {paymentMethods?.paypal ? (
-                  <div className="space-y-3">
+                  <div>
                     {/* Direct PayPal Subscription Link */}
                     <a 
                       href="https://www.paypal.com/webapps/billing/plans/subscribe?plan_id=P-8BT43153WY803422FNAM5UPI"
@@ -637,16 +637,6 @@ export default function PremiumCard() {
                         </span>
                       )}
                     </a>
-                    
-                    <div className="text-center text-xs text-gray-500">- or -</div>
-                    
-                    {/* Existing PayPal button integration */}
-                    <PayPalButton 
-                      amount="9.99"
-                      currency="USD"
-                      intent="CAPTURE"
-                      onSuccess={(data) => handlePaymentSuccess(data, "monthly")}
-                    />
                   </div>
                 ) : (
                   <div className="p-3 text-center bg-gray-100 rounded-md text-gray-600 text-sm">
@@ -731,32 +721,24 @@ export default function PremiumCard() {
             )}
             
             <div className="mt-4 grid grid-cols-1 md:grid-cols-2 gap-3">
-              {/* PayPal Button - Only shows when enabled */}
+              {/* PayPal Button - Direct subscription link */}
               {paymentMethods?.paypal ? (
-                <button 
-                  onClick={() => setIsUpgrading(true)}
+                <a 
+                  href="https://www.paypal.com/webapps/billing/plans/subscribe?plan_id=P-8BT43153WY803422FNAM5UPI"
+                  target="_blank" 
+                  rel="noopener noreferrer"
                   className="bg-blue-600 text-white py-2.5 px-4 rounded-md font-medium hover:bg-blue-700 transition-colors flex items-center justify-center w-full"
-                  disabled={isUpgrading}
                 >
-                  {isUpgrading ? (
-                    <>
-                      <Loader className="w-4 h-4 mr-2 animate-spin" />
-                      Preparing Checkout...
-                    </>
-                  ) : (
-                    <>
-                      <div className="h-5 w-5 mr-2 bg-white rounded-sm flex items-center justify-center">
-                        <img src={paypalLogo} alt="PayPal" className="h-4 w-4" />
-                      </div>
-                      Pay with PayPal
-                      {paymentMethods.mode === 'sandbox' && (
-                        <span className="ml-1 text-xs bg-white/20 px-1.5 py-0.5 rounded-full">
-                          Test
-                        </span>
-                      )}
-                    </>
+                  <div className="h-5 w-5 mr-2 bg-white rounded-sm flex items-center justify-center">
+                    <img src={paypalLogo} alt="PayPal" className="h-4 w-4" />
+                  </div>
+                  Subscribe with PayPal
+                  {paymentMethods.mode === 'sandbox' && (
+                    <span className="ml-1 text-xs bg-white/20 px-1.5 py-0.5 rounded-full">
+                      Test
+                    </span>
                   )}
-                </button>
+                </a>
               ) : (
                 <button 
                   className="bg-gray-200 text-gray-500 py-2.5 px-4 rounded-md font-medium flex items-center justify-center w-full opacity-60 cursor-not-allowed"
