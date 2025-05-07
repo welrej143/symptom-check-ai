@@ -361,8 +361,22 @@ export default function PremiumCard() {
   const [isSuccess, setIsSuccess] = useState(false);
   const { toast } = useToast();
   
+  // Define payment methods type
+  interface PaymentMethods {
+    stripe: boolean;
+    paypal: boolean;
+    mode: 'sandbox' | 'live';
+  }
+
+  // Default payment methods state
+  const defaultPaymentMethods: PaymentMethods = {
+    stripe: false,
+    paypal: true,
+    mode: 'sandbox'
+  };
+  
   // Fetch available payment methods
-  const { data: paymentMethods } = useQuery({
+  const { data: paymentMethods = defaultPaymentMethods } = useQuery<PaymentMethods>({
     queryKey: ['/api/payment-methods'],
     staleTime: 60000, // 1 minute cache
   });
