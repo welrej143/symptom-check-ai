@@ -504,6 +504,42 @@ export async function registerRoutes(app: Express): Promise<Server> {
       res.status(500).json({ message: "Error fetching tracking data" });
     }
   });
+  
+  // Bug report submission endpoint
+  app.post("/api/bug-report", async (req: Request, res: Response) => {
+    try {
+      // Get user ID if authenticated, allow anonymous reports too
+      const userId = req.isAuthenticated() ? req.user.id : null;
+      
+      // Validate bug report data
+      const validation = bugReportSubmissionSchema.safeParse(req.body);
+      
+      if (!validation.success) {
+        return res.status(400).json({ 
+          message: "Invalid input", 
+          errors: validation.error.format() 
+        });
+      }
+      
+      const { description } = validation.data;
+      
+      // Create the bug report
+      const report = await storage.createBugReport({
+        userId,
+        description,
+        screenshotPath: null // We'll add screenshot support later
+      });
+      
+      res.status(201).json({ 
+        success: true, 
+        message: "Bug report submitted successfully",
+        reportId: report.id
+      });
+    } catch (error) {
+      console.error("Bug report submission error:", error);
+      res.status(500).json({ error: "Failed to submit bug report" });
+    }
+  });
 
   // Get user's analysis usage count
   app.get("/api/usage-count", async (req: Request, res: Response) => {

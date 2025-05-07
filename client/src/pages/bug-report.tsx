@@ -51,22 +51,15 @@ export default function BugReportPage() {
   const onSubmit = async (data: BugReportFormValues) => {
     setIsSubmitting(true);
     try {
-      // Create FormData object to handle file upload
-      const formData = new FormData();
-      formData.append("description", data.description);
-      
-      if (data.screenshot && data.screenshot instanceof File) {
-        formData.append("screenshot", data.screenshot);
-      }
-
-      // Make API request
-      const response = await fetch("/api/bug-report", {
-        method: "POST",
-        body: formData,
+      // For now, we'll just send the description as JSON
+      // We'll implement file upload later
+      const response = await apiRequest("POST", "/api/bug-report", {
+        description: data.description
       });
 
       if (!response.ok) {
-        throw new Error("Failed to submit bug report");
+        const errorData = await response.json().catch(() => ({}));
+        throw new Error(errorData.message || "Failed to submit bug report");
       }
       
       setIsSuccess(true);
