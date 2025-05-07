@@ -32,7 +32,7 @@ const client = new Client({
   },
   timeout: 0,
   environment:
-                process.env.NODE_ENV === "production"
+                process.env.PAYPAL_MODE === "live"
                   ? Environment.Production
                   : Environment.Sandbox,
   logging: {
