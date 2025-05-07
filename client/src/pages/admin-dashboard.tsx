@@ -9,7 +9,7 @@ import { Label } from "@/components/ui/label";
 import { Switch } from "@/components/ui/switch";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Separator } from "@/components/ui/separator";
-import { Loader2, UsersRound, FileText, BarChart, CreditCard, LogOut } from "lucide-react";
+import { Loader2, UsersRound, FileText, BarChart, CreditCard, LogOut, Eye, EyeOff } from "lucide-react";
 
 interface PaymentSettings {
   stripeEnabled: boolean;
@@ -37,6 +37,8 @@ export default function AdminDashboard() {
   const [savingSettings, setSavingSettings] = useState(false);
   const [dashboardData, setDashboardData] = useState<DashboardData | null>(null);
   const [settings, setSettings] = useState<PaymentSettings | null>(null);
+  const [showSandboxSecret, setShowSandboxSecret] = useState(false);
+  const [showLiveSecret, setShowLiveSecret] = useState(false);
   const { toast } = useToast();
   const [, navigate] = useLocation();
 
@@ -313,14 +315,28 @@ export default function AdminDashboard() {
                           </div>
                           <div className="space-y-2">
                             <Label htmlFor="paypal-sandbox-client-secret">PayPal Sandbox Client Secret</Label>
-                            <input
-                              type="password"
-                              id="paypal-sandbox-client-secret"
-                              value={settings.paypalSandboxClientSecret}
-                              onChange={(e) => setSettings({ ...settings, paypalSandboxClientSecret: e.target.value })}
-                              className="w-full p-2 border rounded-md"
-                              placeholder="Enter PayPal Sandbox Client Secret"
-                            />
+                            <div className="relative">
+                              <input
+                                type={showSandboxSecret ? "text" : "password"}
+                                id="paypal-sandbox-client-secret"
+                                value={settings.paypalSandboxClientSecret}
+                                onChange={(e) => setSettings({ ...settings, paypalSandboxClientSecret: e.target.value })}
+                                className="w-full p-2 border rounded-md pr-10"
+                                placeholder="Enter PayPal Sandbox Client Secret"
+                              />
+                              <button
+                                type="button"
+                                onClick={() => setShowSandboxSecret(!showSandboxSecret)}
+                                className="absolute right-3 top-1/2 transform -translate-y-1/2 text-gray-500 hover:text-gray-700"
+                                aria-label={showSandboxSecret ? "Hide secret" : "Show secret"}
+                              >
+                                {showSandboxSecret ? (
+                                  <EyeOff className="h-5 w-5" />
+                                ) : (
+                                  <Eye className="h-5 w-5" />
+                                )}
+                              </button>
+                            </div>
                           </div>
                         </div>
                         
@@ -339,14 +355,28 @@ export default function AdminDashboard() {
                           </div>
                           <div className="space-y-2">
                             <Label htmlFor="paypal-live-client-secret">PayPal Live Client Secret</Label>
-                            <input
-                              type="password"
-                              id="paypal-live-client-secret"
-                              value={settings.paypalLiveClientSecret}
-                              onChange={(e) => setSettings({ ...settings, paypalLiveClientSecret: e.target.value })}
-                              className="w-full p-2 border rounded-md"
-                              placeholder="Enter PayPal Live Client Secret"
-                            />
+                            <div className="relative">
+                              <input
+                                type={showLiveSecret ? "text" : "password"}
+                                id="paypal-live-client-secret"
+                                value={settings.paypalLiveClientSecret}
+                                onChange={(e) => setSettings({ ...settings, paypalLiveClientSecret: e.target.value })}
+                                className="w-full p-2 border rounded-md pr-10"
+                                placeholder="Enter PayPal Live Client Secret"
+                              />
+                              <button
+                                type="button"
+                                onClick={() => setShowLiveSecret(!showLiveSecret)}
+                                className="absolute right-3 top-1/2 transform -translate-y-1/2 text-gray-500 hover:text-gray-700"
+                                aria-label={showLiveSecret ? "Hide secret" : "Show secret"}
+                              >
+                                {showLiveSecret ? (
+                                  <EyeOff className="h-5 w-5" />
+                                ) : (
+                                  <Eye className="h-5 w-5" />
+                                )}
+                              </button>
+                            </div>
                           </div>
                         </div>
                       </div>
