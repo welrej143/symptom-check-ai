@@ -447,13 +447,17 @@ export class DatabaseStorage implements IStorage {
 
   async getSettings(keys: string[]): Promise<Record<string, string>> {
     try {
-      const settings = await db
-        .select()
-        .from(appSettings)
-        .where(sql`${appSettings.key} IN (${keys.join(',')})`);
+      if (keys.length === 0) return {};
+      
+      // Using placeholders to avoid SQL injection
+      const placeholders = keys.map((_, i) => `$${i + 1}`).join(',');
+      
+      const settings = await db.execute(
+        sql`SELECT * FROM ${appSettings} WHERE ${appSettings.key} IN (${sql.join(keys.map(k => sql.placeholder(k)), sql`, `)})`
+      );
       
       const settingsMap: Record<string, string> = {};
-      settings.forEach(setting => {
+      settings.rows.forEach((setting: any) => {
         settingsMap[setting.key] = setting.value;
       });
       
