@@ -6,6 +6,10 @@ import { useLocation } from 'wouter';
 import { Loader, CreditCard, AlertCircle } from 'lucide-react';
 import PayPalSubscription from '@/components/PayPalSubscription';
 
+// Import payment logos
+import paypalLogo from "../assets/paypal_icon.png";
+import stripeLogo from "../assets/stripe_logo.png";
+
 export default function PaymentSelection() {
   const [location, setLocation] = useLocation();
   const { user } = useAuth();
@@ -152,7 +156,7 @@ export default function PaymentSelection() {
               }`}
             >
               <div className="flex items-center justify-center mb-3">
-                <img src="/stripe_logo.png" alt="Stripe" className="h-8" />
+                <img src={stripeLogo} alt="Stripe" className="h-8" />
               </div>
               <div className="text-center">
                 <h3 className="font-medium text-gray-900">Credit Card</h3>
@@ -169,7 +173,7 @@ export default function PaymentSelection() {
               }`}
             >
               <div className="flex items-center justify-center mb-3">
-                <img src="/paypal_icon.png" alt="PayPal" className="h-8" />
+                <img src={paypalLogo} alt="PayPal" className="h-8" />
               </div>
               <div className="text-center">
                 <h3 className="font-medium text-gray-900">PayPal</h3>

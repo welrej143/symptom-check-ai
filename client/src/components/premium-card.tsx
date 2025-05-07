@@ -706,7 +706,7 @@ export default function PremiumCard() {
               {/* PayPal Button - Only shows when enabled */}
               {paymentMethods?.paypal ? (
                 <button 
-                  onClick={() => setIsUpgrading(true)}
+                  onClick={() => window.location.href = '/payment'}
                   className="bg-blue-600 text-white py-2.5 px-4 rounded-md font-medium hover:bg-blue-700 transition-colors flex items-center justify-center w-full"
                   disabled={isUpgrading}
                 >
@@ -720,7 +720,7 @@ export default function PremiumCard() {
                       <div className="h-5 w-5 mr-2 bg-white rounded-sm flex items-center justify-center">
                         <img src={paypalLogo} alt="PayPal" className="h-4 w-4" />
                       </div>
-                      Pay with PayPal
+                      Choose Payment Method
                       {paymentMethods.mode === 'sandbox' && (
                         <span className="ml-1 text-xs bg-white/20 px-1.5 py-0.5 rounded-full">
                           Test
@@ -744,45 +744,11 @@ export default function PremiumCard() {
               {/* Stripe Button - Only shows when enabled */}
               {paymentMethods?.stripe ? (
                 <button 
-                  onClick={async () => {
-                    toast({
-                      title: "Stripe Checkout",
-                      description: "Starting Stripe checkout process...",
-                      variant: "default",
-                    });
-                    try {
-                      setIsUpgrading(true);
-                      // Create a checkout session on the server
-                      const response = await apiRequest("POST", "/api/create-subscription", {
-                        subscriptionType: "monthly"
-                      });
-                      
-                      if (!response.ok) {
-                        throw new Error("Failed to start checkout");
-                      }
-                      
-                      const data = await response.json();
-                      
-                      if (!data.sessionId) {
-                        throw new Error("Invalid response from server");
-                      }
-                      
-                      // Redirect to Stripe Checkout
-                      window.location.href = data.url;
-                    } catch (error) {
-                      console.error("Stripe checkout error:", error);
-                      setIsUpgrading(false);
-                      toast({
-                        title: "Checkout Error",
-                        description: error instanceof Error ? error.message : "Failed to start checkout process",
-                        variant: "destructive",
-                      });
-                    }
-                  }}
+                  onClick={() => window.location.href = '/payment'}
                   className="bg-purple-600 text-white py-2.5 px-4 rounded-md font-medium hover:bg-purple-700 transition-colors flex items-center justify-center w-full"
                 >
                   <img src={stripeLogo} alt="Stripe" className="h-5 w-5 mr-2 bg-white rounded-sm p-0.5" />
-                  Pay with Stripe
+                  Choose Payment Method
                 </button>
               ) : (
                 <button 
