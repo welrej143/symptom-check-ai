@@ -169,6 +169,10 @@ export const paymentSettingsSchema = z.object({
   stripeEnabled: z.boolean(),
   paypalEnabled: z.boolean(),
   paypalMode: z.enum(["sandbox", "live"]),
+  // Kept for backward compatibility but no longer edited in UI
+  // These fields are now managed via environment variables:
+  // PAYPAL_CLIENT_ID_SANDBOX, PAYPAL_CLIENT_SECRET_SANDBOX, 
+  // PAYPAL_CLIENT_ID_LIVE, PAYPAL_CLIENT_SECRET_LIVE
   paypalSandboxClientId: z.string().optional(),
   paypalSandboxClientSecret: z.string().optional(),
   paypalLiveClientId: z.string().optional(),

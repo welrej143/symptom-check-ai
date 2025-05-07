@@ -15,6 +15,7 @@ interface PaymentSettings {
   stripeEnabled: boolean;
   paypalEnabled: boolean;
   paypalMode: 'sandbox' | 'live';
+  // We're no longer using these fields for UI but keeping them for API compatibility
   paypalSandboxClientId: string;
   paypalSandboxClientSecret: string;
   paypalLiveClientId: string;
@@ -37,8 +38,6 @@ export default function AdminDashboard() {
   const [savingSettings, setSavingSettings] = useState(false);
   const [dashboardData, setDashboardData] = useState<DashboardData | null>(null);
   const [settings, setSettings] = useState<PaymentSettings | null>(null);
-  const [showSandboxSecret, setShowSandboxSecret] = useState(false);
-  const [showLiveSecret, setShowLiveSecret] = useState(false);
   const { toast } = useToast();
   const [, navigate] = useLocation();
 
@@ -301,82 +300,21 @@ export default function AdminDashboard() {
                         </div>
                         
                         <div className="border rounded-md p-4 space-y-4">
-                          <h3 className="font-medium">Sandbox Credentials</h3>
-                          <div className="space-y-2">
-                            <Label htmlFor="paypal-sandbox-client-id">PayPal Sandbox Client ID</Label>
-                            <input
-                              type="text"
-                              id="paypal-sandbox-client-id"
-                              value={settings.paypalSandboxClientId}
-                              onChange={(e) => setSettings({ ...settings, paypalSandboxClientId: e.target.value })}
-                              className="w-full p-2 border rounded-md"
-                              placeholder="Enter PayPal Sandbox Client ID"
-                            />
-                          </div>
-                          <div className="space-y-2">
-                            <Label htmlFor="paypal-sandbox-client-secret">PayPal Sandbox Client Secret</Label>
-                            <div className="relative">
-                              <input
-                                type={showSandboxSecret ? "text" : "password"}
-                                id="paypal-sandbox-client-secret"
-                                value={settings.paypalSandboxClientSecret}
-                                onChange={(e) => setSettings({ ...settings, paypalSandboxClientSecret: e.target.value })}
-                                className="w-full p-2 border rounded-md pr-10"
-                                placeholder="Enter PayPal Sandbox Client Secret"
-                              />
-                              <button
-                                type="button"
-                                onClick={() => setShowSandboxSecret(!showSandboxSecret)}
-                                className="absolute right-3 top-1/2 transform -translate-y-1/2 text-gray-500 hover:text-gray-700"
-                                aria-label={showSandboxSecret ? "Hide secret" : "Show secret"}
-                              >
-                                {showSandboxSecret ? (
-                                  <EyeOff className="h-5 w-5" />
-                                ) : (
-                                  <Eye className="h-5 w-5" />
-                                )}
-                              </button>
-                            </div>
-                          </div>
-                        </div>
-                        
-                        <div className="border rounded-md p-4 space-y-4">
-                          <h3 className="font-medium">Live Credentials</h3>
-                          <div className="space-y-2">
-                            <Label htmlFor="paypal-live-client-id">PayPal Live Client ID</Label>
-                            <input
-                              type="text"
-                              id="paypal-live-client-id"
-                              value={settings.paypalLiveClientId}
-                              onChange={(e) => setSettings({ ...settings, paypalLiveClientId: e.target.value })}
-                              className="w-full p-2 border rounded-md"
-                              placeholder="Enter PayPal Live Client ID"
-                            />
-                          </div>
-                          <div className="space-y-2">
-                            <Label htmlFor="paypal-live-client-secret">PayPal Live Client Secret</Label>
-                            <div className="relative">
-                              <input
-                                type={showLiveSecret ? "text" : "password"}
-                                id="paypal-live-client-secret"
-                                value={settings.paypalLiveClientSecret}
-                                onChange={(e) => setSettings({ ...settings, paypalLiveClientSecret: e.target.value })}
-                                className="w-full p-2 border rounded-md pr-10"
-                                placeholder="Enter PayPal Live Client Secret"
-                              />
-                              <button
-                                type="button"
-                                onClick={() => setShowLiveSecret(!showLiveSecret)}
-                                className="absolute right-3 top-1/2 transform -translate-y-1/2 text-gray-500 hover:text-gray-700"
-                                aria-label={showLiveSecret ? "Hide secret" : "Show secret"}
-                              >
-                                {showLiveSecret ? (
-                                  <EyeOff className="h-5 w-5" />
-                                ) : (
-                                  <Eye className="h-5 w-5" />
-                                )}
-                              </button>
-                            </div>
+                          <h3 className="font-medium">PayPal API Credentials</h3>
+                          <div className="p-4 bg-blue-50 rounded-md border border-blue-200">
+                            <p className="text-blue-800 font-medium mb-2">Credentials Configuration</p>
+                            <p className="text-blue-700 text-sm">
+                              PayPal API credentials are now managed through environment variables in Render.
+                            </p>
+                            <ul className="list-disc ml-5 mt-2 text-sm text-blue-700">
+                              <li>Set <code className="bg-blue-100 px-1 rounded">PAYPAL_CLIENT_ID_SANDBOX</code> for sandbox testing</li>
+                              <li>Set <code className="bg-blue-100 px-1 rounded">PAYPAL_CLIENT_SECRET_SANDBOX</code> for sandbox testing</li>
+                              <li>Set <code className="bg-blue-100 px-1 rounded">PAYPAL_CLIENT_ID_LIVE</code> for production</li>
+                              <li>Set <code className="bg-blue-100 px-1 rounded">PAYPAL_CLIENT_SECRET_LIVE</code> for production</li>
+                            </ul>
+                            <p className="text-blue-700 text-sm mt-2">
+                              This approach is more secure and prevents credentials from being stored in the database.
+                            </p>
                           </div>
                         </div>
                       </div>
