@@ -563,6 +563,27 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // Get active payment methods
+  app.get("/api/payment-methods", async (_req: Request, res: Response) => {
+    try {
+      // Get payment settings
+      const paymentSettings = await storage.getPaymentSettings();
+      
+      // Return only what the client needs to know
+      res.status(200).json({
+        stripe: paymentSettings.stripeEnabled,
+        paypal: paymentSettings.paypalEnabled,
+        mode: paymentSettings.paypalMode
+      });
+    } catch (error) {
+      console.error("Error fetching payment methods:", error);
+      res.status(500).json({ 
+        message: "Error fetching payment methods",
+        error: error instanceof Error ? error.message : "Unknown error"
+      });
+    }
+  });
+  
   // Get pricing information from Stripe
   app.get("/api/pricing", async (_req: Request, res: Response) => {
     try {

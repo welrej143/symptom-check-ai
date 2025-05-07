@@ -361,6 +361,12 @@ export default function PremiumCard() {
   const [isSuccess, setIsSuccess] = useState(false);
   const { toast } = useToast();
   
+  // Fetch available payment methods
+  const { data: paymentMethods } = useQuery({
+    queryKey: ['/api/payment-methods'],
+    staleTime: 60000, // 1 minute cache
+  });
+  
   // Handle successful PayPal payment
   const handlePaymentSuccess = async (data: any, subscriptionType: string) => {
     try {
@@ -542,25 +548,47 @@ export default function PremiumCard() {
               <div className="mb-4">
                 <h3 className="text-base font-medium text-gray-800">Choose your payment method</h3>
                 <div className="mt-2 flex">
-                  <div className="px-3 py-1.5 bg-blue-50 rounded-l-md border border-blue-200 border-r-0 flex items-center">
-                    <div className="h-6 w-6 mr-1.5 flex items-center justify-center">
-                      <img src={paypalLogo} alt="PayPal" className="h-5 w-5" />
+                  {paymentMethods?.paypal ? (
+                    <div className="px-3 py-1.5 bg-blue-50 rounded-l-md border border-blue-200 border-r-0 flex items-center">
+                      <div className="h-6 w-6 mr-1.5 flex items-center justify-center">
+                        <img src={paypalLogo} alt="PayPal" className="h-5 w-5" />
+                      </div>
+                      <span className="text-sm font-medium text-blue-800">PayPal</span>
+                      {paymentMethods?.mode === 'sandbox' && (
+                        <span className="ml-1 text-xs text-blue-600 bg-blue-100 px-1.5 py-0.5 rounded-full">
+                          Test Mode
+                        </span>
+                      )}
                     </div>
-                    <span className="text-sm font-medium text-blue-800">PayPal</span>
-                  </div>
-                  <div 
-                    className="px-3 py-1.5 bg-gray-100 rounded-r-md border border-gray-200 flex items-center cursor-pointer"
-                    onClick={() => {
-                      toast({
-                        title: "Stripe Coming Soon",
-                        description: "Credit card payments with Stripe will be available soon. Please use PayPal for now.",
-                        variant: "default",
-                      });
-                    }}
-                  >
-                    <img src={stripeLogo} alt="Stripe" className="h-5 w-5 mr-1.5" style={{ opacity: 0.7 }} />
-                    <span className="text-sm text-gray-500">Stripe (Soon)</span>
-                  </div>
+                  ) : (
+                    <div className="px-3 py-1.5 bg-gray-100 rounded-l-md border border-gray-200 border-r-0 flex items-center opacity-50">
+                      <div className="h-6 w-6 mr-1.5 flex items-center justify-center">
+                        <img src={paypalLogo} alt="PayPal" className="h-5 w-5" />
+                      </div>
+                      <span className="text-sm text-gray-500">PayPal</span>
+                    </div>
+                  )}
+                  
+                  {paymentMethods?.stripe ? (
+                    <div className="px-3 py-1.5 bg-purple-50 rounded-r-md border border-purple-200 flex items-center">
+                      <img src={stripeLogo} alt="Stripe" className="h-5 w-5 mr-1.5" />
+                      <span className="text-sm font-medium text-purple-800">Stripe</span>
+                    </div>
+                  ) : (
+                    <div 
+                      className="px-3 py-1.5 bg-gray-100 rounded-r-md border border-gray-200 flex items-center cursor-pointer"
+                      onClick={() => {
+                        toast({
+                          title: "Stripe Coming Soon",
+                          description: "Credit card payments with Stripe will be available soon. Please use PayPal for now.",
+                          variant: "default",
+                        });
+                      }}
+                    >
+                      <img src={stripeLogo} alt="Stripe" className="h-5 w-5 mr-1.5" style={{ opacity: 0.7 }} />
+                      <span className="text-sm text-gray-500">Stripe (Soon)</span>
+                    </div>
+                  )}
                 </div>
               </div>
               
@@ -571,12 +599,18 @@ export default function PremiumCard() {
                   <span className="font-semibold text-primary-900">$9.99/month</span>
                 </div>
                 <p className="text-sm text-gray-600 mb-3">Get unlimited symptom analyses and health tracking. Cancel anytime.</p>
-                <PayPalButton 
-                  amount="9.99"
-                  currency="USD"
-                  intent="CAPTURE"
-                  onSuccess={(data) => handlePaymentSuccess(data, "monthly")}
-                />
+                {paymentMethods?.paypal ? (
+                  <PayPalButton 
+                    amount="9.99"
+                    currency="USD"
+                    intent="CAPTURE"
+                    onSuccess={(data) => handlePaymentSuccess(data, "monthly")}
+                  />
+                ) : (
+                  <div className="p-3 text-center bg-gray-100 rounded-md text-gray-600 text-sm">
+                    PayPal payments are currently unavailable. Please try again later.
+                  </div>
+                )}
               </div>
             </div>
           </div>
@@ -620,55 +654,113 @@ export default function PremiumCard() {
               </div>
             </div>
             
-            {/* Upgrade message with PayPal vs Stripe info */}
-            <div className="mb-4 p-3 bg-amber-50 border border-amber-200 rounded-md">
-              <div className="flex">
-                <AlertTriangle className="h-5 w-5 text-amber-500 mr-2 flex-shrink-0 mt-0.5" />
-                <p className="text-sm text-amber-800">
-                  <span className="font-medium">Note:</span> Stripe payments are temporarily unavailable. Please use PayPal for now.
-                </p>
+            {/* Upgrade message based on payment methods */}
+            {!paymentMethods?.paypal && !paymentMethods?.stripe && (
+              <div className="mb-4 p-3 bg-amber-50 border border-amber-200 rounded-md">
+                <div className="flex">
+                  <AlertTriangle className="h-5 w-5 text-amber-500 mr-2 flex-shrink-0 mt-0.5" />
+                  <p className="text-sm text-amber-800">
+                    <span className="font-medium">Note:</span> All payment methods are currently unavailable. Please try again later.
+                  </p>
+                </div>
               </div>
-            </div>
+            )}
+            
+            {paymentMethods?.paypal && !paymentMethods?.stripe && (
+              <div className="mb-4 p-3 bg-amber-50 border border-amber-200 rounded-md">
+                <div className="flex">
+                  <AlertTriangle className="h-5 w-5 text-amber-500 mr-2 flex-shrink-0 mt-0.5" />
+                  <p className="text-sm text-amber-800">
+                    <span className="font-medium">Note:</span> Stripe payments are temporarily unavailable. Please use PayPal for now.
+                  </p>
+                </div>
+              </div>
+            )}
+            
+            {paymentMethods?.stripe && !paymentMethods?.paypal && (
+              <div className="mb-4 p-3 bg-amber-50 border border-amber-200 rounded-md">
+                <div className="flex">
+                  <AlertTriangle className="h-5 w-5 text-amber-500 mr-2 flex-shrink-0 mt-0.5" />
+                  <p className="text-sm text-amber-800">
+                    <span className="font-medium">Note:</span> PayPal payments are temporarily unavailable. Please use Stripe for now.
+                  </p>
+                </div>
+              </div>
+            )}
             
             <div className="mt-4 grid grid-cols-1 md:grid-cols-2 gap-3">
-              {/* PayPal Button - Primary Option */}
-              <button 
-                onClick={() => setIsUpgrading(true)}
-                className="bg-blue-600 text-white py-2.5 px-4 rounded-md font-medium hover:bg-blue-700 transition-colors flex items-center justify-center w-full"
-                disabled={isUpgrading}
-              >
-                {isUpgrading ? (
-                  <>
-                    <Loader className="w-4 h-4 mr-2 animate-spin" />
-                    Preparing Checkout...
-                  </>
-                ) : (
-                  <>
-                    <div className="h-5 w-5 mr-2 bg-white rounded-sm flex items-center justify-center">
-                      <img src={paypalLogo} alt="PayPal" className="h-4 w-4" />
-                    </div>
-                    Pay with PayPal
-                  </>
-                )}
-              </button>
+              {/* PayPal Button - Only shows when enabled */}
+              {paymentMethods?.paypal ? (
+                <button 
+                  onClick={() => setIsUpgrading(true)}
+                  className="bg-blue-600 text-white py-2.5 px-4 rounded-md font-medium hover:bg-blue-700 transition-colors flex items-center justify-center w-full"
+                  disabled={isUpgrading}
+                >
+                  {isUpgrading ? (
+                    <>
+                      <Loader className="w-4 h-4 mr-2 animate-spin" />
+                      Preparing Checkout...
+                    </>
+                  ) : (
+                    <>
+                      <div className="h-5 w-5 mr-2 bg-white rounded-sm flex items-center justify-center">
+                        <img src={paypalLogo} alt="PayPal" className="h-4 w-4" />
+                      </div>
+                      Pay with PayPal
+                      {paymentMethods.mode === 'sandbox' && (
+                        <span className="ml-1 text-xs bg-white/20 px-1.5 py-0.5 rounded-full">
+                          Test
+                        </span>
+                      )}
+                    </>
+                  )}
+                </button>
+              ) : (
+                <button 
+                  className="bg-gray-200 text-gray-500 py-2.5 px-4 rounded-md font-medium flex items-center justify-center w-full opacity-60 cursor-not-allowed"
+                  disabled={true}
+                >
+                  <div className="h-5 w-5 mr-2 bg-white rounded-sm flex items-center justify-center">
+                    <img src={paypalLogo} alt="PayPal" className="h-4 w-4 opacity-50" />
+                  </div>
+                  PayPal Unavailable
+                </button>
+              )}
               
-              {/* Stripe Button - Greyed Out with Popup */}
-              <button 
-                onClick={() => {
-                  toast({
-                    title: "Stripe Coming Soon",
-                    description: "Credit card payments with Stripe will be available soon. Please use PayPal for now.",
-                    variant: "default",
-                  });
-                }}
-                className="bg-gray-200 text-gray-600 py-2.5 px-4 rounded-md font-medium hover:bg-gray-300 transition-colors flex items-center justify-center w-full relative"
-              >
-                <img src={stripeLogo} alt="Stripe" className="h-5 w-5 mr-2" style={{ opacity: 0.7 }} />
-                Pay with Stripe
-                <span className="absolute -top-2 -right-2 bg-amber-500 text-white text-xs px-1.5 py-0.5 rounded-full">
-                  Soon
-                </span>
-              </button>
+              {/* Stripe Button - Only shows when enabled */}
+              {paymentMethods?.stripe ? (
+                <button 
+                  onClick={() => {
+                    toast({
+                      title: "Stripe Checkout",
+                      description: "Starting Stripe checkout process...",
+                      variant: "default",
+                    });
+                    // Stripe checkout logic would go here
+                  }}
+                  className="bg-purple-600 text-white py-2.5 px-4 rounded-md font-medium hover:bg-purple-700 transition-colors flex items-center justify-center w-full"
+                >
+                  <img src={stripeLogo} alt="Stripe" className="h-5 w-5 mr-2 bg-white rounded-sm p-0.5" />
+                  Pay with Stripe
+                </button>
+              ) : (
+                <button 
+                  onClick={() => {
+                    toast({
+                      title: "Stripe Coming Soon",
+                      description: "Credit card payments with Stripe will be available soon. Please use PayPal for now.",
+                      variant: "default",
+                    });
+                  }}
+                  className="bg-gray-200 text-gray-600 py-2.5 px-4 rounded-md font-medium hover:bg-gray-300 transition-colors flex items-center justify-center w-full relative"
+                >
+                  <img src={stripeLogo} alt="Stripe" className="h-5 w-5 mr-2" style={{ opacity: 0.7 }} />
+                  Pay with Stripe
+                  <span className="absolute -top-2 -right-2 bg-amber-500 text-white text-xs px-1.5 py-0.5 rounded-full">
+                    Soon
+                  </span>
+                </button>
+              )}
             </div>
           </div>
         )}
