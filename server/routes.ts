@@ -104,17 +104,33 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // Update payment settings
   app.post("/api/admin/payment-settings", requireAdmin, async (req: Request, res: Response) => {
     try {
-      const settings = req.body;
+      const newSettings = req.body;
       
       // Validate settings
-      if (typeof settings.stripeEnabled !== 'boolean' || 
-          typeof settings.paypalEnabled !== 'boolean' ||
-          (settings.paypalMode !== 'sandbox' && settings.paypalMode !== 'live')) {
+      if (typeof newSettings.stripeEnabled !== 'boolean' || 
+          typeof newSettings.paypalEnabled !== 'boolean' ||
+          (newSettings.paypalMode !== 'sandbox' && newSettings.paypalMode !== 'live')) {
         return res.status(400).json({ error: "Invalid payment settings format" });
       }
       
+      // Get existing settings to preserve credential values
+      const existingSettings = await storage.getPaymentSettings();
+      
+      // Merge settings - only update enabled flags and mode, preserve credential values
+      const mergedSettings = {
+        ...existingSettings,
+        stripeEnabled: newSettings.stripeEnabled,
+        paypalEnabled: newSettings.paypalEnabled,
+        paypalMode: newSettings.paypalMode,
+        // Keep existing credential values from database
+        paypalSandboxClientId: existingSettings.paypalSandboxClientId || '',
+        paypalSandboxClientSecret: existingSettings.paypalSandboxClientSecret || '',
+        paypalLiveClientId: existingSettings.paypalLiveClientId || '',
+        paypalLiveClientSecret: existingSettings.paypalLiveClientSecret || '',
+      };
+      
       // Update settings
-      const updatedSettings = await storage.updatePaymentSettings(settings);
+      const updatedSettings = await storage.updatePaymentSettings(mergedSettings);
       
       // Return updated settings
       res.status(200).json(updatedSettings);
