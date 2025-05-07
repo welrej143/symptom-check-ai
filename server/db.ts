@@ -153,6 +153,22 @@ async function ensureTablesExist() {
       console.log("Session table created successfully");
     }
     
+    // Check if app_settings table exists, if not create it
+    const appSettingsTableExists = await checkTableExists('app_settings');
+    if (!appSettingsTableExists) {
+      console.log("Creating app_settings table...");
+      await db.execute(sql`
+        CREATE TABLE IF NOT EXISTS app_settings (
+          id SERIAL PRIMARY KEY,
+          key TEXT NOT NULL UNIQUE,
+          value TEXT NOT NULL,
+          created_at TIMESTAMP NOT NULL DEFAULT NOW(),
+          updated_at TIMESTAMP NOT NULL DEFAULT NOW()
+        )
+      `);
+      console.log("App settings table created successfully");
+    }
+    
     console.log("All required tables are in place");
   } catch (error) {
     console.error("Error ensuring tables exist:", error);

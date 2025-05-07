@@ -1,0 +1,129 @@
+error
+dzm6j
+Error setting stripe_enabled: error: relation "app_settings" does not exist
+info
+dzm6j
+    at /opt/render/project/src/node_modules/pg-pool/index.js:45:11
+info
+dzm6j
+    at process.processTicksAndRejections (node:internal/process/task_queues:105:5)
+info
+dzm6j
+    at async NeonPreparedQuery.execute (file:///opt/render/project/src/node_modules/drizzle-orm/neon-serverless/session.js:76:20)
+info
+dzm6j
+    at async DatabaseStorage.setSetting (file:///opt/render/project/src/dist/index.js:720:25)
+info
+dzm6j
+    at async DatabaseStorage.updatePaymentSettings (file:///opt/render/project/src/dist/index.js:787:7)
+info
+dzm6j
+    at async file:///opt/render/project/src/dist/index.js:1130:31 {
+info
+dzm6j
+  length: 110,
+error
+dzm6j
+  severity: 'ERROR',
+info
+dzm6j
+  code: '42P01',
+info
+dzm6j
+  detail: undefined,
+info
+dzm6j
+  hint: undefined,
+info
+dzm6j
+  position: '8',
+info
+dzm6j
+  internalPosition: undefined,
+info
+dzm6j
+  internalQuery: undefined,
+info
+dzm6j
+  where: undefined,
+info
+dzm6j
+  schema: undefined,
+info
+dzm6j
+  table: undefined,
+info
+dzm6j
+  column: undefined,
+info
+dzm6j
+  dataType: undefined,
+info
+dzm6j
+  constraint: undefined,
+info
+dzm6j
+  file: 'parse_relation.c',
+info
+dzm6j
+  line: '1395',
+info
+dzm6j
+  routine: 'parserOpenTable'
+info
+dzm6j
+}
+error
+dzm6j
+Error updating payment settings: Error: Failed to update setting: relation "app_settings" does not exist
+info
+dzm6j
+    at DatabaseStorage.setSetting (file:///opt/render/project/src/dist/index.js:735:13)
+info
+dzm6j
+    at process.processTicksAndRejections (node:internal/process/task_queues:105:5)
+info
+dzm6j
+    at async DatabaseStorage.updatePaymentSettings (file:///opt/render/project/src/dist/index.js:787:7)
+info
+dzm6j
+    at async file:///opt/render/project/src/dist/index.js:1130:31
+error
+dzm6j
+Update payment settings error: Error: Failed to update payment settings: Failed to update setting: relation "app_settings" does not exist
+info
+dzm6j
+    at DatabaseStorage.updatePaymentSettings (file:///opt/render/project/src/dist/index.js:821:13)
+info
+dzm6j
+    at process.processTicksAndRejections (node:internal/process/task_queues:105:5)
+info
+dzm6j
+    at async file:///opt/render/project/src/dist/index.js:1130:31
+info
+dzm6j
+New database connection established successfully
+error
+dzm6j
+1:27:02 AM [express] POST /api/admin/payment-settings 500 in 77ms :: {"error":"Failed to update paym…
+info
+dzm6j
+1:27:05 AM [express] GET /api/health 200 in 1ms :: {"status":"healthy","timestamp":"2025-05-07T01:27…
+info
+dzm6j
+1:27:10 AM [express] GET /api/health 200 in 2ms :: {"status":"healthy","timestamp":"2025-05-07T01:27…
+info
+dzm6j
+1:27:15 AM [express] GET /api/health 200 in 1ms :: {"status":"healthy","timestamp":"2025-05-07T01:27…
+info
+dzm6j
+New database connection established successfully
+info
+dzm6j
+1:27:15 AM [express] GET /api/health 200 in 12ms :: {"status":"healthy","timestamp":"2025-05-07T01:2…
+info
+dzm6j
+1:27:20 AM [express] GET /api/health 200 in 1ms :: {"status":"healthy","timestamp":"2025-05-07T01:27…
+info
+dzm6j
+1:27:25 AM [express] GET /api/health 200 in 2ms :: {"status":"healthy","timestamp":"2025-05-07T01:27…
