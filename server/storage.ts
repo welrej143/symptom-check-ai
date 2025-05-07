@@ -14,7 +14,7 @@ import {
   type PaymentSettings
 } from "@shared/schema";
 import { db, pool } from "./db";
-import { eq, gte, asc, and } from "drizzle-orm";
+import { eq, gte, asc, and, inArray } from "drizzle-orm";
 import session from "express-session";
 import connectPg from "connect-pg-simple";
 import { sql } from "drizzle-orm";
@@ -449,17 +449,19 @@ export class DatabaseStorage implements IStorage {
     try {
       if (keys.length === 0) return {};
       
-      // Using placeholders to avoid SQL injection
+      // Execute a safer SQL query
       const placeholders = keys.map((_, i) => `$${i + 1}`).join(',');
-      
-      const settings = await db.execute(
-        sql`SELECT * FROM ${appSettings} WHERE ${appSettings.key} IN (${sql.join(keys.map(k => sql.placeholder(k)), sql`, `)})`
+      const result = await db.execute(
+        sql`SELECT * FROM app_settings WHERE key IN (${sql.raw(placeholders)})`,
+        ...keys
       );
       
       const settingsMap: Record<string, string> = {};
-      settings.rows.forEach((setting: any) => {
-        settingsMap[setting.key] = setting.value;
-      });
+      if (result.rows) {
+        result.rows.forEach((row: any) => {
+          settingsMap[row.key] = row.value;
+        });
+      }
       
       return settingsMap;
     } catch (error) {
