@@ -17,7 +17,14 @@ import { Request, Response } from "express";
 
 /* PayPal Controllers Setup */
 
-const { PAYPAL_CLIENT_ID, PAYPAL_CLIENT_SECRET } = process.env;
+const { PAYPAL_CLIENT_ID, PAYPAL_CLIENT_SECRET, PAYPAL_MODE } = process.env;
+
+// Log the PayPal configuration (without showing the actual secret)
+console.log(`PayPal configuration: 
+  - Client ID: ${PAYPAL_CLIENT_ID ? "✓ Set" : "❌ Missing"}
+  - Client Secret: ${PAYPAL_CLIENT_SECRET ? "✓ Set" : "❌ Missing"}
+  - Mode: ${PAYPAL_MODE || "sandbox (default)"}`
+);
 
 if (!PAYPAL_CLIENT_ID) {
   throw new Error("Missing PAYPAL_CLIENT_ID");
