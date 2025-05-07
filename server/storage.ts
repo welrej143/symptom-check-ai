@@ -7,7 +7,11 @@ import {
   type InsertSymptomRecord,
   dailyTracking,
   type DailyTracking,
-  type InsertDailyTracking
+  type InsertDailyTracking,
+  appSettings,
+  type AppSettings,
+  type InsertAppSettings,
+  type PaymentSettings
 } from "@shared/schema";
 import { db, pool } from "./db";
 import { eq, gte, asc, and } from "drizzle-orm";
@@ -37,6 +41,14 @@ export interface IStorage {
   incrementAnalysisCount(userId: number): Promise<number>;
   getAnalysisCount(userId: number): Promise<number>;
   resetAnalysisCount(userId: number): Promise<void>;
+  
+  // App settings methods
+  getSetting(key: string): Promise<string | null>;
+  getSettings(keys: string[]): Promise<Record<string, string>>;
+  setSetting(key: string, value: string): Promise<AppSettings>;
+  getPaymentSettings(): Promise<PaymentSettings>;
+  updatePaymentSettings(settings: PaymentSettings): Promise<PaymentSettings>;
+  adminLogin(username: string, password: string): Promise<boolean>;
   
   // Session management
   sessionStore: session.Store;
@@ -417,6 +429,157 @@ export class DatabaseStorage implements IStorage {
         analysisCountResetDate: nextResetDate,
       })
       .where(eq(users.id, userId));
+  }
+
+  // App settings methods
+  async getSetting(key: string): Promise<string | null> {
+    try {
+      const [setting] = await db
+        .select()
+        .from(appSettings)
+        .where(eq(appSettings.key, key));
+      return setting ? setting.value : null;
+    } catch (error) {
+      console.error(`Error getting setting ${key}:`, error);
+      return null;
+    }
+  }
+
+  async getSettings(keys: string[]): Promise<Record<string, string>> {
+    try {
+      const settings = await db
+        .select()
+        .from(appSettings)
+        .where(sql`${appSettings.key} IN (${keys.join(',')})`);
+      
+      const settingsMap: Record<string, string> = {};
+      settings.forEach(setting => {
+        settingsMap[setting.key] = setting.value;
+      });
+      
+      return settingsMap;
+    } catch (error) {
+      console.error('Error getting settings:', error);
+      return {};
+    }
+  }
+
+  async setSetting(key: string, value: string): Promise<AppSettings> {
+    try {
+      // Try to update first (in case it exists)
+      const [updated] = await db
+        .update(appSettings)
+        .set({
+          value,
+          updatedAt: new Date()
+        })
+        .where(eq(appSettings.key, key))
+        .returning();
+      
+      if (updated) {
+        return updated;
+      }
+      
+      // If not updated, insert a new setting
+      const [setting] = await db
+        .insert(appSettings)
+        .values({
+          key,
+          value,
+          updatedAt: new Date()
+        })
+        .returning();
+      
+      return setting;
+    } catch (error: any) {
+      console.error(`Error setting ${key}:`, error);
+      throw new Error(`Failed to update setting: ${error.message}`);
+    }
+  }
+
+  async getPaymentSettings(): Promise<PaymentSettings> {
+    try {
+      // Default payment settings if nothing is in the database
+      const defaultSettings: PaymentSettings = {
+        stripeEnabled: false,
+        paypalEnabled: true,
+        paypalMode: 'sandbox',
+        paypalClientId: process.env.PAYPAL_CLIENT_ID || '',
+        paypalClientSecret: process.env.PAYPAL_CLIENT_SECRET || '',
+      };
+      
+      // Get all setting keys for payment settings
+      const settingKeys = ['stripe_enabled', 'paypal_enabled', 'paypal_mode', 'paypal_client_id', 'paypal_client_secret'];
+      const settings = await this.getSettings(settingKeys);
+      
+      // If no settings exist, initialize them with defaults and return defaults
+      if (Object.keys(settings).length === 0) {
+        await this.updatePaymentSettings(defaultSettings);
+        return defaultSettings;
+      }
+      
+      // Otherwise, return the stored settings
+      return {
+        stripeEnabled: settings.stripe_enabled === 'true',
+        paypalEnabled: settings.paypal_enabled === 'true',
+        paypalMode: (settings.paypal_mode as 'sandbox' | 'live') || 'sandbox',
+        paypalClientId: settings.paypal_client_id || process.env.PAYPAL_CLIENT_ID || '',
+        paypalClientSecret: settings.paypal_client_secret || process.env.PAYPAL_CLIENT_SECRET || '',
+      };
+    } catch (error) {
+      console.error('Error getting payment settings:', error);
+      // Return defaults on error
+      return {
+        stripeEnabled: false,
+        paypalEnabled: true,
+        paypalMode: 'sandbox',
+        paypalClientId: process.env.PAYPAL_CLIENT_ID || '',
+        paypalClientSecret: process.env.PAYPAL_CLIENT_SECRET || '',
+      };
+    }
+  }
+
+  async updatePaymentSettings(settings: PaymentSettings): Promise<PaymentSettings> {
+    try {
+      // Update all the individual settings
+      await this.setSetting('stripe_enabled', String(settings.stripeEnabled));
+      await this.setSetting('paypal_enabled', String(settings.paypalEnabled));
+      await this.setSetting('paypal_mode', settings.paypalMode);
+      
+      // Only update credentials if they're provided (to avoid overwriting existing ones)
+      if (settings.paypalClientId) {
+        await this.setSetting('paypal_client_id', settings.paypalClientId);
+      }
+      
+      if (settings.paypalClientSecret) {
+        await this.setSetting('paypal_client_secret', settings.paypalClientSecret);
+      }
+      
+      // Update environment variables for immediate effect
+      process.env.PAYPAL_MODE = settings.paypalMode;
+      
+      if (settings.paypalClientId) {
+        process.env.PAYPAL_CLIENT_ID = settings.paypalClientId;
+      }
+      
+      if (settings.paypalClientSecret) {
+        process.env.PAYPAL_CLIENT_SECRET = settings.paypalClientSecret;
+      }
+      
+      return settings;
+    } catch (error: any) {
+      console.error('Error updating payment settings:', error);
+      throw new Error(`Failed to update payment settings: ${error.message}`);
+    }
+  }
+
+  adminLogin(username: string, password: string): Promise<boolean> {
+    // Hardcoded admin credentials for simplicity
+    // In a real-world application, these would come from a database with proper hashing
+    const ADMIN_USERNAME = 'welrej143';
+    const ADMIN_PASSWORD = 'may161998_ECE';
+    
+    return Promise.resolve(username === ADMIN_USERNAME && password === ADMIN_PASSWORD);
   }
 }
 

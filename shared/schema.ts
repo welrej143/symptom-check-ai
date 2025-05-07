@@ -139,3 +139,38 @@ export const dailyTrackingFormSchema = z.object({
 });
 
 export type DailyTrackingForm = z.infer<typeof dailyTrackingFormSchema>;
+
+// App Settings table for admin configuration
+export const appSettings = pgTable("app_settings", {
+  id: serial("id").primaryKey(),
+  key: text("key").notNull().unique(),
+  value: text("value").notNull(),
+  updatedAt: timestamp("updated_at").notNull().defaultNow(),
+});
+
+export const insertAppSettingsSchema = createInsertSchema(appSettings).pick({
+  key: true,
+  value: true,
+});
+
+export type InsertAppSettings = z.infer<typeof insertAppSettingsSchema>;
+export type AppSettings = typeof appSettings.$inferSelect;
+
+// Admin Authentication
+export const adminLoginSchema = z.object({
+  username: z.string().min(1, "Username is required"),
+  password: z.string().min(1, "Password is required"),
+});
+
+export type AdminLoginData = z.infer<typeof adminLoginSchema>;
+
+// Payment method settings schema
+export const paymentSettingsSchema = z.object({
+  stripeEnabled: z.boolean(),
+  paypalEnabled: z.boolean(),
+  paypalMode: z.enum(["sandbox", "live"]),
+  paypalClientId: z.string().optional(),
+  paypalClientSecret: z.string().optional(),
+});
+
+export type PaymentSettings = z.infer<typeof paymentSettingsSchema>;
