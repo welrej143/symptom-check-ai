@@ -11,6 +11,7 @@ import { users } from "@shared/schema";
 import { eq, sql } from "drizzle-orm";
 import { SessionData } from "express-session";
 import { createPaypalOrder, capturePaypalOrder, loadPaypalDefault } from "./paypal";
+import { getPayPalMode, updatePayPalMode } from './paypal-loader';
 
 // Initialize Stripe (temporarily disabled as requested, with a warning message)
 // Using ! assertion to avoid TypeScript errors, but we'll check before using it in each route
@@ -188,6 +189,35 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
   
   // PayPal setup and order routes
+  
+  // Update PayPal mode from database on every PayPal API request
+  const updatePayPalModeMiddleware = async (req: Request, res: Response, next: NextFunction) => {
+    try {
+      // Get the latest mode from database settings
+      const paymentSettings = await storage.getPaymentSettings();
+      if (paymentSettings && paymentSettings.paypalMode) {
+        // Update environment variable
+        process.env.PAYPAL_MODE = paymentSettings.paypalMode;
+        
+        // Log the current mode being used
+        console.log(`Using PayPal mode from settings: ${paymentSettings.paypalMode}`);
+        
+        // Set appropriate client credentials based on mode
+        if (paymentSettings.paypalMode === 'sandbox' && paymentSettings.paypalSandboxClientId) {
+          process.env.PAYPAL_CLIENT_ID = paymentSettings.paypalSandboxClientId;
+          process.env.PAYPAL_CLIENT_SECRET = paymentSettings.paypalSandboxClientSecret;
+        } else if (paymentSettings.paypalMode === 'live' && paymentSettings.paypalLiveClientId) {
+          process.env.PAYPAL_CLIENT_ID = paymentSettings.paypalLiveClientId;
+          process.env.PAYPAL_CLIENT_SECRET = paymentSettings.paypalLiveClientSecret;
+        }
+      }
+      next();
+    } catch (error) {
+      // Don't fail the request if we can't update the mode
+      console.error("Error updating PayPal mode in middleware:", error);
+      next();
+    }
+  };
   // Analyze symptoms route
   app.post("/api/analyze-symptoms", async (req: Request, res: Response) => {
     try {
