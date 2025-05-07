@@ -1,15 +1,14 @@
-import { Pool, neonConfig } from '@neondatabase/serverless';
+import pg from 'pg';
 import { drizzle } from 'drizzle-orm/neon-serverless';
 import { sql } from 'drizzle-orm';
-import ws from "ws";
 import * as schema from "@shared/schema";
 import { users, symptomRecords, dailyTracking } from "@shared/schema";
 
-// Enhanced Neon configuration
-neonConfig.webSocketConstructor = ws;
-neonConfig.useSecureWebSocket = true; // Required for production sites
-neonConfig.pipelineConnect = false; // Disable to avoid WebSocket ping issues
-// Use secure TLS connection for PostgreSQL
+// Define Pool from pg
+const { Pool } = pg;
+
+// Use standard PostgreSQL connection for Render's database
+// We're using pg module which is more compatible with Render's PostgreSQL
 
 // Set a longer connection timeout (in milliseconds)
 const CONNECTION_TIMEOUT = 15000; // 15 seconds - longer for first connection
@@ -43,7 +42,7 @@ if (process.env.NODE_ENV !== 'production') {
 }
 
 // Create a pool with more comprehensive error handling and connection retry logic
-let pool: Pool;
+let pool: any; // Will be a pg.Pool instance
 let db: ReturnType<typeof drizzle>;
 
 const MAX_RETRIES = 5;
