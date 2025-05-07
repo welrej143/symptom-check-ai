@@ -2640,17 +2640,19 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
   // PayPal integration routes
   // PayPal routes for creating orders and processing payments
-  app.get("/api/paypal/setup", async (req, res) => {
-    await loadPaypalDefault(req, res);
-  });
+  // PayPal setup route is now defined at /paypal/setup instead
 
-  app.post("/api/paypal/order", async (req, res) => {
+  app.post("/paypal/order", async (req, res) => {
     // Request body should contain: { intent, amount, currency }
     await createPaypalOrder(req, res);
   });
 
-  app.post("/api/paypal/order/:orderID/capture", async (req, res) => {
+  app.post("/paypal/order/:orderID/capture", async (req, res) => {
     await capturePaypalOrder(req, res);
+  });
+  
+  app.get("/paypal/setup", async (req, res) => {
+    await loadPaypalDefault(req, res);
   });
 
   // Process PayPal payment success
