@@ -148,6 +148,22 @@ function PaymentVerificationWrapper({
         </div>
       )} />
       <Route path="/auth" component={AuthPage} />
+      
+      {/* Admin routes */}
+      <Route path="/admin/login">
+        {() => {
+          const AdminLogin = require("@/pages/admin-login").default;
+          return <AdminLogin />;
+        }}
+      </Route>
+      <Route path="/admin">
+        {() => {
+          const AdminDashboard = require("@/pages/admin-dashboard").default;
+          return <AdminDashboard />;
+        }}
+      </Route>
+      
+      {/* 404 route */}
       <Route component={NotFound} />
     </Switch>
   );
