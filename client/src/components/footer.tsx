@@ -1,6 +1,7 @@
-import { Zap, Mail, Phone, AlertTriangle, ShieldCheck, Users } from "lucide-react";
+import { Mail, Phone, AlertTriangle, ShieldCheck, Users } from "lucide-react";
 import { Link } from "wouter";
 import { useState } from "react";
+import appIcon from "../assets/app-icon.png";
 
 // Modal component for Terms, Privacy Policy, etc.
 function LegalModal({ 
@@ -79,7 +80,7 @@ export default function Footer() {
         <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
           <div>
             <div className="flex items-center">
-              <Zap className="h-8 w-8 text-primary-600" />
+              <img src={appIcon} alt="SymptomCheck AI" className="h-8 w-auto" />
               <h2 className="ml-2 text-xl font-bold text-gray-900">SymptomCheck AI</h2>
             </div>
             <p className="mt-2 text-sm text-gray-600">Personalized health insights powered by artificial intelligence.</p>
