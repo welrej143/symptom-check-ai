@@ -621,7 +621,7 @@ export default function PremiumCard() {
                   <div>
                     {/* Direct PayPal Subscription Link */}
                     <a 
-                      href="https://www.sandbox.paypal.com/webapps/billing/plans/subscribe?plan_id=P-8BT43153WY803422FNAM5UPI"
+                      href={`https://${paymentMethods.mode === 'sandbox' ? 'www.sandbox.paypal.com' : 'www.paypal.com'}/webapps/billing/plans/subscribe?plan_id=P-8BT43153WY803422FNAM5UPI`}
                       target="_blank" 
                       rel="noopener noreferrer"
                       className="w-full bg-[#0070ba] hover:bg-[#003087] text-white py-3 px-4 rounded-md font-semibold flex items-center justify-center gap-2 transition-colors"
@@ -724,7 +724,7 @@ export default function PremiumCard() {
               {/* PayPal Button - Direct subscription link */}
               {paymentMethods?.paypal ? (
                 <a 
-                  href="https://www.sandbox.paypal.com/webapps/billing/plans/subscribe?plan_id=P-8BT43153WY803422FNAM5UPI"
+                  href={`https://${paymentMethods.mode === 'sandbox' ? 'www.sandbox.paypal.com' : 'www.paypal.com'}/webapps/billing/plans/subscribe?plan_id=P-8BT43153WY803422FNAM5UPI`}
                   target="_blank" 
                   rel="noopener noreferrer"
                   className="bg-blue-600 text-white py-2.5 px-4 rounded-md font-medium hover:bg-blue-700 transition-colors flex items-center justify-center w-full"
