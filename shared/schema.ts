@@ -8,15 +8,8 @@ export const users = pgTable("users", {
   email: text("email").notNull(),
   password: text("password").notNull(),
   createdAt: timestamp("created_at").notNull().defaultNow(),
-  // Payment method tracking
-  paymentProvider: text("payment_provider").default("stripe"), // "stripe" or "paypal"
-  // Stripe subscription fields
   stripeCustomerId: text("stripe_customer_id"),
   stripeSubscriptionId: text("stripe_subscription_id"),
-  // PayPal subscription fields
-  paypalSubscriptionId: text("paypal_subscription_id"),
-  paypalOrderId: text("paypal_order_id"),
-  // General subscription fields (used for both Stripe and PayPal)
   isPremium: boolean("is_premium").default(false),
   subscriptionStatus: text("subscription_status").default("inactive"),
   subscriptionEndDate: timestamp("subscription_end_date"),
@@ -187,31 +180,3 @@ export const paymentSettingsSchema = z.object({
 });
 
 export type PaymentSettings = z.infer<typeof paymentSettingsSchema>;
-
-// Bug reports table
-export const bugReports = pgTable("bug_reports", {
-  id: serial("id").primaryKey(),
-  userId: integer("user_id").references(() => users.id),
-  description: text("description").notNull(),
-  screenshotPath: text("screenshot_path"),
-  status: text("status").default("pending").notNull(), // pending, in-progress, resolved
-  createdAt: timestamp("created_at").notNull().defaultNow(),
-  updatedAt: timestamp("updated_at").notNull().defaultNow(),
-});
-
-export const insertBugReportSchema = createInsertSchema(bugReports).pick({
-  userId: true,
-  description: true,
-  screenshotPath: true,
-});
-
-export type InsertBugReport = z.infer<typeof insertBugReportSchema>;
-export type BugReport = typeof bugReports.$inferSelect;
-
-// Bug report submission schema for form validation
-export const bugReportSubmissionSchema = z.object({
-  description: z.string().min(10, "Description must be at least 10 characters long"),
-  // Screenshot is optional
-});
-
-export type BugReportSubmission = z.infer<typeof bugReportSubmissionSchema>;

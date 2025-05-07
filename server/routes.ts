@@ -5,20 +5,13 @@ import { setupAuth } from "./auth";
 import OpenAI from "openai";
 import Stripe from "stripe";
 import z from "zod";
-import { 
-  symptomInputSchema, 
-  analysisResponseSchema, 
-  symptomRecords, 
-  dailyTracking,
-  bugReportSubmissionSchema
-} from "@shared/schema";
+import { symptomInputSchema, analysisResponseSchema, symptomRecords, dailyTracking } from "@shared/schema";
 import { db, isDatabaseHealthy } from "./db";
 import { users } from "@shared/schema";
 import { eq, sql } from "drizzle-orm";
 import { SessionData } from "express-session";
 import { createPaypalOrder, capturePaypalOrder, loadPaypalDefault } from "./paypal";
 import { getPayPalMode, updatePayPalMode } from './paypal-loader';
-
 
 // Initialize Stripe (temporarily disabled as requested, with a warning message)
 // Using ! assertion to avoid TypeScript errors, but we'll check before using it in each route
@@ -154,41 +147,6 @@ export async function registerRoutes(app: Express): Promise<Server> {
       res.status(200).json({ success: true });
     } else {
       res.status(500).json({ error: "Session management error" });
-    }
-  });
-  
-  // Get bug reports for admin dashboard
-  app.get("/api/admin/bug-reports", requireAdmin, async (_req: Request, res: Response) => {
-    try {
-      const reports = await storage.getBugReports();
-      res.json(reports);
-    } catch (error) {
-      console.error("Error fetching bug reports:", error);
-      res.status(500).json({ 
-        error: "Failed to fetch bug reports",
-        details: error instanceof Error ? error.message : "Unknown error"
-      });
-    }
-  });
-  
-  // Update bug report status
-  app.post("/api/admin/bug-reports/:id/status", requireAdmin, async (req: Request, res: Response) => {
-    try {
-      const { id } = req.params;
-      const { status } = req.body;
-      
-      if (!id || !status) {
-        return res.status(400).json({ error: "Missing required parameters" });
-      }
-      
-      const report = await storage.updateBugReportStatus(parseInt(id), status);
-      res.json(report);
-    } catch (error) {
-      console.error("Error updating bug report status:", error);
-      res.status(500).json({ 
-        error: "Failed to update bug report status",
-        details: error instanceof Error ? error.message : "Unknown error"
-      });
     }
   });
   
@@ -539,42 +497,6 @@ export async function registerRoutes(app: Express): Promise<Server> {
       res.status(500).json({ message: "Error fetching tracking data" });
     }
   });
-  
-  // Bug report submission endpoint
-  app.post("/api/bug-report", async (req: Request, res: Response) => {
-    try {
-      // Get user ID if authenticated, allow anonymous reports too
-      const userId = req.isAuthenticated() ? req.user.id : null;
-      
-      // Validate bug report data
-      const validation = bugReportSubmissionSchema.safeParse(req.body);
-      
-      if (!validation.success) {
-        return res.status(400).json({ 
-          message: "Invalid input", 
-          errors: validation.error.format() 
-        });
-      }
-      
-      const { description } = validation.data;
-      
-      // Create the bug report
-      const report = await storage.createBugReport({
-        userId,
-        description,
-        screenshotPath: null // We'll add screenshot support later
-      });
-      
-      res.status(201).json({ 
-        success: true, 
-        message: "Bug report submitted successfully",
-        reportId: report.id
-      });
-    } catch (error) {
-      console.error("Bug report submission error:", error);
-      res.status(500).json({ error: "Failed to submit bug report" });
-    }
-  });
 
   // Get user's analysis usage count
   app.get("/api/usage-count", async (req: Request, res: Response) => {
@@ -619,160 +541,97 @@ export async function registerRoutes(app: Express): Promise<Server> {
       }
 
       const user = req.user;
-      const { paymentMethod = 'stripe' } = req.body; // Default to Stripe if not specified
       
       // Check if user already has an active subscription
       if (user.isPremium && user.subscriptionStatus === 'active') {
         return res.status(400).json({ message: "User already has an active subscription" });
       }
 
-      // Get payment settings to determine which payment methods are enabled
-      const paymentSettings = await storage.getPaymentSettings();
+      // Create or retrieve a Stripe customer
+      let customerId = user.stripeCustomerId;
       
-      // Handle Stripe payment
-      if (paymentMethod === 'stripe') {
-        // Check if Stripe is enabled
-        if (!paymentSettings.stripeEnabled) {
-          return res.status(400).json({ 
-            message: "Stripe payments are currently disabled",
-            availablePaymentMethods: { 
-              stripe: false, 
-              paypal: paymentSettings.paypalEnabled 
-            }
-          });
+      if (!customerId) {
+        if (!user.email) {
+          return res.status(400).json({ message: "User email is required for subscription" });
         }
         
-        // Create or retrieve a Stripe customer
-        let customerId = user.stripeCustomerId;
+        const customer = await stripe.customers.create({
+          email: user.email,
+          name: user.username,
+          metadata: {
+            userId: user.id.toString(),
+          },
+        });
         
-        if (!customerId) {
-          if (!user.email) {
-            return res.status(400).json({ message: "User email is required for subscription" });
-          }
-          
-          const customer = await stripe.customers.create({
-            email: user.email,
-            name: user.username,
-            metadata: {
-              userId: user.id.toString(),
-            },
-          });
-          
-          customerId = customer.id;
-          
-          // Update user with Stripe customer ID
-          await storage.updateUserStripeInfo(user.id, {
-            stripeCustomerId: customerId,
-            stripeSubscriptionId: "",
-          });
-        }
+        customerId = customer.id;
+        
+        // Update user with Stripe customer ID
+        await storage.updateUserStripeInfo(user.id, {
+          stripeCustomerId: customerId,
+          stripeSubscriptionId: "",
+        });
+      }
 
-        // Ensure the STRIPE_PRICE_ID is available
-        const stripePriceId = process.env.STRIPE_PRICE_ID;
-        if (!stripePriceId) {
-          console.error('Missing STRIPE_PRICE_ID environment variable');
-          return res.status(500).json({ 
-            message: "Missing Stripe price ID. Please set the STRIPE_PRICE_ID environment variable.",
-            errorType: "configuration"
-          });
-        }
+      // Ensure the STRIPE_PRICE_ID is available
+      const stripePriceId = process.env.STRIPE_PRICE_ID;
+      if (!stripePriceId) {
+        console.error('Missing STRIPE_PRICE_ID environment variable');
+        return res.status(500).json({ 
+          message: "Missing Stripe price ID. Please set the STRIPE_PRICE_ID environment variable.",
+          errorType: "configuration"
+        });
+      }
+      
+      // Validate the price ID format (should start with "price_")
+      if (!stripePriceId.startsWith('price_')) {
+        console.error('Invalid STRIPE_PRICE_ID format. It should start with "price_", got:', stripePriceId);
+        return res.status(500).json({ 
+          message: "Invalid Stripe price ID format. It should start with 'price_'.",
+          errorType: "configuration",
+          priceIdPrefix: stripePriceId.substring(0, 5) + "..."
+        });
+      }
+      
+      try {
+        // Create a Stripe Checkout session - this is a simpler approach
+        console.log("Creating Stripe Checkout session for premium subscription");
         
-        // Validate the price ID format (should start with "price_")
-        if (!stripePriceId.startsWith('price_')) {
-          console.error('Invalid STRIPE_PRICE_ID format. It should start with "price_", got:', stripePriceId);
-          return res.status(500).json({ 
-            message: "Invalid Stripe price ID format. It should start with 'price_'.",
-            errorType: "configuration",
-            priceIdPrefix: stripePriceId.substring(0, 5) + "..."
-          });
-        }
-        
-        try {
-          // Create a Stripe Checkout session - this is a simpler approach
-          console.log("Creating Stripe Checkout session for premium subscription");
-          
-          const baseUrl = `${req.protocol}://${req.get('host')}`;
-          const session = await stripe.checkout.sessions.create({
-            customer: customerId,
-            payment_method_types: ['card'],
-            line_items: [
-              {
-                price: stripePriceId,
-                quantity: 1,
-              },
-            ],
-            mode: 'subscription',
-            success_url: `${baseUrl}/?success=true&session_id={CHECKOUT_SESSION_ID}`,
-            cancel_url: `${baseUrl}/premium?canceled=true`,
+        const baseUrl = `${req.protocol}://${req.get('host')}`;
+        const session = await stripe.checkout.sessions.create({
+          customer: customerId,
+          payment_method_types: ['card'],
+          line_items: [
+            {
+              price: stripePriceId,
+              quantity: 1,
+            },
+          ],
+          mode: 'subscription',
+          success_url: `${baseUrl}/?success=true&session_id={CHECKOUT_SESSION_ID}`,
+          cancel_url: `${baseUrl}/premium?canceled=true`,
+          metadata: {
+            userId: user.id.toString()
+          },
+          subscription_data: {
             metadata: {
               userId: user.id.toString()
-            },
-            subscription_data: {
-              metadata: {
-                userId: user.id.toString()
-              }
             }
-          });
-          
-          console.log("Checkout session created:", session.id);
-          
-          // Return the checkout session URL
-          return res.json({
-            provider: 'stripe',
-            sessionId: session.id,
-            url: session.url
-          });
-        } catch (error) {
-          const errorMessage = error instanceof Error ? error.message : String(error);
-          console.error("Failed to create Stripe Checkout session:", error);
-          return res.status(500).json({ 
-            message: "Failed to create subscription checkout session",
-            error: errorMessage
-          });
-        }
-      }
-      // Handle PayPal payment
-      else if (paymentMethod === 'paypal') {
-        // Check if PayPal is enabled
-        if (!paymentSettings.paypalEnabled) {
-          return res.status(400).json({ 
-            message: "PayPal payments are currently disabled",
-            availablePaymentMethods: { 
-              stripe: paymentSettings.stripeEnabled, 
-              paypal: false 
-            }
-          });
-        }
+          }
+        });
         
-        try {
-          // Create a PayPal subscription
-          console.log("Setting up PayPal subscription for user:", user.id);
-          
-          // Return a response with information that client needs to set up PayPal
-          // This will be used on the client to render the PayPal button
-          return res.json({
-            provider: 'paypal',
-            // Return data needed for client-side PayPal integration
-            paypalMode: paymentSettings.paypalMode,
-            userId: user.id,
-            // Common subscription details
-            amount: '9.99', // Fixed subscription amount
-            currency: 'USD',
-            intent: 'subscription',
-            message: "Please complete subscription setup using PayPal"
-          });
-        } catch (error) {
-          const errorMessage = error instanceof Error ? error.message : String(error);
-          console.error("Failed to set up PayPal subscription:", error);
-          return res.status(500).json({ 
-            message: "Failed to create PayPal subscription",
-            error: errorMessage
-          });
-        }
-      } else {
-        return res.status(400).json({ 
-          message: "Invalid payment method",
-          supportedMethods: ['stripe', 'paypal']
+        console.log("Checkout session created:", session.id);
+        
+        // Return the checkout session URL
+        res.json({
+          sessionId: session.id,
+          url: session.url
+        });
+      } catch (error) {
+        const errorMessage = error instanceof Error ? error.message : String(error);
+        console.error("Failed to create Stripe Checkout session:", error);
+        return res.status(500).json({ 
+          message: "Failed to create subscription checkout session",
+          error: errorMessage
         });
       }
     } catch (error) {
@@ -2870,60 +2729,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   // PayPal integration routes
-  
-  // Handle PayPal subscription completions
-  app.post("/api/paypal-subscription-success", async (req: Request, res: Response) => {
-    try {
-      if (!req.isAuthenticated()) {
-        return res.status(401).json({ message: "Authentication required" });
-      }
-      
-      const { subscriptionId, orderId } = req.body;
-      
-      if (!subscriptionId) {
-        return res.status(400).json({ message: "PayPal subscription ID is required" });
-      }
-      
-      const user = req.user;
-      console.log(`Processing PayPal subscription success for user ${user.id}, subscription ${subscriptionId}`);
-      
-      // Update user with PayPal subscription details
-      await storage.updateUserPayPalInfo(user.id, {
-        paypalSubscriptionId: subscriptionId,
-        paypalOrderId: orderId || undefined
-      });
-      
-      // Set subscription status to active and end date to one month from now
-      const endDate = new Date();
-      endDate.setMonth(endDate.getMonth() + 1);
-      
-      await storage.updateSubscriptionStatus(
-        user.id,
-        'active',
-        endDate,
-        'Premium Monthly'
-      );
-      
-      // Return updated subscription details
-      res.json({
-        success: true,
-        message: "PayPal subscription processed successfully",
-        isPremium: true,
-        subscriptionStatus: 'active',
-        subscriptionEndDate: endDate,
-        paymentProvider: 'paypal',
-        paypalSubscriptionId: subscriptionId
-      });
-    } catch (error) {
-      console.error("Error processing PayPal subscription:", error);
-      res.status(500).json({ 
-        message: "Error processing PayPal subscription",
-        error: error instanceof Error ? error.message : "Unknown error"
-      });
-    }
-  });
-  
-  // PayPal setup route is now defined at /paypal/setuptead
+  // PayPal routes for creating orders and processing payments
+  // PayPal setup route is now defined at /paypal/setup instead
 
   app.post("/paypal/order", updatePayPalModeMiddleware, async (req, res) => {
     // Request body should contain: { intent, amount, currency }

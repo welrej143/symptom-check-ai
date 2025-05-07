@@ -11,10 +11,7 @@ import {
   appSettings,
   type AppSettings,
   type InsertAppSettings,
-  type PaymentSettings,
-  bugReports,
-  type BugReport,
-  type InsertBugReport
+  type PaymentSettings
 } from "@shared/schema";
 import { db, pool } from "./db";
 import { eq, gte, asc, and, inArray } from "drizzle-orm";
@@ -29,7 +26,6 @@ export interface IStorage {
   getUserByUsername(username: string): Promise<User | undefined>;
   createUser(user: InsertUser): Promise<User>;
   updateUserStripeInfo(userId: number, stripeInfo: { stripeCustomerId: string, stripeSubscriptionId: string }): Promise<User>;
-  updateUserPayPalInfo(userId: number, paypalInfo: { paypalSubscriptionId: string, paypalOrderId?: string }): Promise<User>;
   updateSubscriptionStatus(userId: number, status: string, endDate?: Date, planName?: string): Promise<User>;
   
   // Symptom record methods
@@ -53,11 +49,6 @@ export interface IStorage {
   getPaymentSettings(): Promise<PaymentSettings>;
   updatePaymentSettings(settings: PaymentSettings): Promise<PaymentSettings>;
   adminLogin(username: string, password: string): Promise<boolean>;
-  
-  // Bug report methods
-  createBugReport(report: InsertBugReport): Promise<BugReport>;
-  getBugReports(): Promise<BugReport[]>;
-  updateBugReportStatus(id: number, status: string): Promise<BugReport>;
   
   // Session management
   sessionStore: session.Store;
@@ -204,12 +195,9 @@ export class DatabaseStorage implements IStorage {
             email: insertUser.email,
             password: insertUser.password,
             createdAt: new Date(),
-            // Set default payment provider
-            paymentProvider: 'stripe',
-            // Initialize subscription fields
+            analysisCount: 0,
             isPremium: false,
-            subscriptionStatus: 'inactive',
-            analysisCount: 0
+            subscriptionStatus: 'inactive'
           })
           .returning();
           
@@ -229,22 +217,12 @@ export class DatabaseStorage implements IStorage {
       // This is a more reliable approach that gives us more control
       console.log("Using direct SQL to create user");
       const result = await db.execute(sql`
-        INSERT INTO users (
-          username, 
-          email, 
-          password, 
-          created_at, 
-          payment_provider,
-          analysis_count, 
-          is_premium, 
-          subscription_status
-        )
+        INSERT INTO users (username, email, password, created_at, analysis_count, is_premium, subscription_status)
         VALUES (
           ${insertUser.username}, 
           ${insertUser.email}, 
           ${insertUser.password}, 
           NOW(), 
-          'stripe',
           0, 
           false, 
           'inactive'
@@ -268,20 +246,12 @@ export class DatabaseStorage implements IStorage {
         email: String(row.email),
         password: String(row.password),
         createdAt: new Date(row.created_at as string),
-        // Payment provider tracking
-        paymentProvider: row.payment_provider ? String(row.payment_provider) : 'stripe',
-        // Stripe subscription fields
         stripeCustomerId: row.stripe_customer_id ? String(row.stripe_customer_id) : null,
         stripeSubscriptionId: row.stripe_subscription_id ? String(row.stripe_subscription_id) : null,
-        // PayPal subscription fields
-        paypalSubscriptionId: row.paypal_subscription_id ? String(row.paypal_subscription_id) : null,
-        paypalOrderId: row.paypal_order_id ? String(row.paypal_order_id) : null,
-        // General subscription fields
         isPremium: Boolean(row.is_premium),
         subscriptionStatus: String(row.subscription_status || 'inactive'),
         subscriptionEndDate: row.subscription_end_date ? new Date(row.subscription_end_date as string) : null,
         planName: String(row.plan_name || 'Premium Monthly'),
-        // Usage tracking
         analysisCount: typeof row.analysis_count === 'number' ? row.analysis_count : parseInt(row.analysis_count as string, 10) || 0,
         analysisCountResetDate: row.analysis_count_reset_date ? new Date(row.analysis_count_reset_date as string) : null,
       };
@@ -304,20 +274,6 @@ export class DatabaseStorage implements IStorage {
       .set({
         stripeCustomerId: stripeInfo.stripeCustomerId,
         stripeSubscriptionId: stripeInfo.stripeSubscriptionId,
-        paymentProvider: 'stripe', // Set payment provider to stripe
-      })
-      .where(eq(users.id, userId))
-      .returning();
-    return updatedUser;
-  }
-  
-  async updateUserPayPalInfo(userId: number, paypalInfo: { paypalSubscriptionId: string, paypalOrderId?: string }): Promise<User> {
-    const [updatedUser] = await db
-      .update(users)
-      .set({
-        paypalSubscriptionId: paypalInfo.paypalSubscriptionId,
-        paypalOrderId: paypalInfo.paypalOrderId,
-        paymentProvider: 'paypal', // Set payment provider to paypal
       })
       .where(eq(users.id, userId))
       .returning();
@@ -665,60 +621,6 @@ export class DatabaseStorage implements IStorage {
     const ADMIN_PASSWORD = 'may161998_ECE';
     
     return Promise.resolve(username === ADMIN_USERNAME && password === ADMIN_PASSWORD);
-  }
-  
-  // Bug report methods
-  async createBugReport(report: InsertBugReport): Promise<BugReport> {
-    try {
-      const [newReport] = await db
-        .insert(bugReports)
-        .values({
-          userId: report.userId,
-          description: report.description,
-          screenshotPath: report.screenshotPath,
-          status: 'pending',
-          createdAt: new Date(),
-          updatedAt: new Date()
-        })
-        .returning();
-      
-      return newReport;
-    } catch (error) {
-      console.error("Error creating bug report:", error);
-      throw new Error("Failed to create bug report");
-    }
-  }
-
-  async getBugReports(): Promise<BugReport[]> {
-    try {
-      const reports = await db
-        .select()
-        .from(bugReports)
-        .orderBy(bugReports.createdAt);
-      
-      return reports;
-    } catch (error) {
-      console.error("Error fetching bug reports:", error);
-      return [];
-    }
-  }
-
-  async updateBugReportStatus(id: number, status: string): Promise<BugReport> {
-    try {
-      const [updatedReport] = await db
-        .update(bugReports)
-        .set({
-          status,
-          updatedAt: new Date()
-        })
-        .where(eq(bugReports.id, id))
-        .returning();
-      
-      return updatedReport;
-    } catch (error) {
-      console.error(`Error updating bug report status (id: ${id}):`, error);
-      throw new Error("Failed to update bug report status");
-    }
   }
 }
 

@@ -11,7 +11,6 @@ import {
 } from "@/components/ui/dropdown-menu";
 import { Button } from "@/components/ui/button";
 import { Loader2 } from "lucide-react";
-import appIcon from "../assets/app-icon.png";
 
 export default function Header() {
   const [_, navigate] = useLocation();
@@ -34,7 +33,7 @@ export default function Header() {
           className="flex items-center cursor-pointer" 
           onClick={() => navigate("/")}
         >
-          <img src={appIcon} alt="SymptomCheck AI" className="h-10 w-auto" />
+          <Zap className="h-8 w-8 text-blue-500" />
           <h1 className="ml-2 text-xl font-bold text-gray-900">SymptomCheck AI</h1>
         </div>
         

@@ -9,9 +9,7 @@ import { Label } from "@/components/ui/label";
 import { Switch } from "@/components/ui/switch";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Separator } from "@/components/ui/separator";
-import { Badge } from "@/components/ui/badge";
-import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
-import { Loader2, UsersRound, FileText, BarChart, CreditCard, LogOut, Bug, Eye, EyeOff, CheckCircle2, AlertTriangle, Clock } from "lucide-react";
+import { Loader2, UsersRound, FileText, BarChart, CreditCard, LogOut, Eye, EyeOff } from "lucide-react";
 
 interface PaymentSettings {
   stripeEnabled: boolean;
@@ -30,15 +28,6 @@ interface Statistics {
   trackingCount: number;
 }
 
-interface BugReport {
-  id: number;
-  email: string;
-  description: string;
-  status: string;
-  createdAt: string;
-  updatedAt?: string;
-}
-
 interface DashboardData {
   statistics: Statistics;
   paymentSettings: PaymentSettings;
@@ -46,12 +35,9 @@ interface DashboardData {
 
 export default function AdminDashboard() {
   const [loading, setLoading] = useState(true);
-  const [loadingBugReports, setLoadingBugReports] = useState(false);
   const [savingSettings, setSavingSettings] = useState(false);
-  const [updatingBugStatus, setUpdatingBugStatus] = useState<number | null>(null);
   const [dashboardData, setDashboardData] = useState<DashboardData | null>(null);
   const [settings, setSettings] = useState<PaymentSettings | null>(null);
-  const [bugReports, setBugReports] = useState<BugReport[]>([]);
   const { toast } = useToast();
   const [, navigate] = useLocation();
 
@@ -87,71 +73,8 @@ export default function AdminDashboard() {
     }
   };
 
-  const fetchBugReports = async () => {
-    try {
-      setLoadingBugReports(true);
-      const response = await apiRequest("GET", "/api/admin/bug-reports");
-      
-      if (response.ok) {
-        const data = await response.json();
-        setBugReports(data);
-      } else {
-        // If unauthorized, redirect to login
-        if (response.status === 401) {
-          navigate("/admin/login");
-        }
-        
-        toast({
-          title: "Error",
-          description: "Failed to load bug reports",
-          variant: "destructive",
-        });
-      }
-    } catch (error) {
-      toast({
-        title: "Error",
-        description: "Failed to fetch bug reports",
-        variant: "destructive",
-      });
-    } finally {
-      setLoadingBugReports(false);
-    }
-  };
-  
-  const updateBugStatus = async (id: number, status: string) => {
-    try {
-      setUpdatingBugStatus(id);
-      const response = await apiRequest("POST", `/api/admin/bug-reports/${id}/status`, { status });
-      
-      if (response.ok) {
-        toast({
-          title: "Status updated",
-          description: `Bug report status updated to ${status}`,
-        });
-        
-        // Refresh bug reports
-        fetchBugReports();
-      } else {
-        toast({
-          title: "Error",
-          description: "Failed to update bug report status",
-          variant: "destructive",
-        });
-      }
-    } catch (error) {
-      toast({
-        title: "Error",
-        description: "Failed to update bug report status",
-        variant: "destructive",
-      });
-    } finally {
-      setUpdatingBugStatus(null);
-    }
-  };
-
   useEffect(() => {
     fetchDashboardData();
-    fetchBugReports();
   }, []);
 
   const handleLogout = async () => {
@@ -233,9 +156,8 @@ export default function AdminDashboard() {
       </div>
       
       <Tabs defaultValue="overview">
-        <TabsList className="grid w-full grid-cols-3">
+        <TabsList className="grid w-full grid-cols-2">
           <TabsTrigger value="overview">Overview</TabsTrigger>
-          <TabsTrigger value="bug-reports">Bug Reports</TabsTrigger>
           <TabsTrigger value="settings">Payment Settings</TabsTrigger>
         </TabsList>
         
@@ -313,130 +235,6 @@ export default function AdminDashboard() {
                   </span>
                 </div>
               </div>
-            </CardContent>
-          </Card>
-        </TabsContent>
-        
-        <TabsContent value="bug-reports" className="mt-4">
-          <Card>
-            <CardHeader>
-              <CardTitle>Bug Reports</CardTitle>
-              <CardDescription>View and manage user submitted bug reports</CardDescription>
-            </CardHeader>
-            <CardContent>
-              {loadingBugReports ? (
-                <div className="py-8 flex items-center justify-center">
-                  <Loader2 className="h-8 w-8 animate-spin text-primary" />
-                </div>
-              ) : bugReports.length === 0 ? (
-                <div className="py-8 text-center">
-                  <Bug className="mx-auto h-12 w-12 text-muted-foreground mb-4" />
-                  <h3 className="text-lg font-medium">No bug reports</h3>
-                  <p className="text-sm text-muted-foreground mt-2">
-                    There are no bug reports submitted by users yet.
-                  </p>
-                </div>
-              ) : (
-                <div className="overflow-x-auto">
-                  <Table>
-                    <TableHeader>
-                      <TableRow>
-                        <TableHead>ID</TableHead>
-                        <TableHead>Status</TableHead>
-                        <TableHead>Email</TableHead>
-                        <TableHead>Description</TableHead>
-                        <TableHead>Submitted</TableHead>
-                        <TableHead>Actions</TableHead>
-                      </TableRow>
-                    </TableHeader>
-                    <TableBody>
-                      {bugReports.map((report) => (
-                        <TableRow key={report.id}>
-                          <TableCell className="font-medium">{report.id}</TableCell>
-                          <TableCell>
-                            <Badge
-                              variant={
-                                report.status === "new" ? "destructive" :
-                                report.status === "in_progress" ? "outline" : 
-                                "secondary"
-                              }
-                              className={`whitespace-nowrap ${
-                                report.status === "new" ? "bg-red-100 text-red-800 hover:bg-red-100" : 
-                                report.status === "in_progress" ? "bg-yellow-100 text-yellow-800 hover:bg-yellow-100" :
-                                "bg-green-100 text-green-800 hover:bg-green-100"
-                              }`}
-                            >
-                              {report.status === "new" ? "New" : 
-                               report.status === "in_progress" ? "In Progress" : 
-                               "Resolved"}
-                            </Badge>
-                          </TableCell>
-                          <TableCell className="whitespace-nowrap">
-                            {report.email}
-                          </TableCell>
-                          <TableCell className="max-w-[300px] truncate">
-                            {report.description}
-                          </TableCell>
-                          <TableCell className="whitespace-nowrap">
-                            {new Date(report.createdAt).toLocaleDateString()}
-                          </TableCell>
-                          <TableCell>
-                            <div className="flex space-x-2">
-                              {report.status === "new" && (
-                                <Button 
-                                  variant="outline" 
-                                  size="sm"
-                                  disabled={updatingBugStatus === report.id}
-                                  onClick={() => updateBugStatus(report.id, "in_progress")}
-                                >
-                                  {updatingBugStatus === report.id ? (
-                                    <Loader2 className="h-4 w-4 animate-spin" />
-                                  ) : (
-                                    <Clock className="h-4 w-4 mr-1" />
-                                  )}
-                                  Mark In Progress
-                                </Button>
-                              )}
-                              
-                              {report.status === "in_progress" && (
-                                <Button 
-                                  variant="outline" 
-                                  size="sm"
-                                  disabled={updatingBugStatus === report.id}
-                                  onClick={() => updateBugStatus(report.id, "resolved")}
-                                >
-                                  {updatingBugStatus === report.id ? (
-                                    <Loader2 className="h-4 w-4 animate-spin" />
-                                  ) : (
-                                    <CheckCircle2 className="h-4 w-4 mr-1" />
-                                  )}
-                                  Mark Resolved
-                                </Button>
-                              )}
-                              
-                              {report.status === "resolved" && (
-                                <Button 
-                                  variant="outline" 
-                                  size="sm"
-                                  disabled={updatingBugStatus === report.id}
-                                  onClick={() => updateBugStatus(report.id, "new")}
-                                >
-                                  {updatingBugStatus === report.id ? (
-                                    <Loader2 className="h-4 w-4 animate-spin" />
-                                  ) : (
-                                    <AlertTriangle className="h-4 w-4 mr-1" />
-                                  )}
-                                  Re-open
-                                </Button>
-                              )}
-                            </div>
-                          </TableCell>
-                        </TableRow>
-                      ))}
-                    </TableBody>
-                  </Table>
-                </div>
-              )}
             </CardContent>
           </Card>
         </TabsContent>

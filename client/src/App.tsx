@@ -7,8 +7,6 @@ import Tracker from "@/pages/tracker";
 import AuthPage from "@/pages/auth-page";
 import AdminLogin from "@/pages/admin-login";
 import AdminDashboard from "@/pages/admin-dashboard";
-import PaymentSelection from "@/pages/payment-selection";
-import BugReportPage from "@/pages/bug-report";
 import Header from "@/components/header";
 import Footer from "@/components/footer";
 import { useState, useEffect } from "react";
@@ -247,9 +245,7 @@ function App() {
                       </div>
                     </div>
                   )} />
-                  <ProtectedRoute path="/payment" component={PaymentSelection} />
                   <Route path="/auth" component={AuthPage} />
-                  <Route path="/bug-report" component={BugReportPage} />
                   
                   {/* Admin routes */}
                   <Route path="/admin/login" component={AdminLogin} />

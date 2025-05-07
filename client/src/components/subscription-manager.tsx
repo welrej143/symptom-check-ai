@@ -268,26 +268,6 @@ export default function SubscriptionManager({ user, refreshSubscriptionStatus }:
               
               <div className="bg-gray-50 p-4 rounded-md">
                 <div className="flex items-center mb-1">
-                  <CreditCard className="h-4 w-4 mr-1.5 text-gray-500 flex-shrink-0" />
-                  <div className="text-sm text-gray-500">Payment Method</div>
-                </div>
-                <div className="font-medium flex items-center">
-                  {user.paymentProvider === "paypal" ? (
-                    <>
-                      <img src="/paypal_icon.png" alt="PayPal" className="h-5 w-5 mr-1.5" />
-                      <span>PayPal</span>
-                    </>
-                  ) : (
-                    <>
-                      <img src="/stripe_logo.png" alt="Credit Card" className="h-5 w-5 mr-1.5" />
-                      <span>Credit Card</span>
-                    </>
-                  )}
-                </div>
-              </div>
-              
-              <div className="bg-gray-50 p-4 rounded-md">
-                <div className="flex items-center mb-1">
                   <CalendarClock className="h-4 w-4 mr-1.5 text-gray-500 flex-shrink-0" />
                   <div className="text-sm text-gray-500">Start Date</div>
                 </div>
