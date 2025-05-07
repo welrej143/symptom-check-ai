@@ -17,8 +17,6 @@ import { Request, Response } from "express";
 
 /* PayPal Controllers Setup */
 
-const { PAYPAL_CLIENT_ID, PAYPAL_CLIENT_SECRET } = process.env;
-
 // First check if there's an explicit PAYPAL_MODE in environment variables
 let PAYPAL_MODE = process.env.PAYPAL_MODE;
 
@@ -42,6 +40,24 @@ if (!PAYPAL_MODE) {
       console.log(`Updated PayPal mode from database to: ${PAYPAL_MODE}`);
     }
   });
+}
+
+// Get the appropriate PayPal credentials based on mode
+let PAYPAL_CLIENT_ID: string | undefined;
+let PAYPAL_CLIENT_SECRET: string | undefined;
+
+if (PAYPAL_MODE === 'sandbox') {
+  // Try environment variables for sandbox mode
+  PAYPAL_CLIENT_ID = process.env.PAYPAL_CLIENT_ID_SANDBOX || process.env.PAYPAL_CLIENT_ID;
+  PAYPAL_CLIENT_SECRET = process.env.PAYPAL_CLIENT_SECRET_SANDBOX || process.env.PAYPAL_CLIENT_SECRET;
+} else if (PAYPAL_MODE === 'live') {
+  // Try environment variables for live mode
+  PAYPAL_CLIENT_ID = process.env.PAYPAL_CLIENT_ID_LIVE || process.env.PAYPAL_CLIENT_ID;
+  PAYPAL_CLIENT_SECRET = process.env.PAYPAL_CLIENT_SECRET_LIVE || process.env.PAYPAL_CLIENT_SECRET;
+} else {
+  // Fallback to the default credentials
+  PAYPAL_CLIENT_ID = process.env.PAYPAL_CLIENT_ID;
+  PAYPAL_CLIENT_SECRET = process.env.PAYPAL_CLIENT_SECRET;
 }
 
 // Log the PayPal configuration (without showing the actual secret)

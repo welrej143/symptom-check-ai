@@ -197,18 +197,39 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const paymentSettings = await storage.getPaymentSettings();
       if (paymentSettings && paymentSettings.paypalMode) {
         // Update environment variable
-        process.env.PAYPAL_MODE = paymentSettings.paypalMode;
+        const mode = paymentSettings.paypalMode; // 'sandbox' or 'live'
+        process.env.PAYPAL_MODE = mode;
         
         // Log the current mode being used
-        console.log(`Using PayPal mode from settings: ${paymentSettings.paypalMode}`);
+        console.log(`Using PayPal mode from settings: ${mode}`);
         
-        // Set appropriate client credentials based on mode
-        if (paymentSettings.paypalMode === 'sandbox' && paymentSettings.paypalSandboxClientId) {
-          process.env.PAYPAL_CLIENT_ID = paymentSettings.paypalSandboxClientId;
-          process.env.PAYPAL_CLIENT_SECRET = paymentSettings.paypalSandboxClientSecret;
-        } else if (paymentSettings.paypalMode === 'live' && paymentSettings.paypalLiveClientId) {
-          process.env.PAYPAL_CLIENT_ID = paymentSettings.paypalLiveClientId;
-          process.env.PAYPAL_CLIENT_SECRET = paymentSettings.paypalLiveClientSecret;
+        // Check for environment variables first (highest priority)
+        if (mode === 'sandbox') {
+          // Try environment variables
+          if (process.env.PAYPAL_CLIENT_ID_SANDBOX && process.env.PAYPAL_CLIENT_SECRET_SANDBOX) {
+            console.log('Using sandbox credentials from environment variables');
+            process.env.PAYPAL_CLIENT_ID = process.env.PAYPAL_CLIENT_ID_SANDBOX;
+            process.env.PAYPAL_CLIENT_SECRET = process.env.PAYPAL_CLIENT_SECRET_SANDBOX;
+          } 
+          // Fall back to database settings if available
+          else if (paymentSettings.paypalSandboxClientId && paymentSettings.paypalSandboxClientSecret) {
+            console.log('Using sandbox credentials from database settings');
+            process.env.PAYPAL_CLIENT_ID = paymentSettings.paypalSandboxClientId;
+            process.env.PAYPAL_CLIENT_SECRET = paymentSettings.paypalSandboxClientSecret;
+          }
+        } else if (mode === 'live') {
+          // Try environment variables
+          if (process.env.PAYPAL_CLIENT_ID_LIVE && process.env.PAYPAL_CLIENT_SECRET_LIVE) {
+            console.log('Using live credentials from environment variables');
+            process.env.PAYPAL_CLIENT_ID = process.env.PAYPAL_CLIENT_ID_LIVE;
+            process.env.PAYPAL_CLIENT_SECRET = process.env.PAYPAL_CLIENT_SECRET_LIVE;
+          } 
+          // Fall back to database settings if available
+          else if (paymentSettings.paypalLiveClientId && paymentSettings.paypalLiveClientSecret) {
+            console.log('Using live credentials from database settings');
+            process.env.PAYPAL_CLIENT_ID = paymentSettings.paypalLiveClientId;
+            process.env.PAYPAL_CLIENT_SECRET = paymentSettings.paypalLiveClientSecret;
+          }
         }
       }
       next();
