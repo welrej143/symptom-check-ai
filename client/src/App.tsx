@@ -17,29 +17,14 @@ import LoadingAnalysis from "@/components/loading-analysis";
 import { analyzeSymptoms } from "@/lib/openai";
 import { useToast } from "@/hooks/use-toast";
 import PremiumCard from "@/components/premium-card";
-import { apiRequest, queryClient } from "@/lib/queryClient";
+import { apiRequest } from "@/lib/queryClient";
 
-// Payment verification component (must be defined outside App)
-// This is a separate component that uses Auth context hooks
-function PaymentVerificationWrapper({
-  children,
-  analysisResult,
-  userSymptoms,
-  setUserSymptoms,
-  analyzeUserSymptoms
-}: {
-  children?: React.ReactNode,
-  analysisResult: AnalysisResponse | null,
-  userSymptoms: string,
-  setUserSymptoms: (symptoms: string) => void,
-  analyzeUserSymptoms: (symptoms: string) => Promise<void>
-}) {
+// Payment verification component
+function PaymentVerification() {
   const [isProcessing, setIsProcessing] = useState(false);
-  const { refreshSubscriptionStatus } = useAuth();
   const { toast } = useToast();
-  const [location] = useLocation();
+  const [, navigate] = useLocation();
   
-  // Check for Stripe payment completion
   useEffect(() => {
     const searchParams = new URLSearchParams(window.location.search);
     const isSuccess = searchParams.get('success') === 'true';
@@ -57,7 +42,7 @@ function PaymentVerificationWrapper({
             variant: "default",
           });
           
-          // Clear URL params to avoid re-processing on refresh
+          // Clear URL params
           const currentUrl = new URL(window.location.href);
           currentUrl.search = '';
           window.history.replaceState({}, '', currentUrl.toString());
@@ -72,7 +57,7 @@ function PaymentVerificationWrapper({
           const data = await response.json();
           console.log("Payment verification successful:", data);
           
-          // Force cache invalidation to get fresh user data
+          // Force cache invalidation
           await fetch("/api/user", { method: "GET", credentials: "include" });
           
           // Show success message
@@ -82,7 +67,7 @@ function PaymentVerificationWrapper({
             variant: "default",
           });
           
-          // Force page reload to refresh all components
+          // Force page reload
           setTimeout(() => {
             window.location.reload();
           }, 1500);
@@ -101,9 +86,8 @@ function PaymentVerificationWrapper({
     };
     
     verifyPayment();
-  }, [toast]);
+  }, [toast, navigate]);
   
-  // Show processing indicator
   if (isProcessing) {
     return (
       <div className="flex flex-col items-center justify-center min-h-[60vh]">
@@ -117,8 +101,7 @@ function PaymentVerificationWrapper({
     );
   }
   
-  // Regular routes if not processing payment
-  return children as React.ReactElement;
+  return null;
 }
 
 function App() {
@@ -248,12 +231,8 @@ function App() {
             {isAnalyzing ? (
               <LoadingAnalysis progress={progress} />
             ) : (
-              <PaymentVerificationWrapper
-                analysisResult={analysisResult}
-                userSymptoms={userSymptoms}
-                setUserSymptoms={setUserSymptoms}
-                analyzeUserSymptoms={analyzeUserSymptoms}
-              >
+              <>
+                <PaymentVerification />
                 <Switch>
                   <Route path="/" component={HomeWrapper} />
                   <Route path="/results" component={ResultsWrapper} />
@@ -275,7 +254,7 @@ function App() {
                   {/* 404 route */}
                   <Route component={NotFound} />
                 </Switch>
-              </PaymentVerificationWrapper>
+              </>
             )}
           </main>
           <Footer />
