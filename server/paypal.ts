@@ -17,10 +17,42 @@ import { Request, Response } from "express";
 
 /* PayPal Controllers Setup */
 
-// The user specified that their credentials in Render are for LIVE mode
 const { PAYPAL_CLIENT_ID, PAYPAL_CLIENT_SECRET } = process.env;
-// Force LIVE mode when running in production (on Render)
-const PAYPAL_MODE = process.env.NODE_ENV === 'production' ? 'live' : process.env.PAYPAL_MODE;
+
+// First check if there's an explicit PAYPAL_MODE in environment variables
+let PAYPAL_MODE = process.env.PAYPAL_MODE;
+
+// Next try to get the mode from database settings (this will be updated immediately by admin panel)
+async function checkPayPalModeInDatabase() {
+  try {
+    // Dynamically import the storage
+    const { storage } = await import('./storage');
+    
+    // Get paypal_mode setting from database
+    const paypalMode = await storage.getSetting('paypal_mode');
+    if (paypalMode) {
+      console.log(`Using PayPal mode from database: ${paypalMode}`);
+      return paypalMode;
+    }
+  } catch (error) {
+    console.error("Error checking PayPal mode in database:", error);
+  }
+  return null;
+}
+
+// If no explicit mode is set, default to 'live' in production
+if (!PAYPAL_MODE) {
+  // Default based on environment
+  PAYPAL_MODE = process.env.NODE_ENV === 'production' ? 'live' : 'sandbox';
+  
+  // Try to update from database later (async)
+  checkPayPalModeInDatabase().then(dbMode => {
+    if (dbMode) {
+      PAYPAL_MODE = dbMode;
+      console.log(`Updated PayPal mode from database to: ${PAYPAL_MODE}`);
+    }
+  });
+}
 
 // Log the PayPal configuration (without showing the actual secret)
 console.log(`PayPal configuration: 
