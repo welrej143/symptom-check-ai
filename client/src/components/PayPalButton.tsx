@@ -132,8 +132,8 @@ export default function PayPalButton({
             console.warn("Could not determine PayPal mode, defaulting to environment settings", e);
           }
           
-          // Use PROD env var as fallback if we couldn't determine from API
-          const isProduction = paymentMode === 'live' || import.meta.env.PROD;
+          // ONLY use the mode from settings, don't fallback to environment vars
+          const isProduction = paymentMode === 'live';
           
           console.log(`Initializing PayPal SDK in ${isProduction ? 'LIVE' : 'SANDBOX'} mode`);
           
