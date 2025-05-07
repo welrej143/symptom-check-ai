@@ -744,13 +744,40 @@ export default function PremiumCard() {
               {/* Stripe Button - Only shows when enabled */}
               {paymentMethods?.stripe ? (
                 <button 
-                  onClick={() => {
+                  onClick={async () => {
                     toast({
                       title: "Stripe Checkout",
                       description: "Starting Stripe checkout process...",
                       variant: "default",
                     });
-                    // Stripe checkout logic would go here
+                    try {
+                      setIsUpgrading(true);
+                      // Create a checkout session on the server
+                      const response = await apiRequest("POST", "/api/create-subscription", {
+                        subscriptionType: "monthly"
+                      });
+                      
+                      if (!response.ok) {
+                        throw new Error("Failed to start checkout");
+                      }
+                      
+                      const data = await response.json();
+                      
+                      if (!data.sessionId) {
+                        throw new Error("Invalid response from server");
+                      }
+                      
+                      // Redirect to Stripe Checkout
+                      window.location.href = data.url;
+                    } catch (error) {
+                      console.error("Stripe checkout error:", error);
+                      setIsUpgrading(false);
+                      toast({
+                        title: "Checkout Error",
+                        description: error instanceof Error ? error.message : "Failed to start checkout process",
+                        variant: "destructive",
+                      });
+                    }
                   }}
                   className="bg-purple-600 text-white py-2.5 px-4 rounded-md font-medium hover:bg-purple-700 transition-colors flex items-center justify-center w-full"
                 >
