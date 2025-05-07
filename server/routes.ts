@@ -5,13 +5,20 @@ import { setupAuth } from "./auth";
 import OpenAI from "openai";
 import Stripe from "stripe";
 import z from "zod";
-import { symptomInputSchema, analysisResponseSchema, symptomRecords, dailyTracking } from "@shared/schema";
+import { 
+  symptomInputSchema, 
+  analysisResponseSchema, 
+  symptomRecords, 
+  dailyTracking,
+  bugReportSubmissionSchema
+} from "@shared/schema";
 import { db, isDatabaseHealthy } from "./db";
 import { users } from "@shared/schema";
 import { eq, sql } from "drizzle-orm";
 import { SessionData } from "express-session";
 import { createPaypalOrder, capturePaypalOrder, loadPaypalDefault } from "./paypal";
 import { getPayPalMode, updatePayPalMode } from './paypal-loader';
+
 
 // Initialize Stripe (temporarily disabled as requested, with a warning message)
 // Using ! assertion to avoid TypeScript errors, but we'll check before using it in each route
