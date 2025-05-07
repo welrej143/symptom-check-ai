@@ -188,19 +188,6 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
   
   // PayPal setup and order routes
-  app.get("/api/paypal/setup", async (req, res) => {
-    await loadPaypalDefault(req, res);
-  });
-  
-  app.post("/api/paypal/order", async (req, res) => {
-    // Request body should contain: { intent, amount, currency }
-    await createPaypalOrder(req, res);
-  });
-  
-  app.post("/api/paypal/order/:orderID/capture", async (req, res) => {
-    await capturePaypalOrder(req, res);
-  });
-
   // Analyze symptoms route
   app.post("/api/analyze-symptoms", async (req: Request, res: Response) => {
     try {
@@ -2652,6 +2639,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   // PayPal integration routes
+  // PayPal routes for creating orders and processing payments
   app.get("/api/paypal/setup", async (req, res) => {
     await loadPaypalDefault(req, res);
   });
