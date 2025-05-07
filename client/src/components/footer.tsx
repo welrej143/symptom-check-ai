@@ -371,7 +371,6 @@ export default function Footer() {
                       </p>
                     </div>
                   ))}
-                  className="text-sm text-gray-600 hover:text-gray-900 cursor-pointer hover:underline text-left"
                 >
                   About Us
                 </button>
@@ -416,7 +415,6 @@ export default function Footer() {
                       </p>
                     </div>
                   ))}
-                  className="text-sm text-gray-600 hover:text-gray-900 cursor-pointer hover:underline text-left"
                 >
                   Contact Us
                 </button>
