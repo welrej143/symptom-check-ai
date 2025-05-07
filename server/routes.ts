@@ -207,6 +207,17 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // PayPal setup and order routes
   
   // Update PayPal mode from database on every PayPal API request
+  // Function to safely display part of a credential (first 4 and last 4 chars)
+  function maskCredential(credential: string | undefined): string {
+    if (!credential) return "❌ Missing";
+    if (credential.length <= 10) return "✓ Set (too short to safely display)";
+    
+    const firstFour = credential.substring(0, 4);
+    const lastFour = credential.substring(credential.length - 4);
+    
+    return `${firstFour}...${lastFour}`;
+  }
+
   const updatePayPalModeMiddleware = async (req: Request, res: Response, next: NextFunction) => {
     try {
       // Get the latest mode from database settings
@@ -224,12 +235,18 @@ export async function registerRoutes(app: Express): Promise<Server> {
           // Try environment variables
           if (process.env.PAYPAL_CLIENT_ID_SANDBOX && process.env.PAYPAL_CLIENT_SECRET_SANDBOX) {
             console.log('Using sandbox credentials from environment variables');
+            console.log(`  - Sandbox Client ID: ${maskCredential(process.env.PAYPAL_CLIENT_ID_SANDBOX)}`);
+            console.log(`  - Sandbox Client Secret: ${maskCredential(process.env.PAYPAL_CLIENT_SECRET_SANDBOX)}`);
+            
             process.env.PAYPAL_CLIENT_ID = process.env.PAYPAL_CLIENT_ID_SANDBOX;
             process.env.PAYPAL_CLIENT_SECRET = process.env.PAYPAL_CLIENT_SECRET_SANDBOX;
           } 
           // Fall back to database settings if available
           else if (paymentSettings.paypalSandboxClientId && paymentSettings.paypalSandboxClientSecret) {
             console.log('Using sandbox credentials from database settings');
+            console.log(`  - Sandbox Client ID from DB: ${maskCredential(paymentSettings.paypalSandboxClientId)}`);
+            console.log(`  - Sandbox Client Secret from DB: ${maskCredential(paymentSettings.paypalSandboxClientSecret)}`);
+            
             process.env.PAYPAL_CLIENT_ID = paymentSettings.paypalSandboxClientId;
             process.env.PAYPAL_CLIENT_SECRET = paymentSettings.paypalSandboxClientSecret;
           }
@@ -237,12 +254,18 @@ export async function registerRoutes(app: Express): Promise<Server> {
           // Try environment variables
           if (process.env.PAYPAL_CLIENT_ID_LIVE && process.env.PAYPAL_CLIENT_SECRET_LIVE) {
             console.log('Using live credentials from environment variables');
+            console.log(`  - Live Client ID: ${maskCredential(process.env.PAYPAL_CLIENT_ID_LIVE)}`);
+            console.log(`  - Live Client Secret: ${maskCredential(process.env.PAYPAL_CLIENT_SECRET_LIVE)}`);
+            
             process.env.PAYPAL_CLIENT_ID = process.env.PAYPAL_CLIENT_ID_LIVE;
             process.env.PAYPAL_CLIENT_SECRET = process.env.PAYPAL_CLIENT_SECRET_LIVE;
           } 
           // Fall back to database settings if available
           else if (paymentSettings.paypalLiveClientId && paymentSettings.paypalLiveClientSecret) {
             console.log('Using live credentials from database settings');
+            console.log(`  - Live Client ID from DB: ${maskCredential(paymentSettings.paypalLiveClientId)}`);
+            console.log(`  - Live Client Secret from DB: ${maskCredential(paymentSettings.paypalLiveClientSecret)}`);
+            
             process.env.PAYPAL_CLIENT_ID = paymentSettings.paypalLiveClientId;
             process.env.PAYPAL_CLIENT_SECRET = paymentSettings.paypalLiveClientSecret;
           }

@@ -60,10 +60,23 @@ if (PAYPAL_MODE === 'sandbox') {
   PAYPAL_CLIENT_SECRET = process.env.PAYPAL_CLIENT_SECRET;
 }
 
-// Log the PayPal configuration (without showing the actual secret)
+// Function to safely display part of a credential (first 4 and last 4 chars)
+function maskCredential(credential: string | undefined): string {
+  if (!credential) return "❌ Missing";
+  if (credential.length <= 10) return "✓ Set (too short to safely display)";
+  
+  const firstFour = credential.substring(0, 4);
+  const lastFour = credential.substring(credential.length - 4);
+  const maskedLength = credential.length - 8;
+  const maskedPart = '*'.repeat(Math.min(maskedLength, 10));
+  
+  return `${firstFour}...${maskedPart}...${lastFour}`;
+}
+
+// Log the PayPal configuration with partially masked credentials
 console.log(`PayPal configuration: 
-  - Client ID: ${PAYPAL_CLIENT_ID ? "✓ Set" : "❌ Missing"}
-  - Client Secret: ${PAYPAL_CLIENT_SECRET ? "✓ Set" : "❌ Missing"}
+  - Client ID: ${maskCredential(PAYPAL_CLIENT_ID)}
+  - Client Secret: ${maskCredential(PAYPAL_CLIENT_SECRET)}
   - Mode: ${PAYPAL_MODE || "sandbox (default)"}
   - Environment: ${process.env.NODE_ENV}`
 );
