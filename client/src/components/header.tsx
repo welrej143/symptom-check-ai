@@ -34,7 +34,7 @@ export default function Header() {
           className="flex items-center cursor-pointer" 
           onClick={() => navigate("/")}
         >
-          <img src={appIcon} alt="SymptomCheck AI" className="h-8 w-auto" />
+          <img src={appIcon} alt="SymptomCheck AI" className="h-10 w-auto" />
           <h1 className="ml-2 text-xl font-bold text-gray-900">SymptomCheck AI</h1>
         </div>
         

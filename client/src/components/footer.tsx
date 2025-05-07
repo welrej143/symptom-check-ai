@@ -80,7 +80,7 @@ export default function Footer() {
         <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
           <div>
             <div className="flex items-center">
-              <img src={appIcon} alt="SymptomCheck AI" className="h-8 w-auto" />
+              <img src={appIcon} alt="SymptomCheck AI" className="h-10 w-auto" />
               <h2 className="ml-2 text-xl font-bold text-gray-900">SymptomCheck AI</h2>
             </div>
             <p className="mt-2 text-sm text-gray-600">Personalized health insights powered by artificial intelligence.</p>
