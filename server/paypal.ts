@@ -22,21 +22,11 @@ const { PAYPAL_CLIENT_ID, PAYPAL_CLIENT_SECRET } = process.env;
 // First check if there's an explicit PAYPAL_MODE in environment variables
 let PAYPAL_MODE = process.env.PAYPAL_MODE;
 
-// Next try to get the mode from database settings (this will be updated immediately by admin panel)
+// We won't try to query the database directly from this file
+// Instead, we'll rely on the middleware in routes.ts to set the mode before each request
 async function checkPayPalModeInDatabase() {
-  try {
-    // Dynamically import the storage
-    const { storage } = await import('./storage');
-    
-    // Get paypal_mode setting from database
-    const paypalMode = await storage.getSetting('paypal_mode');
-    if (paypalMode) {
-      console.log(`Using PayPal mode from database: ${paypalMode}`);
-      return paypalMode;
-    }
-  } catch (error) {
-    console.error("Error checking PayPal mode in database:", error);
-  }
+  // This function no longer queries the database directly
+  // The mode is now set by updatePayPalModeMiddleware in routes.ts
   return null;
 }
 

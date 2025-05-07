@@ -2672,21 +2672,21 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // PayPal routes for creating orders and processing payments
   // PayPal setup route is now defined at /paypal/setup instead
 
-  app.post("/paypal/order", async (req, res) => {
+  app.post("/paypal/order", updatePayPalModeMiddleware, async (req, res) => {
     // Request body should contain: { intent, amount, currency }
     await createPaypalOrder(req, res);
   });
 
-  app.post("/paypal/order/:orderID/capture", async (req, res) => {
+  app.post("/paypal/order/:orderID/capture", updatePayPalModeMiddleware, async (req, res) => {
     await capturePaypalOrder(req, res);
   });
   
-  app.get("/paypal/setup", async (req, res) => {
+  app.get("/paypal/setup", updatePayPalModeMiddleware, async (req, res) => {
     await loadPaypalDefault(req, res);
   });
 
   // Process PayPal payment success
-  app.post("/api/process-paypal-payment", async (req, res) => {
+  app.post("/api/process-paypal-payment", updatePayPalModeMiddleware, async (req, res) => {
     try {
       if (!req.isAuthenticated()) {
         return res.status(401).json({ message: "Authentication required" });
