@@ -275,6 +275,92 @@ export default function AdminDashboard() {
               </div>
             </CardContent>
           </Card>
+
+          <Card>
+            <CardHeader>
+              <CardTitle>Registered Users</CardTitle>
+              <CardDescription>All registered users in the system</CardDescription>
+            </CardHeader>
+            <CardContent>
+              {dashboardData?.users && dashboardData.users.length > 0 ? (
+                <Table>
+                  <TableCaption>List of all registered users</TableCaption>
+                  <TableHeader>
+                    <TableRow>
+                      <TableHead className="w-[50px]">ID</TableHead>
+                      <TableHead>Username</TableHead>
+                      <TableHead>Email</TableHead>
+                      <TableHead>Status</TableHead>
+                      <TableHead>Plan</TableHead>
+                      <TableHead>Created</TableHead>
+                      <TableHead className="text-right">Usage</TableHead>
+                    </TableRow>
+                  </TableHeader>
+                  <TableBody>
+                    {dashboardData.users.map((user) => {
+                      // Format the date
+                      const createdDate = new Date(user.createdAt).toLocaleDateString();
+                      
+                      // Determine status badge
+                      let statusBadge;
+                      if (user.isPremium) {
+                        statusBadge = (
+                          <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-green-100 text-green-800">
+                            <BadgeCheck className="w-3 h-3 mr-1" />
+                            Premium
+                          </span>
+                        );
+                      } else {
+                        statusBadge = (
+                          <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-gray-100 text-gray-800">
+                            Free
+                          </span>
+                        );
+                      }
+                      
+                      return (
+                        <TableRow key={user.id}>
+                          <TableCell className="font-medium">{user.id}</TableCell>
+                          <TableCell>{user.username}</TableCell>
+                          <TableCell>{user.email}</TableCell>
+                          <TableCell>{statusBadge}</TableCell>
+                          <TableCell>
+                            {user.subscriptionStatus === 'active' ? (
+                              <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-blue-100 text-blue-800">
+                                {user.planName || 'Premium Monthly'}
+                              </span>
+                            ) : (
+                              <span className="text-gray-500 text-sm">-</span>
+                            )}
+                          </TableCell>
+                          <TableCell>
+                            <span className="inline-flex items-center text-sm text-gray-500">
+                              <Calendar className="w-3 h-3 mr-1" />
+                              {createdDate}
+                            </span>
+                          </TableCell>
+                          <TableCell className="text-right">
+                            {user.isPremium ? (
+                              <span className="text-gray-500 text-sm">Unlimited</span>
+                            ) : (
+                              <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-amber-100 text-amber-800">
+                                {user.analysisCount}/3
+                              </span>
+                            )}
+                          </TableCell>
+                        </TableRow>
+                      );
+                    })}
+                  </TableBody>
+                </Table>
+              ) : (
+                <div className="py-8 text-center text-gray-500">
+                  <UsersRound className="h-12 w-12 mx-auto mb-3 text-gray-400" />
+                  <p>No users registered yet</p>
+                </div>
+              )}
+            </CardContent>
+          </Card>
         </TabsContent>
         
         <TabsContent value="settings" className="mt-4">
