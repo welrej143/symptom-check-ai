@@ -281,9 +281,12 @@ function PayPalPaymentOptions() {
         variant: "default",
       });
       
-      // Reload the page after a short delay
+      // Redirect to the premium subscription details page instead of just reloading
+      // This matches what happens with Stripe payments
       setTimeout(() => {
-        window.location.reload();
+        // Redirect to the main page, the SubscriptionManager component will be shown
+        // since the user now has premium status
+        window.location.href = "/premium";
       }, 1500);
     } catch (err) {
       console.error("Error processing PayPal payment:", err);
@@ -410,9 +413,10 @@ export default function PremiumCard() {
         variant: "default",
       });
       
-      // Reload the page after a short delay
+      // Redirect to the premium subscription details page
       setTimeout(() => {
-        window.location.reload();
+        // This will display the SubscriptionManager since the user now has premium
+        window.location.href = "/premium";
       }, 1500);
     } catch (err) {
       console.error("Error processing PayPal payment:", err);
