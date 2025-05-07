@@ -33,30 +33,66 @@ export default function PayPalButton({
   onSuccess
 }: PayPalButtonProps) {
   const createOrder = async () => {
-    const orderPayload = {
-      amount: amount,
-      currency: currency,
-      intent: intent,
-    };
-    const response = await fetch("/paypal/order", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify(orderPayload),
-    });
-    const output = await response.json();
-    return { orderId: output.id };
+    try {
+      console.log("Creating PayPal order with params:", { amount, currency, intent });
+      
+      const orderPayload = {
+        amount: amount,
+        currency: currency,
+        intent: intent,
+      };
+      
+      console.log("Sending request to /paypal/order");
+      const response = await fetch("/paypal/order", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(orderPayload),
+      });
+      
+      if (!response.ok) {
+        console.error("PayPal order creation failed:", response.status, response.statusText);
+        const errorText = await response.text();
+        throw new Error(`Failed to create PayPal order: ${errorText}`);
+      }
+      
+      const output = await response.json();
+      console.log("PayPal order created successfully:", output);
+      
+      if (!output.id) {
+        throw new Error("Missing order ID in PayPal response");
+      }
+      
+      return { orderId: output.id };
+    } catch (error) {
+      console.error("Error creating PayPal order:", error);
+      throw error;
+    }
   };
 
   const captureOrder = async (orderId: string) => {
-    const response = await fetch(`/paypal/order/${orderId}/capture`, {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-      },
-    });
-    const data = await response.json();
-
-    return data;
+    try {
+      console.log(`Capturing PayPal order: ${orderId}`);
+      const response = await fetch(`/paypal/order/${orderId}/capture`, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+      });
+      
+      if (!response.ok) {
+        console.error("PayPal capture failed:", response.status, response.statusText);
+        const errorText = await response.text();
+        throw new Error(`Failed to capture PayPal order: ${errorText}`);
+      }
+      
+      const data = await response.json();
+      console.log("PayPal capture successful:", data);
+      
+      return data;
+    } catch (error) {
+      console.error("Error capturing PayPal order:", error);
+      throw error;
+    }
   };
 
   const onApprove = async (data: any) => {
@@ -100,15 +136,33 @@ export default function PayPalButton({
   
   const initPayPal = async () => {
     try {
-      const clientToken: string = await fetch("/paypal/setup")
-        .then((res) => res.json())
-        .then((data) => {
-          return data.clientToken;
-        });
+      console.log("Starting PayPal initialization");
+      const response = await fetch("/paypal/setup");
+      
+      if (!response.ok) {
+        throw new Error(`PayPal setup failed with status: ${response.status}`);
+      }
+      
+      const data = await response.json();
+      console.log("PayPal setup response:", data);
+      
+      if (!data.clientToken) {
+        throw new Error("Missing clientToken in PayPal setup response");
+      }
+      
+      const clientToken = data.clientToken;
+      console.log("Got PayPal clientToken, creating instance");
+      
+      if (!(window as any).paypal) {
+        throw new Error("PayPal SDK not loaded properly");
+      }
+      
       const sdkInstance = await (window as any).paypal.createInstance({
         clientToken,
         components: ["paypal-payments"],
       });
+      
+      console.log("PayPal SDK instance created successfully");
 
       const paypalCheckout =
             sdkInstance.createPayPalOneTimePaymentSession({
@@ -119,13 +173,16 @@ export default function PayPalButton({
 
       const onClick = async () => {
         try {
+          console.log("PayPal button clicked, creating order");
           const checkoutOptionsPromise = createOrder();
+          console.log("Starting PayPal checkout flow");
           await paypalCheckout.start(
             { paymentFlow: "auto" },
             checkoutOptionsPromise,
           );
+          console.log("PayPal checkout flow started successfully");
         } catch (e) {
-          console.error(e);
+          console.error("Error in PayPal checkout:", e);
         }
       };
 
