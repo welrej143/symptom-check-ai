@@ -169,8 +169,10 @@ export const paymentSettingsSchema = z.object({
   stripeEnabled: z.boolean(),
   paypalEnabled: z.boolean(),
   paypalMode: z.enum(["sandbox", "live"]),
-  paypalClientId: z.string().optional(),
-  paypalClientSecret: z.string().optional(),
+  paypalSandboxClientId: z.string().optional(),
+  paypalSandboxClientSecret: z.string().optional(),
+  paypalLiveClientId: z.string().optional(),
+  paypalLiveClientSecret: z.string().optional(),
 });
 
 export type PaymentSettings = z.infer<typeof paymentSettingsSchema>;

@@ -15,8 +15,10 @@ interface PaymentSettings {
   stripeEnabled: boolean;
   paypalEnabled: boolean;
   paypalMode: 'sandbox' | 'live';
-  paypalClientId: string;
-  paypalClientSecret: string;
+  paypalSandboxClientId: string;
+  paypalSandboxClientSecret: string;
+  paypalLiveClientId: string;
+  paypalLiveClientSecret: string;
 }
 
 interface Statistics {
@@ -271,28 +273,82 @@ export default function AdminDashboard() {
                         <Label htmlFor="paypal-toggle">Enable PayPal Payments</Label>
                       </div>
                       
-                      <div className="space-y-2">
-                        <Label htmlFor="paypal-mode">PayPal Mode</Label>
-                        <Select
-                          value={settings.paypalMode}
-                          onValueChange={(value) => 
-                            setSettings({ 
-                              ...settings, 
-                              paypalMode: value as 'sandbox' | 'live' 
-                            })
-                          }
-                        >
-                          <SelectTrigger id="paypal-mode">
-                            <SelectValue placeholder="Select mode" />
-                          </SelectTrigger>
-                          <SelectContent>
-                            <SelectItem value="sandbox">Sandbox (Testing)</SelectItem>
-                            <SelectItem value="live">Live (Production)</SelectItem>
-                          </SelectContent>
-                        </Select>
-                        <p className="text-sm text-muted-foreground">
-                          Warning: Only switch to live mode when ready for real transactions
-                        </p>
+                      <div className="space-y-4">
+                        <div className="space-y-2">
+                          <Label htmlFor="paypal-mode">PayPal Mode</Label>
+                          <Select
+                            value={settings.paypalMode}
+                            onValueChange={(value) => 
+                              setSettings({ 
+                                ...settings, 
+                                paypalMode: value as 'sandbox' | 'live' 
+                              })
+                            }
+                          >
+                            <SelectTrigger id="paypal-mode">
+                              <SelectValue placeholder="Select mode" />
+                            </SelectTrigger>
+                            <SelectContent>
+                              <SelectItem value="sandbox">Sandbox (Testing)</SelectItem>
+                              <SelectItem value="live">Live (Production)</SelectItem>
+                            </SelectContent>
+                          </Select>
+                          <p className="text-sm text-muted-foreground">
+                            Warning: Only switch to live mode when ready for real transactions
+                          </p>
+                        </div>
+                        
+                        <div className="border rounded-md p-4 space-y-4">
+                          <h3 className="font-medium">Sandbox Credentials</h3>
+                          <div className="space-y-2">
+                            <Label htmlFor="paypal-sandbox-client-id">PayPal Sandbox Client ID</Label>
+                            <input
+                              type="text"
+                              id="paypal-sandbox-client-id"
+                              value={settings.paypalSandboxClientId}
+                              onChange={(e) => setSettings({ ...settings, paypalSandboxClientId: e.target.value })}
+                              className="w-full p-2 border rounded-md"
+                              placeholder="Enter PayPal Sandbox Client ID"
+                            />
+                          </div>
+                          <div className="space-y-2">
+                            <Label htmlFor="paypal-sandbox-client-secret">PayPal Sandbox Client Secret</Label>
+                            <input
+                              type="password"
+                              id="paypal-sandbox-client-secret"
+                              value={settings.paypalSandboxClientSecret}
+                              onChange={(e) => setSettings({ ...settings, paypalSandboxClientSecret: e.target.value })}
+                              className="w-full p-2 border rounded-md"
+                              placeholder="Enter PayPal Sandbox Client Secret"
+                            />
+                          </div>
+                        </div>
+                        
+                        <div className="border rounded-md p-4 space-y-4">
+                          <h3 className="font-medium">Live Credentials</h3>
+                          <div className="space-y-2">
+                            <Label htmlFor="paypal-live-client-id">PayPal Live Client ID</Label>
+                            <input
+                              type="text"
+                              id="paypal-live-client-id"
+                              value={settings.paypalLiveClientId}
+                              onChange={(e) => setSettings({ ...settings, paypalLiveClientId: e.target.value })}
+                              className="w-full p-2 border rounded-md"
+                              placeholder="Enter PayPal Live Client ID"
+                            />
+                          </div>
+                          <div className="space-y-2">
+                            <Label htmlFor="paypal-live-client-secret">PayPal Live Client Secret</Label>
+                            <input
+                              type="password"
+                              id="paypal-live-client-secret"
+                              value={settings.paypalLiveClientSecret}
+                              onChange={(e) => setSettings({ ...settings, paypalLiveClientSecret: e.target.value })}
+                              className="w-full p-2 border rounded-md"
+                              placeholder="Enter PayPal Live Client Secret"
+                            />
+                          </div>
+                        </div>
                       </div>
                     </div>
                   </div>

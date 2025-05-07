@@ -449,12 +449,12 @@ export class DatabaseStorage implements IStorage {
     try {
       if (keys.length === 0) return {};
       
-      // Execute a safer SQL query
-      const placeholders = keys.map((_, i) => `$${i + 1}`).join(',');
-      const result = await db.execute(
-        sql`SELECT * FROM app_settings WHERE key IN (${sql.raw(placeholders)})`,
-        ...keys
-      );
+      // Just use a simpler approach by building a parameterized query
+      const placeholders = Array(keys.length).fill('?').join(',');
+      const query = `SELECT * FROM app_settings WHERE key IN (${placeholders})`;
+      
+      // Execute the query directly with the db pool
+      const result = await pool.query(query, keys);
       
       const settingsMap: Record<string, string> = {};
       if (result.rows) {
@@ -510,12 +510,22 @@ export class DatabaseStorage implements IStorage {
         stripeEnabled: false,
         paypalEnabled: true,
         paypalMode: 'sandbox',
-        paypalClientId: process.env.PAYPAL_CLIENT_ID || '',
-        paypalClientSecret: process.env.PAYPAL_CLIENT_SECRET || '',
+        paypalSandboxClientId: process.env.PAYPAL_CLIENT_ID || '',
+        paypalSandboxClientSecret: process.env.PAYPAL_CLIENT_SECRET || '',
+        paypalLiveClientId: '',
+        paypalLiveClientSecret: '',
       };
       
       // Get all setting keys for payment settings
-      const settingKeys = ['stripe_enabled', 'paypal_enabled', 'paypal_mode', 'paypal_client_id', 'paypal_client_secret'];
+      const settingKeys = [
+        'stripe_enabled', 
+        'paypal_enabled', 
+        'paypal_mode', 
+        'paypal_sandbox_client_id', 
+        'paypal_sandbox_client_secret',
+        'paypal_live_client_id',
+        'paypal_live_client_secret'
+      ];
       const settings = await this.getSettings(settingKeys);
       
       // If no settings exist, initialize them with defaults and return defaults
@@ -529,8 +539,10 @@ export class DatabaseStorage implements IStorage {
         stripeEnabled: settings.stripe_enabled === 'true',
         paypalEnabled: settings.paypal_enabled === 'true',
         paypalMode: (settings.paypal_mode as 'sandbox' | 'live') || 'sandbox',
-        paypalClientId: settings.paypal_client_id || process.env.PAYPAL_CLIENT_ID || '',
-        paypalClientSecret: settings.paypal_client_secret || process.env.PAYPAL_CLIENT_SECRET || '',
+        paypalSandboxClientId: settings.paypal_sandbox_client_id || process.env.PAYPAL_CLIENT_ID || '',
+        paypalSandboxClientSecret: settings.paypal_sandbox_client_secret || process.env.PAYPAL_CLIENT_SECRET || '',
+        paypalLiveClientId: settings.paypal_live_client_id || '',
+        paypalLiveClientSecret: settings.paypal_live_client_secret || '',
       };
     } catch (error) {
       console.error('Error getting payment settings:', error);
@@ -539,8 +551,10 @@ export class DatabaseStorage implements IStorage {
         stripeEnabled: false,
         paypalEnabled: true,
         paypalMode: 'sandbox',
-        paypalClientId: process.env.PAYPAL_CLIENT_ID || '',
-        paypalClientSecret: process.env.PAYPAL_CLIENT_SECRET || '',
+        paypalSandboxClientId: process.env.PAYPAL_CLIENT_ID || '',
+        paypalSandboxClientSecret: process.env.PAYPAL_CLIENT_SECRET || '',
+        paypalLiveClientId: '',
+        paypalLiveClientSecret: '',
       };
     }
   }
@@ -552,24 +566,45 @@ export class DatabaseStorage implements IStorage {
       await this.setSetting('paypal_enabled', String(settings.paypalEnabled));
       await this.setSetting('paypal_mode', settings.paypalMode);
       
-      // Only update credentials if they're provided (to avoid overwriting existing ones)
-      if (settings.paypalClientId) {
-        await this.setSetting('paypal_client_id', settings.paypalClientId);
+      // Update sandbox credentials if provided
+      if (settings.paypalSandboxClientId) {
+        await this.setSetting('paypal_sandbox_client_id', settings.paypalSandboxClientId);
       }
       
-      if (settings.paypalClientSecret) {
-        await this.setSetting('paypal_client_secret', settings.paypalClientSecret);
+      if (settings.paypalSandboxClientSecret) {
+        await this.setSetting('paypal_sandbox_client_secret', settings.paypalSandboxClientSecret);
       }
       
-      // Update environment variables for immediate effect
+      // Update live credentials if provided
+      if (settings.paypalLiveClientId) {
+        await this.setSetting('paypal_live_client_id', settings.paypalLiveClientId);
+      }
+      
+      if (settings.paypalLiveClientSecret) {
+        await this.setSetting('paypal_live_client_secret', settings.paypalLiveClientSecret);
+      }
+      
+      // Update environment variables based on current mode
       process.env.PAYPAL_MODE = settings.paypalMode;
       
-      if (settings.paypalClientId) {
-        process.env.PAYPAL_CLIENT_ID = settings.paypalClientId;
-      }
-      
-      if (settings.paypalClientSecret) {
-        process.env.PAYPAL_CLIENT_SECRET = settings.paypalClientSecret;
+      // Set the appropriate credentials based on mode
+      if (settings.paypalMode === 'sandbox') {
+        if (settings.paypalSandboxClientId) {
+          process.env.PAYPAL_CLIENT_ID = settings.paypalSandboxClientId;
+        }
+        
+        if (settings.paypalSandboxClientSecret) {
+          process.env.PAYPAL_CLIENT_SECRET = settings.paypalSandboxClientSecret;
+        }
+      } else {
+        // Live mode
+        if (settings.paypalLiveClientId) {
+          process.env.PAYPAL_CLIENT_ID = settings.paypalLiveClientId;
+        }
+        
+        if (settings.paypalLiveClientSecret) {
+          process.env.PAYPAL_CLIENT_SECRET = settings.paypalLiveClientSecret;
+        }
       }
       
       return settings;
