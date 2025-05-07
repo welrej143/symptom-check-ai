@@ -69,6 +69,68 @@ async function checkTableExists(tableName: string): Promise<boolean> {
 }
 
 /**
+ * Function to update existing tables with new columns
+ * This ensures old tables get updated with new schema changes
+ */
+async function updateExistingTables() {
+  try {
+    console.log("Checking if existing tables need updates...");
+    
+    // Check if payment_provider column exists in users table
+    const paymentProviderExists = await db.execute(sql`
+      SELECT column_name 
+      FROM information_schema.columns 
+      WHERE table_name = 'users' AND column_name = 'payment_provider'
+    `);
+    
+    if (paymentProviderExists.rows.length === 0) {
+      console.log("Adding payment_provider column to users table...");
+      await db.execute(sql`
+        ALTER TABLE users 
+        ADD COLUMN payment_provider TEXT DEFAULT 'stripe'
+      `);
+      console.log("payment_provider column added successfully");
+    }
+    
+    // Check if paypal_subscription_id column exists in users table
+    const paypalSubscriptionIdExists = await db.execute(sql`
+      SELECT column_name 
+      FROM information_schema.columns 
+      WHERE table_name = 'users' AND column_name = 'paypal_subscription_id'
+    `);
+    
+    if (paypalSubscriptionIdExists.rows.length === 0) {
+      console.log("Adding paypal_subscription_id column to users table...");
+      await db.execute(sql`
+        ALTER TABLE users 
+        ADD COLUMN paypal_subscription_id TEXT
+      `);
+      console.log("paypal_subscription_id column added successfully");
+    }
+    
+    // Check if paypal_order_id column exists in users table
+    const paypalOrderIdExists = await db.execute(sql`
+      SELECT column_name 
+      FROM information_schema.columns 
+      WHERE table_name = 'users' AND column_name = 'paypal_order_id'
+    `);
+    
+    if (paypalOrderIdExists.rows.length === 0) {
+      console.log("Adding paypal_order_id column to users table...");
+      await db.execute(sql`
+        ALTER TABLE users 
+        ADD COLUMN paypal_order_id TEXT
+      `);
+      console.log("paypal_order_id column added successfully");
+    }
+    
+  } catch (error) {
+    console.error("Error updating existing tables:", error);
+    // Don't throw the error - we want to continue even if this fails
+  }
+}
+
+/**
  * Function to ensure all required database tables exist
  * This is a fallback in case migrations aren't working in production
  */
@@ -87,8 +149,11 @@ async function ensureTablesExist() {
           email TEXT NOT NULL,
           password TEXT NOT NULL,
           created_at TIMESTAMP NOT NULL DEFAULT NOW(),
+          payment_provider TEXT DEFAULT 'stripe',
           stripe_customer_id TEXT,
           stripe_subscription_id TEXT,
+          paypal_subscription_id TEXT,
+          paypal_order_id TEXT,
           is_premium BOOLEAN DEFAULT FALSE,
           subscription_status TEXT DEFAULT 'inactive',
           subscription_end_date TIMESTAMP,
@@ -266,8 +331,11 @@ async function initializeDatabase(retryCount = 0): Promise<void> {
     // Try to ensure all required tables exist
     try {
       await ensureTablesExist();
+      
+      // Then update any existing tables with new columns
+      await updateExistingTables();
     } catch (tableError) {
-      console.error("Error creating tables:", tableError);
+      console.error("Error creating or updating tables:", tableError);
       // Continue anyway - tables might already exist
     }
     
