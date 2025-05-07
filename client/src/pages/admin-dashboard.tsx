@@ -15,7 +15,6 @@ import {
   FileText, 
   BarChart, 
   CreditCard, 
-  LogOut, 
   Eye, 
   EyeOff, 
   User, 
@@ -89,11 +88,7 @@ export default function AdminDashboard() {
         setDashboardData(data);
         setSettings(data.paymentSettings);
       } else {
-        // If unauthorized, redirect to login
-        if (response.status === 401) {
-          navigate("/admin/login");
-        }
-        
+        // Show error without redirecting to login (login requirement removed)
         toast({
           title: "Error",
           description: "Failed to load dashboard data",
@@ -115,31 +110,7 @@ export default function AdminDashboard() {
     fetchDashboardData();
   }, []);
 
-  const handleLogout = async () => {
-    try {
-      const response = await apiRequest("POST", "/api/admin/logout");
-      
-      if (response.ok) {
-        toast({
-          title: "Logged out",
-          description: "You have been successfully logged out",
-        });
-        navigate("/admin/login");
-      } else {
-        toast({
-          title: "Error",
-          description: "Failed to logout",
-          variant: "destructive",
-        });
-      }
-    } catch (error) {
-      toast({
-        title: "Error",
-        description: "Failed to connect to server",
-        variant: "destructive",
-      });
-    }
-  };
+  // Logout function removed since login is no longer required
 
   const savePaymentSettings = async () => {
     if (!settings) return;
@@ -187,10 +158,6 @@ export default function AdminDashboard() {
     <div className="container mx-auto py-6 space-y-6">
       <div className="flex justify-between items-center">
         <h1 className="text-3xl font-bold">Admin Dashboard</h1>
-        <Button variant="outline" onClick={handleLogout}>
-          <LogOut className="mr-2 h-4 w-4" />
-          Logout
-        </Button>
       </div>
       
       <Tabs defaultValue="overview">

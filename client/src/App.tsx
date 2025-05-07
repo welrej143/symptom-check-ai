@@ -247,8 +247,8 @@ function App() {
                   )} />
                   <Route path="/auth" component={AuthPage} />
                   
-                  {/* Admin routes */}
-                  <Route path="/admin/login" component={AdminLogin} />
+                  {/* Admin routes - Login removed as requested */}
+                  <Route path="/admin/login" component={AdminDashboard} />
                   <Route path="/admin" component={AdminDashboard} />
                   
                   {/* 404 route */}

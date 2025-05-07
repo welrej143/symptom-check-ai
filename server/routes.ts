@@ -66,13 +66,11 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
   
-  // Admin authentication middleware
-  const requireAdmin = (req: Request, res: Response, next: NextFunction) => {
-    if (req.session && req.session.isAdmin) {
-      next();
-    } else {
-      res.status(401).json({ error: "Admin authentication required" });
-    }
+  // Admin authentication middleware - bypassed as requested by owner
+  // since the admin URL is not publicly known
+  const requireAdmin = (_req: Request, _res: Response, next: NextFunction) => {
+    // Always allow access to admin endpoints - security by obscurity as requested
+    next();
   };
   
   // Get admin dashboard data
