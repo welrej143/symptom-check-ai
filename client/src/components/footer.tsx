@@ -316,6 +316,15 @@ export default function Footer() {
             <h3 className="text-sm font-semibold text-gray-900 uppercase tracking-wider mb-4">Company</h3>
             <ul className="space-y-2">
               <li>
+                <Link 
+                  to="/bug-report" 
+                  className="flex items-center text-sm text-gray-600 hover:text-primary-600 transition-colors"
+                >
+                  <AlertTriangle className="h-4 w-4 mr-2" />
+                  Report a Bug
+                </Link>
+              </li>
+              <li>
                 <button 
                   onClick={() => openModal("About Us", (
                     <div className="prose prose-sm max-w-none">
