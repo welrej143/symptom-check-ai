@@ -116,8 +116,29 @@ export default function PayPalButton({
     const loadPayPalSDK = async () => {
       try {
         if (!(window as any).paypal) {
+          // Get PayPal settings from the API to determine which SDK URL to use
+          let paymentMode = "sandbox";
+          try {
+            // Try to fetch payment settings to get the mode
+            const modeResponse = await fetch("/api/payment-methods");
+            if (modeResponse.ok) {
+              const methodsData = await modeResponse.json();
+              if (methodsData.paypal && methodsData.mode === 'live') {
+                paymentMode = 'live';
+                console.log("Using PayPal LIVE mode from settings");
+              }
+            }
+          } catch (e) {
+            console.warn("Could not determine PayPal mode, defaulting to environment settings", e);
+          }
+          
+          // Use PROD env var as fallback if we couldn't determine from API
+          const isProduction = paymentMode === 'live' || import.meta.env.PROD;
+          
+          console.log(`Initializing PayPal SDK in ${isProduction ? 'LIVE' : 'SANDBOX'} mode`);
+          
           const script = document.createElement("script");
-          script.src = import.meta.env.PROD
+          script.src = isProduction
             ? "https://www.paypal.com/web-sdk/v6/core"
             : "https://www.sandbox.paypal.com/web-sdk/v6/core";
           script.async = true;

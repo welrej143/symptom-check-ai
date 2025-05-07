@@ -17,13 +17,17 @@ import { Request, Response } from "express";
 
 /* PayPal Controllers Setup */
 
-const { PAYPAL_CLIENT_ID, PAYPAL_CLIENT_SECRET, PAYPAL_MODE } = process.env;
+// The user specified that their credentials in Render are for LIVE mode
+const { PAYPAL_CLIENT_ID, PAYPAL_CLIENT_SECRET } = process.env;
+// Force LIVE mode when running in production (on Render)
+const PAYPAL_MODE = process.env.NODE_ENV === 'production' ? 'live' : process.env.PAYPAL_MODE;
 
 // Log the PayPal configuration (without showing the actual secret)
 console.log(`PayPal configuration: 
   - Client ID: ${PAYPAL_CLIENT_ID ? "✓ Set" : "❌ Missing"}
   - Client Secret: ${PAYPAL_CLIENT_SECRET ? "✓ Set" : "❌ Missing"}
-  - Mode: ${PAYPAL_MODE || "sandbox (default)"}`
+  - Mode: ${PAYPAL_MODE || "sandbox (default)"}
+  - Environment: ${process.env.NODE_ENV}`
 );
 
 if (!PAYPAL_CLIENT_ID) {
@@ -39,7 +43,7 @@ const client = new Client({
   },
   timeout: 0,
   environment:
-                process.env.PAYPAL_MODE === "live"
+                PAYPAL_MODE === "live"
                   ? Environment.Production
                   : Environment.Sandbox,
   logging: {
