@@ -85,7 +85,7 @@ export default function BugReportPage() {
   };
 
   return (
-    <div className="container max-w-3xl py-10">
+    <div className="container max-w-3xl py-10 mx-auto min-h-[calc(100vh-4rem)] flex flex-col justify-center">
       <h1 className="text-3xl font-bold mb-6 flex items-center gap-2">
         <BugIcon className="h-8 w-8 text-red-500" />
         Report a Bug
