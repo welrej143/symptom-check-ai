@@ -11,7 +11,10 @@ import {
   appSettings,
   type AppSettings,
   type InsertAppSettings,
-  type PaymentSettings
+  type PaymentSettings,
+  bugReports,
+  type BugReport,
+  type InsertBugReport
 } from "@shared/schema";
 import { db, pool } from "./db";
 import { eq, gte, asc, and, inArray } from "drizzle-orm";
@@ -50,6 +53,11 @@ export interface IStorage {
   getPaymentSettings(): Promise<PaymentSettings>;
   updatePaymentSettings(settings: PaymentSettings): Promise<PaymentSettings>;
   adminLogin(username: string, password: string): Promise<boolean>;
+  
+  // Bug report methods
+  createBugReport(report: InsertBugReport): Promise<BugReport>;
+  getBugReports(): Promise<BugReport[]>;
+  updateBugReportStatus(id: number, status: string): Promise<BugReport>;
   
   // Session management
   sessionStore: session.Store;
@@ -657,6 +665,60 @@ export class DatabaseStorage implements IStorage {
     const ADMIN_PASSWORD = 'may161998_ECE';
     
     return Promise.resolve(username === ADMIN_USERNAME && password === ADMIN_PASSWORD);
+  }
+  
+  // Bug report methods
+  async createBugReport(report: InsertBugReport): Promise<BugReport> {
+    try {
+      const [newReport] = await db
+        .insert(bugReports)
+        .values({
+          userId: report.userId,
+          description: report.description,
+          screenshotPath: report.screenshotPath,
+          status: 'pending',
+          createdAt: new Date(),
+          updatedAt: new Date()
+        })
+        .returning();
+      
+      return newReport;
+    } catch (error) {
+      console.error("Error creating bug report:", error);
+      throw new Error("Failed to create bug report");
+    }
+  }
+
+  async getBugReports(): Promise<BugReport[]> {
+    try {
+      const reports = await db
+        .select()
+        .from(bugReports)
+        .orderBy(bugReports.createdAt);
+      
+      return reports;
+    } catch (error) {
+      console.error("Error fetching bug reports:", error);
+      return [];
+    }
+  }
+
+  async updateBugReportStatus(id: number, status: string): Promise<BugReport> {
+    try {
+      const [updatedReport] = await db
+        .update(bugReports)
+        .set({
+          status,
+          updatedAt: new Date()
+        })
+        .where(eq(bugReports.id, id))
+        .returning();
+      
+      return updatedReport;
+    } catch (error) {
+      console.error(`Error updating bug report status (id: ${id}):`, error);
+      throw new Error("Failed to update bug report status");
+    }
   }
 }
 

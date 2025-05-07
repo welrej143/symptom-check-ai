@@ -187,3 +187,31 @@ export const paymentSettingsSchema = z.object({
 });
 
 export type PaymentSettings = z.infer<typeof paymentSettingsSchema>;
+
+// Bug reports table
+export const bugReports = pgTable("bug_reports", {
+  id: serial("id").primaryKey(),
+  userId: integer("user_id").references(() => users.id),
+  description: text("description").notNull(),
+  screenshotPath: text("screenshot_path"),
+  status: text("status").default("pending").notNull(), // pending, in-progress, resolved
+  createdAt: timestamp("created_at").notNull().defaultNow(),
+  updatedAt: timestamp("updated_at").notNull().defaultNow(),
+});
+
+export const insertBugReportSchema = createInsertSchema(bugReports).pick({
+  userId: true,
+  description: true,
+  screenshotPath: true,
+});
+
+export type InsertBugReport = z.infer<typeof insertBugReportSchema>;
+export type BugReport = typeof bugReports.$inferSelect;
+
+// Bug report submission schema for form validation
+export const bugReportSubmissionSchema = z.object({
+  description: z.string().min(10, "Description must be at least 10 characters long"),
+  // Screenshot is optional
+});
+
+export type BugReportSubmission = z.infer<typeof bugReportSubmissionSchema>;
