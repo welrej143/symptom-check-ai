@@ -1,14 +1,15 @@
-import type { Express, Request, Response } from "express";
+import type { Express, Request, Response, NextFunction } from "express";
 import { createServer, type Server } from "http";
 import { storage } from "./storage";
 import { setupAuth } from "./auth";
 import OpenAI from "openai";
 import Stripe from "stripe";
 import z from "zod";
-import { symptomInputSchema, analysisResponseSchema } from "@shared/schema";
+import { symptomInputSchema, analysisResponseSchema, symptomRecords, dailyTracking } from "@shared/schema";
 import { db, isDatabaseHealthy } from "./db";
 import { users } from "@shared/schema";
 import { eq, sql } from "drizzle-orm";
+import { SessionData } from "express-session";
 import { createPaypalOrder, capturePaypalOrder, loadPaypalDefault } from "./paypal";
 
 // Initialize Stripe (temporarily disabled as requested, with a warning message)
@@ -39,6 +40,100 @@ if (!process.env.PAYPAL_CLIENT_ID || !process.env.PAYPAL_CLIENT_SECRET) {
 
 export async function registerRoutes(app: Express): Promise<Server> {
   // Health check endpoint for Render
+  // Admin routes
+  app.post("/api/admin/login", async (req: Request, res: Response) => {
+    try {
+      const { username, password } = req.body;
+      
+      if (!username || !password) {
+        return res.status(400).json({ error: "Username and password are required" });
+      }
+      
+      const isAuthenticated = await storage.adminLogin(username, password);
+      
+      if (isAuthenticated) {
+        if (req.session) {
+          req.session.isAdmin = true;
+        }
+        res.status(200).json({ success: true });
+      } else {
+        res.status(401).json({ error: "Invalid credentials" });
+      }
+    } catch (error) {
+      console.error("Admin login error:", error);
+      res.status(500).json({ error: "Authentication failed" });
+    }
+  });
+  
+  // Admin authentication middleware
+  const requireAdmin = (req: Request, res: Response, next: NextFunction) => {
+    if (req.session && req.session.isAdmin) {
+      next();
+    } else {
+      res.status(401).json({ error: "Admin authentication required" });
+    }
+  };
+  
+  // Get admin dashboard data
+  app.get("/api/admin/dashboard", requireAdmin, async (_req: Request, res: Response) => {
+    try {
+      // Get system statistics
+      const userCount = await db.select({ count: sql`count(*)` }).from(users);
+      const recordCount = await db.select({ count: sql`count(*)` }).from(symptomRecords);
+      const trackingCount = await db.select({ count: sql`count(*)` }).from(dailyTracking);
+      
+      // Get payment settings
+      const paymentSettings = await storage.getPaymentSettings();
+      
+      // Return dashboard data
+      res.status(200).json({
+        statistics: {
+          userCount: userCount[0]?.count || 0,
+          recordCount: recordCount[0]?.count || 0,
+          trackingCount: trackingCount[0]?.count || 0,
+        },
+        paymentSettings,
+      });
+    } catch (error) {
+      console.error("Admin dashboard error:", error);
+      res.status(500).json({ error: "Failed to load dashboard data" });
+    }
+  });
+  
+  // Update payment settings
+  app.post("/api/admin/payment-settings", requireAdmin, async (req: Request, res: Response) => {
+    try {
+      const settings = req.body;
+      
+      // Validate settings
+      if (typeof settings.stripeEnabled !== 'boolean' || 
+          typeof settings.paypalEnabled !== 'boolean' ||
+          (settings.paypalMode !== 'sandbox' && settings.paypalMode !== 'live')) {
+        return res.status(400).json({ error: "Invalid payment settings format" });
+      }
+      
+      // Update settings
+      const updatedSettings = await storage.updatePaymentSettings(settings);
+      
+      // Return updated settings
+      res.status(200).json(updatedSettings);
+    } catch (error) {
+      console.error("Update payment settings error:", error);
+      res.status(500).json({ error: "Failed to update payment settings" });
+    }
+  });
+  
+  // Admin logout
+  app.post("/api/admin/logout", requireAdmin, (req: Request, res: Response) => {
+    if (req.session) {
+      req.session.isAdmin = false;
+      res.status(200).json({ success: true });
+    } else {
+      res.status(500).json({ error: "Session management error" });
+    }
+  });
+  
+  // Health check endpoint
   app.get("/api/health", async (_req: Request, res: Response) => {
     try {
       // Check if we're in degraded mode (database failed to connect initially)
