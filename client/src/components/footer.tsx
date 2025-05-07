@@ -318,7 +318,7 @@ export default function Footer() {
               <li>
                 <Link 
                   to="/bug-report" 
-                  className="flex items-center justify-center text-sm text-gray-600 hover:text-primary-600 transition-colors"
+                  className="flex items-center text-sm text-gray-600 hover:text-primary-600 transition-colors"
                 >
                   <AlertTriangle className="h-4 w-4 mr-2" />
                   Report a Bug
@@ -326,7 +326,6 @@ export default function Footer() {
               </li>
               <li>
                 <button 
-                  className="w-full flex items-center justify-center text-sm text-gray-600 hover:text-primary-600 transition-colors"
                   onClick={() => openModal("About Us", (
                     <div className="prose prose-sm max-w-none">
                       <h2>About SymptomCheck AI</h2>
@@ -371,6 +370,7 @@ export default function Footer() {
                       </p>
                     </div>
                   ))}
+                  className="text-sm text-gray-600 hover:text-gray-900 cursor-pointer hover:underline text-left"
                 >
                   About Us
                 </button>
@@ -415,6 +415,7 @@ export default function Footer() {
                       </p>
                     </div>
                   ))}
+                  className="text-sm text-gray-600 hover:text-gray-900 cursor-pointer hover:underline text-left"
                 >
                   Contact Us
                 </button>
