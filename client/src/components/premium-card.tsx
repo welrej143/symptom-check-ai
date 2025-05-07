@@ -618,26 +618,12 @@ export default function PremiumCard() {
                 </div>
                 <p className="text-sm text-gray-600 mb-3">Get unlimited symptom analyses and health tracking. Cancel anytime.</p>
                 {paymentMethods?.paypal ? (
-                  <div>
-                    {/* Direct PayPal Subscription Link */}
-                    <a 
-                      href={`https://${paymentMethods.mode === 'sandbox' ? 'www.sandbox.paypal.com' : 'www.paypal.com'}/webapps/billing/plans/subscribe?plan_id=P-8BT43153WY803422FNAM5UPI`}
-                      target="_blank" 
-                      rel="noopener noreferrer"
-                      className="w-full bg-[#0070ba] hover:bg-[#003087] text-white py-3 px-4 rounded-md font-semibold flex items-center justify-center gap-2 transition-colors"
-                    >
-                      <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                        <rect width="20" height="14" x="2" y="5" rx="2" />
-                        <line x1="2" x2="22" y1="10" y2="10" />
-                      </svg>
-                      Subscribe with PayPal
-                      {paymentMethods?.mode === 'sandbox' && (
-                        <span className="ml-1 text-xs bg-white/20 px-1.5 py-0.5 rounded-full">
-                          Test
-                        </span>
-                      )}
-                    </a>
-                  </div>
+                  <PayPalButton 
+                    amount="9.99"
+                    currency="USD"
+                    intent="CAPTURE"
+                    onSuccess={(data) => handlePaymentSuccess(data, "monthly")}
+                  />
                 ) : (
                   <div className="p-3 text-center bg-gray-100 rounded-md text-gray-600 text-sm">
                     PayPal payments are currently unavailable. Please try again later.
@@ -721,24 +707,32 @@ export default function PremiumCard() {
             )}
             
             <div className="mt-4 grid grid-cols-1 md:grid-cols-2 gap-3">
-              {/* PayPal Button - Direct subscription link */}
+              {/* PayPal Button - Only shows when enabled */}
               {paymentMethods?.paypal ? (
-                <a 
-                  href={`https://${paymentMethods.mode === 'sandbox' ? 'www.sandbox.paypal.com' : 'www.paypal.com'}/webapps/billing/plans/subscribe?plan_id=P-8BT43153WY803422FNAM5UPI`}
-                  target="_blank" 
-                  rel="noopener noreferrer"
+                <button 
+                  onClick={() => setIsUpgrading(true)}
                   className="bg-blue-600 text-white py-2.5 px-4 rounded-md font-medium hover:bg-blue-700 transition-colors flex items-center justify-center w-full"
+                  disabled={isUpgrading}
                 >
-                  <div className="h-5 w-5 mr-2 bg-white rounded-sm flex items-center justify-center">
-                    <img src={paypalLogo} alt="PayPal" className="h-4 w-4" />
-                  </div>
-                  Subscribe with PayPal
-                  {paymentMethods.mode === 'sandbox' && (
-                    <span className="ml-1 text-xs bg-white/20 px-1.5 py-0.5 rounded-full">
-                      Test
-                    </span>
+                  {isUpgrading ? (
+                    <>
+                      <Loader className="w-4 h-4 mr-2 animate-spin" />
+                      Preparing Checkout...
+                    </>
+                  ) : (
+                    <>
+                      <div className="h-5 w-5 mr-2 bg-white rounded-sm flex items-center justify-center">
+                        <img src={paypalLogo} alt="PayPal" className="h-4 w-4" />
+                      </div>
+                      Pay with PayPal
+                      {paymentMethods.mode === 'sandbox' && (
+                        <span className="ml-1 text-xs bg-white/20 px-1.5 py-0.5 rounded-full">
+                          Test
+                        </span>
+                      )}
+                    </>
                   )}
-                </a>
+                </button>
               ) : (
                 <button 
                   className="bg-gray-200 text-gray-500 py-2.5 px-4 rounded-md font-medium flex items-center justify-center w-full opacity-60 cursor-not-allowed"
