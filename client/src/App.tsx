@@ -7,6 +7,8 @@ import Tracker from "@/pages/tracker";
 import AuthPage from "@/pages/auth-page";
 import AdminLogin from "@/pages/admin-login";
 import AdminDashboard from "@/pages/admin-dashboard";
+import PrivacyPolicy from "@/pages/privacy-policy";
+import TermsOfService from "@/pages/terms-of-service";
 import Header from "@/components/header";
 import Footer from "@/components/footer";
 import { useState, useEffect } from "react";
@@ -246,6 +248,10 @@ function App() {
                     </div>
                   )} />
                   <Route path="/auth" component={AuthPage} />
+                  
+                  {/* Legal pages */}
+                  <Route path="/privacy-policy" component={PrivacyPolicy} />
+                  <Route path="/terms-of-service" component={TermsOfService} />
                   
                   {/* Admin routes - Login removed as requested */}
                   <Route path="/admin/login" component={AdminDashboard} />

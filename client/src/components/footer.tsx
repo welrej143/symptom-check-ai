@@ -1,4 +1,4 @@
-import { Zap, Mail, Phone, AlertTriangle, ShieldCheck, Users } from "lucide-react";
+import { Mail, Phone, AlertTriangle, ShieldCheck, Users } from "lucide-react";
 import { Link } from "wouter";
 import { useState } from "react";
 
@@ -157,161 +157,20 @@ export default function Footer() {
                 </button>
               </li>
               <li>
-                <button 
-                  onClick={() => openModal("Privacy Policy", (
-                    <div className="prose prose-sm max-w-none">
-                      <h2>Privacy Policy for SymptomCheck AI</h2>
-                      
-                      <p>Last Updated: {new Date().toLocaleDateString()}</p>
-                      
-                      <p>
-                        <strong>1. Information We Collect</strong>
-                      </p>
-                      
-                      <p>
-                        SymptomCheck AI collects information you provide directly to us, including:
-                      </p>
-                      
-                      <ul>
-                        <li>Account information (email address, username, password)</li>
-                        <li>Health information (symptoms, medical history, lifestyle factors)</li>
-                        <li>Payment information when you subscribe to premium services</li>
-                        <li>Communication data when you contact our support team</li>
-                      </ul>
-                      
-                      <p>
-                        <strong>2. How We Use Your Information</strong>
-                      </p>
-                      
-                      <ul>
-                        <li>To provide and improve our services</li>
-                        <li>To process your subscription and payments</li>
-                        <li>To personalize your experience</li>
-                        <li>To communicate with you about your account or our services</li>
-                        <li>To analyze usage patterns and improve our application</li>
-                      </ul>
-                      
-                      <p>
-                        <strong>3. Data Security</strong>
-                      </p>
-                      
-                      <p>
-                        We implement appropriate technical and organizational measures to protect your personal information. However, no method of transmission over the Internet or method of electronic storage is 100% secure.
-                      </p>
-                      
-                      <p>
-                        <strong>4. Data Sharing</strong>
-                      </p>
-                      
-                      <p>
-                        We do not sell your personal information. We may share information with:
-                      </p>
-                      
-                      <ul>
-                        <li>Service providers that help us deliver our services</li>
-                        <li>Payment processors for subscription handling</li>
-                        <li>Legal authorities when required by law</li>
-                      </ul>
-                      
-                      <p>
-                        <strong>5. Your Rights</strong>
-                      </p>
-                      
-                      <p>
-                        Depending on your location, you may have rights to:
-                      </p>
-                      
-                      <ul>
-                        <li>Access your personal information</li>
-                        <li>Correct inaccurate information</li>
-                        <li>Delete your information</li>
-                        <li>Object to certain processing</li>
-                        <li>Export your data</li>
-                      </ul>
-                      
-                      <p>
-                        <strong>6. Contact Us</strong>
-                      </p>
-                      
-                      <p>
-                        If you have questions about this Privacy Policy, please contact us at privacy@symptomcheckapp.com.
-                      </p>
-                    </div>
-                  ))}
+                <Link 
+                  href="/privacy-policy"
                   className="text-sm text-gray-600 hover:text-gray-900 cursor-pointer hover:underline text-left"
                 >
                   Privacy Policy
-                </button>
+                </Link>
               </li>
               <li>
-                <button 
-                  onClick={() => openModal("Terms of Service", (
-                    <div className="prose prose-sm max-w-none">
-                      <h2>Terms of Service for SymptomCheck AI</h2>
-                      
-                      <p>Last Updated: {new Date().toLocaleDateString()}</p>
-                      
-                      <p>
-                        <strong>1. Acceptance of Terms</strong>
-                      </p>
-                      
-                      <p>
-                        By accessing or using SymptomCheck AI, you agree to be bound by these Terms of Service. If you do not agree to these terms, you must not use our service.
-                      </p>
-                      
-                      <p>
-                        <strong>2. Description of Service</strong>
-                      </p>
-                      
-                      <p>
-                        SymptomCheck AI provides an AI-powered platform for analyzing health symptoms and tracking health metrics. The service includes both free and premium subscription options.
-                      </p>
-                      
-                      <p>
-                        <strong>3. User Accounts</strong>
-                      </p>
-                      
-                      <p>
-                        You are responsible for maintaining the confidentiality of your account credentials and for all activities that occur under your account. You must immediately notify us of any unauthorized use of your account.
-                      </p>
-                      
-                      <p>
-                        <strong>4. Subscription and Billing</strong>
-                      </p>
-                      
-                      <p>
-                        Premium features require a paid subscription. Subscription fees are billed in advance on a monthly or annual basis. Subscriptions automatically renew unless canceled at least 24 hours before the end of the current period.
-                      </p>
-                      
-                      <p>
-                        <strong>5. Medical Disclaimer</strong>
-                      </p>
-                      
-                      <p>
-                        SymptomCheck AI is not a substitute for professional medical advice, diagnosis, or treatment. Always seek the advice of your physician or other qualified health provider with any questions you may have regarding a medical condition.
-                      </p>
-                      
-                      <p>
-                        <strong>6. Limitation of Liability</strong>
-                      </p>
-                      
-                      <p>
-                        To the maximum extent permitted by law, SymptomCheck AI shall not be liable for any indirect, incidental, special, consequential, or punitive damages resulting from your use or inability to use the service.
-                      </p>
-                      
-                      <p>
-                        <strong>7. Changes to Terms</strong>
-                      </p>
-                      
-                      <p>
-                        We may modify these Terms of Service at any time. The updated terms will be posted on this page with a revised "Last Updated" date. Your continued use of the service after any changes constitutes your acceptance of the new terms.
-                      </p>
-                    </div>
-                  ))}
+                <Link 
+                  href="/terms-of-service"
                   className="text-sm text-gray-600 hover:text-gray-900 cursor-pointer hover:underline text-left"
                 >
                   Terms of Service
-                </button>
+                </Link>
               </li>
             </ul>
           </div>
