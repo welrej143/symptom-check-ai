@@ -33,7 +33,12 @@ export default function Header() {
           className="flex items-center cursor-pointer" 
           onClick={() => navigate("/")}
         >
-          <img src="/icon.png" alt="SymptomCheck AI" className="h-8 w-auto" />
+          <img 
+            src="/icon.png" 
+            alt="SymptomCheck AI" 
+            className="h-10 w-auto mix-blend-multiply" 
+            style={{ filter: 'brightness(1.1) contrast(1.1)' }}
+          />
           <h1 className="ml-2 text-xl font-bold text-gray-900">SymptomCheck AI</h1>
         </div>
         
