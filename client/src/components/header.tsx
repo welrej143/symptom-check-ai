@@ -33,7 +33,7 @@ export default function Header() {
           className="flex items-center cursor-pointer" 
           onClick={() => navigate("/")}
         >
-          <Zap className="h-8 w-8 text-blue-500" />
+          <img src="/icon.png" alt="SymptomCheck AI" className="h-8 w-auto" />
           <h1 className="ml-2 text-xl font-bold text-gray-900">SymptomCheck AI</h1>
         </div>
         
