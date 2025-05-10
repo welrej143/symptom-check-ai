@@ -106,7 +106,7 @@ export default function PrivacyPolicy() {
           </p>
           
           <p>
-            <strong>Email:</strong> privacy@symptomcheckapp.com<br />
+            <strong>Email:</strong> support@symptomcheckapp.com<br />
             <strong>Phone:</strong> +63 967 836 1036
           </p>
         </div>
