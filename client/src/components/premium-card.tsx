@@ -13,7 +13,7 @@ import {
 import SubscriptionManager from "./subscription-manager";
 import { useQuery } from "@tanstack/react-query";
 import PayPalButton from "./PayPalButton";
-import { trackConversion } from "@/lib/gtag";
+import { trackPurchase, trackPageViewConversion } from "@/lib/gtag";
 
 // Import payment logos
 import paypalLogo from "../assets/paypal_icon.png";
@@ -276,13 +276,10 @@ function PayPalPaymentOptions() {
       // Refresh subscription status
       await refreshSubscriptionStatus();
       
-      // Track conversion with Google Ads
-      trackConversion(
-        '17064009210',
-        'SUBSCRIPTION_PURCHASE', // Replace with your actual conversion label
+      // Track conversion with Google Ads using the exact snippet from Google Ads
+      trackPurchase(
         parseFloat(paymentInfo?.amount || "9.99"),
-        'USD',
-        data.id
+        'USD'
       );
       
       toast({
@@ -424,13 +421,10 @@ export default function PremiumCard() {
         console.error("Could not parse payment data for conversion tracking", e);
       }
       
-      // Track conversion with Google Ads
-      trackConversion(
-        '17064009210',
-        'SUBSCRIPTION_PURCHASE', // Replace with your actual conversion label
+      // Track conversion with Google Ads using the exact snippet from Google Ads
+      trackPurchase(
         amount,
-        'USD',
-        data.id
+        'USD'
       );
       
       setIsSuccess(true);
@@ -493,12 +487,9 @@ export default function PremiumCard() {
           
           // Track conversion with Google Ads
           if (data && data.amount) {
-            trackConversion(
-              '17064009210',
-              'SUBSCRIPTION_PURCHASE', // Replace with your actual conversion label
+            trackPurchase(
               parseFloat(data.amount),
-              data.currency || 'USD',
-              sessionId
+              data.currency || 'USD'
             );
           }
           

@@ -8,7 +8,71 @@ declare global {
   }
 }
 
-// Track a specific conversion event
+/**
+ * Track a page view conversion using the official Google Ads snippet
+ * Use this for tracking conversions that happen when a user views a specific page
+ * after completing a goal (like a thank you page)
+ */
+export const trackPageViewConversion = (
+  value: number = 1.0,
+  currency: string = 'USD'
+) => {
+  if (typeof window === 'undefined' || !window.gtag) {
+    console.warn('Google Ads tracking not available');
+    return;
+  }
+
+  // This is the exact snippet provided by Google Ads
+  window.gtag('event', 'conversion', {
+    'send_to': 'AW-17064009210/nJjFCJzQ68caEPq74Mg_',
+    'value': value,
+    'currency': currency
+  });
+};
+
+/**
+ * Track a click conversion using the official Google Ads snippet and redirect
+ * This function tracks a conversion when a user clicks a button or link
+ * and optionally redirects them to a new URL
+ */
+export const trackClickConversion = (url?: string) => {
+  if (typeof window === 'undefined' || !window.gtag) {
+    console.warn('Google Ads tracking not available');
+    return false;
+  }
+
+  const callback = function() {
+    if (typeof url !== 'undefined') {
+      window.location = url as any;
+    }
+  };
+
+  // This is the exact snippet provided by Google Ads
+  window.gtag('event', 'conversion', {
+    'send_to': 'AW-17064009210/nJjFCJzQ68caEPq74Mg_',
+    'value': 1.0,
+    'currency': 'USD',
+    'event_callback': callback
+  });
+  
+  return false;
+};
+
+/**
+ * Track a purchase conversion
+ * A wrapper around trackPageViewConversion to track subscription purchases
+ */
+export const trackPurchase = (
+  value: number,
+  currency: string = 'USD'
+) => {
+  trackPageViewConversion(value, currency);
+};
+
+/**
+ * Track a basic conversion
+ * A simplified function to track conversions with custom parameters
+ */
 export const trackConversion = (
   conversionId: string, 
   conversionLabel: string, 
@@ -23,7 +87,7 @@ export const trackConversion = (
 
   // Create conversion parameters
   const conversionParams: Record<string, any> = {
-    'send_to': `AW-17064009210/${conversionLabel}`,
+    'send_to': `${conversionId}/${conversionLabel}`,
   };
 
   // Add optional parameters if they exist
@@ -41,22 +105,6 @@ export const trackConversion = (
 
   // Send conversion event to Google Ads
   window.gtag('event', 'conversion', conversionParams);
-};
-
-// Track a purchase conversion
-export const trackPurchase = (
-  value: number,
-  currency: string = 'USD',
-  transactionId?: string
-) => {
-  // Replace 'CONVERSION_LABEL' with your actual purchase conversion label from Google Ads
-  trackConversion('17064009210', 'CONVERSION_LABEL', value, currency, transactionId);
-};
-
-// Track a signup conversion
-export const trackSignup = () => {
-  // Replace 'SIGNUP_LABEL' with your actual signup conversion label from Google Ads
-  trackConversion('17064009210', 'SIGNUP_LABEL');
 };
 
 // Track a page view (normally handled automatically by the base tag, but useful for SPAs)
