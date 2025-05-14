@@ -276,6 +276,15 @@ function PayPalPaymentOptions() {
       // Refresh subscription status
       await refreshSubscriptionStatus();
       
+      // Track conversion with Google Ads
+      trackConversion(
+        '17064009210',
+        'SUBSCRIPTION_PURCHASE', // Replace with your actual conversion label
+        parseFloat(paymentInfo?.amount || "9.99"),
+        'USD',
+        data.id
+      );
+      
       toast({
         title: "Payment Successful",
         description: "Your subscription has been activated successfully!",
@@ -404,6 +413,26 @@ export default function PremiumCard() {
       // Refresh subscription status
       await refreshSubscriptionStatus();
       
+      // Get the price data from the API response if available
+      let amount = 9.99; // Default amount
+      try {
+        const paymentData = await response.json();
+        if (paymentData && paymentData.amount) {
+          amount = parseFloat(paymentData.amount);
+        }
+      } catch (e) {
+        console.error("Could not parse payment data for conversion tracking", e);
+      }
+      
+      // Track conversion with Google Ads
+      trackConversion(
+        '17064009210',
+        'SUBSCRIPTION_PURCHASE', // Replace with your actual conversion label
+        amount,
+        'USD',
+        data.id
+      );
+      
       setIsSuccess(true);
       setIsVerifying(false);
       setIsUpgrading(false);
@@ -461,6 +490,17 @@ export default function PremiumCard() {
           
           // Refresh subscription status to reflect changes
           await refreshSubscriptionStatus();
+          
+          // Track conversion with Google Ads
+          if (data && data.amount) {
+            trackConversion(
+              '17064009210',
+              'SUBSCRIPTION_PURCHASE', // Replace with your actual conversion label
+              parseFloat(data.amount),
+              data.currency || 'USD',
+              sessionId
+            );
+          }
           
           setIsSuccess(true);
           toast({
