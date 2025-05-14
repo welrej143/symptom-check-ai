@@ -13,6 +13,7 @@ import {
 import SubscriptionManager from "./subscription-manager";
 import { useQuery } from "@tanstack/react-query";
 import PayPalButton from "./PayPalButton";
+import { trackConversion } from "@/lib/gtag";
 
 // Import payment logos
 import paypalLogo from "../assets/paypal_icon.png";
