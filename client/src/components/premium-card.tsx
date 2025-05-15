@@ -13,7 +13,7 @@ import {
 import SubscriptionManager from "./subscription-manager";
 import { useQuery } from "@tanstack/react-query";
 import PayPalButton from "./PayPalButton";
-import { trackPurchase, trackPageViewConversion } from "@/lib/gtag";
+import { trackPaymentButtonClick, trackSuccessfulPayment, trackPageViewConversion } from "@/lib/gtag";
 
 // Import payment logos
 import paypalLogo from "../assets/paypal_icon.png";
@@ -276,10 +276,14 @@ function PayPalPaymentOptions() {
       // Refresh subscription status
       await refreshSubscriptionStatus();
       
-      // Track conversion with Google Ads using the exact snippet from Google Ads
-      trackPurchase(
-        parseFloat(paymentInfo?.amount || "9.99"),
-        'USD'
+      // Track successful payment
+      const amount = parseFloat(paymentInfo?.amount || "9.99");
+      trackSuccessfulPayment(
+        'paypal',
+        amount,
+        'USD',
+        auth.user?.id,
+        'completed'
       );
       
       toast({
@@ -421,10 +425,13 @@ export default function PremiumCard() {
         console.error("Could not parse payment data for conversion tracking", e);
       }
       
-      // Track conversion with Google Ads using the exact snippet from Google Ads
-      trackPurchase(
+      // Track successful payment
+      trackSuccessfulPayment(
+        'stripe',
         amount,
-        'USD'
+        'USD',
+        user?.id,
+        'completed'
       );
       
       setIsSuccess(true);
