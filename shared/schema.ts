@@ -148,6 +148,17 @@ export const appSettings = pgTable("app_settings", {
   updatedAt: timestamp("updated_at").notNull().defaultNow(),
 });
 
+export const paymentAnalytics = pgTable("payment_analytics", {
+  id: serial("id").primaryKey(),
+  event: text("event").notNull(), // 'button_click', 'payment_success', etc.
+  method: text("method").notNull(), // 'stripe', 'paypal'
+  userId: integer("user_id").references(() => users.id),
+  amount: text("amount"),
+  orderId: text("order_id"),
+  timestamp: timestamp("timestamp").notNull().defaultNow(),
+  additionalData: text("additional_data"), // JSON string for any extra data
+});
+
 export const insertAppSettingsSchema = createInsertSchema(appSettings).pick({
   key: true,
   value: true,
@@ -155,6 +166,18 @@ export const insertAppSettingsSchema = createInsertSchema(appSettings).pick({
 
 export type InsertAppSettings = z.infer<typeof insertAppSettingsSchema>;
 export type AppSettings = typeof appSettings.$inferSelect;
+
+export const insertPaymentAnalyticsSchema = createInsertSchema(paymentAnalytics).pick({
+  event: true,
+  method: true,
+  userId: true,
+  amount: true,
+  orderId: true,
+  additionalData: true,
+});
+
+export type InsertPaymentAnalytics = z.infer<typeof insertPaymentAnalyticsSchema>;
+export type PaymentAnalytics = typeof paymentAnalytics.$inferSelect;
 
 // Admin Authentication
 export const adminLoginSchema = z.object({

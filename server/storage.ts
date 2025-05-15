@@ -11,7 +11,10 @@ import {
   appSettings,
   type AppSettings,
   type InsertAppSettings,
-  type PaymentSettings
+  type PaymentSettings,
+  paymentAnalytics,
+  type PaymentAnalytics,
+  type InsertPaymentAnalytics
 } from "@shared/schema";
 import { db, pool } from "./db";
 import { eq, gte, asc, and, inArray } from "drizzle-orm";
@@ -41,6 +44,12 @@ export interface IStorage {
   incrementAnalysisCount(userId: number): Promise<number>;
   getAnalysisCount(userId: number): Promise<number>;
   resetAnalysisCount(userId: number): Promise<void>;
+  
+  // Payment analytics methods
+  trackPaymentEvent(analytics: InsertPaymentAnalytics): Promise<PaymentAnalytics>;
+  getPaymentClickStats(): Promise<{stripe: number, paypal: number}>;
+  getPaymentSuccessStats(): Promise<{stripe: number, paypal: number}>;
+  getRecentPaymentEvents(limit?: number): Promise<PaymentAnalytics[]>;
   
   // App settings methods
   getSetting(key: string): Promise<string | null>;
