@@ -440,6 +440,69 @@ export class DatabaseStorage implements IStorage {
       .where(eq(users.id, userId));
   }
 
+  // Payment analytics methods
+  async trackPaymentEvent(analytics: InsertPaymentAnalytics): Promise<PaymentAnalytics> {
+    const [result] = await db
+      .insert(paymentAnalytics)
+      .values(analytics)
+      .returning();
+    return result;
+  }
+  
+  async getPaymentClickStats(): Promise<{stripe: number, paypal: number}> {
+    const stripeClicks = await db
+      .select({ count: sql`count(*)` })
+      .from(paymentAnalytics)
+      .where(and(
+        eq(paymentAnalytics.event, 'button_click'),
+        eq(paymentAnalytics.method, 'stripe')
+      ));
+      
+    const paypalClicks = await db
+      .select({ count: sql`count(*)` })
+      .from(paymentAnalytics)
+      .where(and(
+        eq(paymentAnalytics.event, 'button_click'),
+        eq(paymentAnalytics.method, 'paypal')
+      ));
+      
+    return {
+      stripe: Number(stripeClicks[0]?.count || 0),
+      paypal: Number(paypalClicks[0]?.count || 0)
+    };
+  }
+  
+  async getPaymentSuccessStats(): Promise<{stripe: number, paypal: number}> {
+    const stripeSuccess = await db
+      .select({ count: sql`count(*)` })
+      .from(paymentAnalytics)
+      .where(and(
+        eq(paymentAnalytics.event, 'payment_success'),
+        eq(paymentAnalytics.method, 'stripe')
+      ));
+      
+    const paypalSuccess = await db
+      .select({ count: sql`count(*)` })
+      .from(paymentAnalytics)
+      .where(and(
+        eq(paymentAnalytics.event, 'payment_success'),
+        eq(paymentAnalytics.method, 'paypal')
+      ));
+      
+    return {
+      stripe: Number(stripeSuccess[0]?.count || 0),
+      paypal: Number(paypalSuccess[0]?.count || 0)
+    };
+  }
+  
+  async getRecentPaymentEvents(limit: number = 10): Promise<PaymentAnalytics[]> {
+    return await db
+      .select()
+      .from(paymentAnalytics)
+      .orderBy(sql`timestamp DESC`)
+      .limit(limit);
+  }
+
   // App settings methods
   async getSetting(key: string): Promise<string | null> {
     try {

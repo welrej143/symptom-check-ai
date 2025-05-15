@@ -169,6 +169,26 @@ async function ensureTablesExist() {
       console.log("App settings table created successfully");
     }
     
+    // Check if payment_analytics table exists, if not create it
+    const paymentAnalyticsTableExists = await checkTableExists('payment_analytics');
+    if (!paymentAnalyticsTableExists) {
+      console.log("Creating payment_analytics table...");
+      await db.execute(sql`
+        CREATE TABLE IF NOT EXISTS payment_analytics (
+          id SERIAL PRIMARY KEY,
+          method TEXT NOT NULL,
+          event TEXT NOT NULL,
+          timestamp TIMESTAMP NOT NULL DEFAULT NOW(),
+          user_id INTEGER,
+          amount NUMERIC,
+          currency TEXT,
+          status TEXT,
+          metadata JSONB
+        )
+      `);
+      console.log("Payment analytics table created successfully");
+    }
+    
     console.log("All required tables are in place");
   } catch (error) {
     console.error("Error ensuring tables exist:", error);
