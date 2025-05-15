@@ -5,7 +5,15 @@ import { setupAuth } from "./auth";
 import OpenAI from "openai";
 import Stripe from "stripe";
 import z from "zod";
-import { symptomInputSchema, analysisResponseSchema, symptomRecords, dailyTracking } from "@shared/schema";
+import { 
+  symptomInputSchema, 
+  analysisResponseSchema, 
+  symptomRecords, 
+  dailyTracking,
+  paymentAnalytics,
+  type PaymentAnalytics,
+  type InsertPaymentAnalytics
+} from "@shared/schema";
 import { db, isDatabaseHealthy } from "./db";
 import { users } from "@shared/schema";
 import { eq, sql, desc } from "drizzle-orm";
@@ -683,6 +691,37 @@ export async function registerRoutes(app: Express): Promise<Server> {
         message: "Error fetching payment methods",
         error: error instanceof Error ? error.message : "Unknown error"
       });
+    }
+  });
+  
+  // Track payment events (button clicks, successes, etc.)
+  app.post("/api/track-payment-event", async (req: Request, res: Response) => {
+    try {
+      const { method, event, userId, amount, currency, status, metadata } = req.body;
+      
+      // Basic validation
+      if (!method || !event) {
+        return res.status(400).json({ error: "Method and event are required" });
+      }
+      
+      // Create the analytics record
+      const analyticsData: InsertPaymentAnalytics = {
+        method,
+        event,
+        timestamp: new Date(),
+        userId: userId || null,
+        amount: amount || null,
+        currency: currency || null,
+        status: status || null,
+        metadata: metadata || null
+      };
+      
+      const result = await storage.trackPaymentEvent(analyticsData);
+      
+      res.status(200).json({ success: true, id: result.id });
+    } catch (error) {
+      console.error("Error tracking payment event:", error);
+      res.status(500).json({ error: "Failed to track payment event" });
     }
   });
   

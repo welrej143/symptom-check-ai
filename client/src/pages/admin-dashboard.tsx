@@ -185,8 +185,9 @@ export default function AdminDashboard() {
       </div>
       
       <Tabs defaultValue="overview">
-        <TabsList className="grid w-full grid-cols-2">
+        <TabsList className="grid w-full grid-cols-3">
           <TabsTrigger value="overview">Overview</TabsTrigger>
+          <TabsTrigger value="analytics">Payment Analytics</TabsTrigger>
           <TabsTrigger value="settings">Payment Settings</TabsTrigger>
         </TabsList>
         
@@ -348,6 +349,195 @@ export default function AdminDashboard() {
                 <div className="py-8 text-center text-gray-500">
                   <UsersRound className="h-12 w-12 mx-auto mb-3 text-gray-400" />
                   <p>No users registered yet</p>
+                </div>
+              )}
+            </CardContent>
+          </Card>
+        </TabsContent>
+        
+        <TabsContent value="analytics" className="space-y-4 mt-4">
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <Card>
+              <CardHeader>
+                <CardTitle>Payment Button Clicks</CardTitle>
+                <CardDescription>Number of times payment buttons were clicked</CardDescription>
+              </CardHeader>
+              <CardContent>
+                <div className="space-y-4">
+                  <div className="flex items-center justify-between">
+                    <div className="space-y-1">
+                      <p className="text-sm font-medium leading-none">PayPal</p>
+                      <p className="text-sm text-muted-foreground">Button click count</p>
+                    </div>
+                    <div className="text-3xl font-bold">
+                      {dashboardData?.paymentClickStats?.paypal || 0}
+                    </div>
+                  </div>
+                  <Separator />
+                  <div className="flex items-center justify-between">
+                    <div className="space-y-1">
+                      <p className="text-sm font-medium leading-none">Stripe</p>
+                      <p className="text-sm text-muted-foreground">Button click count</p>
+                    </div>
+                    <div className="text-3xl font-bold">
+                      {dashboardData?.paymentClickStats?.stripe || 0}
+                    </div>
+                  </div>
+                </div>
+              </CardContent>
+            </Card>
+
+            <Card>
+              <CardHeader>
+                <CardTitle>Successful Payments</CardTitle>
+                <CardDescription>Number of successful payment transactions</CardDescription>
+              </CardHeader>
+              <CardContent>
+                <div className="space-y-4">
+                  <div className="flex items-center justify-between">
+                    <div className="space-y-1">
+                      <p className="text-sm font-medium leading-none">PayPal</p>
+                      <p className="text-sm text-muted-foreground">Successful payments</p>
+                    </div>
+                    <div className="text-3xl font-bold">
+                      {dashboardData?.paymentSuccessStats?.paypal || 0}
+                    </div>
+                  </div>
+                  <Separator />
+                  <div className="flex items-center justify-between">
+                    <div className="space-y-1">
+                      <p className="text-sm font-medium leading-none">Stripe</p>
+                      <p className="text-sm text-muted-foreground">Successful payments</p>
+                    </div>
+                    <div className="text-3xl font-bold">
+                      {dashboardData?.paymentSuccessStats?.stripe || 0}
+                    </div>
+                  </div>
+                </div>
+              </CardContent>
+            </Card>
+          </div>
+          
+          <Card>
+            <CardHeader>
+              <CardTitle>Recent Payment Events</CardTitle>
+              <CardDescription>Latest payment-related activity</CardDescription>
+            </CardHeader>
+            <CardContent>
+              {dashboardData?.recentPaymentEvents && dashboardData.recentPaymentEvents.length > 0 ? (
+                <Table>
+                  <TableHeader>
+                    <TableRow>
+                      <TableHead>Event</TableHead>
+                      <TableHead>Method</TableHead>
+                      <TableHead>Date</TableHead>
+                      <TableHead>User ID</TableHead>
+                      <TableHead>Amount</TableHead>
+                      <TableHead>Status</TableHead>
+                    </TableRow>
+                  </TableHeader>
+                  <TableBody>
+                    {dashboardData.recentPaymentEvents.map((event) => {
+                      // Format the date
+                      const eventDate = new Date(event.timestamp).toLocaleDateString('en-US', {
+                        month: 'short',
+                        day: 'numeric',
+                        hour: '2-digit',
+                        minute: '2-digit'
+                      });
+                      
+                      // Format amount if available
+                      const formattedAmount = event.amount && event.currency 
+                        ? new Intl.NumberFormat('en-US', { 
+                            style: 'currency', 
+                            currency: event.currency
+                          }).format(event.amount) 
+                        : '-';
+                      
+                      // Determine event badge
+                      let eventBadge;
+                      switch(event.event) {
+                        case 'button_click':
+                          eventBadge = (
+                            <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-blue-100 text-blue-800">
+                              Button Click
+                            </span>
+                          );
+                          break;
+                        case 'payment_success':
+                          eventBadge = (
+                            <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-green-100 text-green-800">
+                              Payment Success
+                            </span>
+                          );
+                          break;
+                        case 'payment_failed':
+                          eventBadge = (
+                            <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-red-100 text-red-800">
+                              Payment Failed
+                            </span>
+                          );
+                          break;
+                        default:
+                          eventBadge = (
+                            <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-gray-100 text-gray-800">
+                              {event.event}
+                            </span>
+                          );
+                      }
+                      
+                      // Determine method badge
+                      let methodBadge;
+                      switch(event.method) {
+                        case 'paypal':
+                          methodBadge = (
+                            <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-blue-100 text-blue-800">
+                              PayPal
+                            </span>
+                          );
+                          break;
+                        case 'stripe':
+                          methodBadge = (
+                            <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-purple-100 text-purple-800">
+                              Stripe
+                            </span>
+                          );
+                          break;
+                        default:
+                          methodBadge = (
+                            <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-gray-100 text-gray-800">
+                              {event.method}
+                            </span>
+                          );
+                      }
+                      
+                      return (
+                        <TableRow key={event.id}>
+                          <TableCell>{eventBadge}</TableCell>
+                          <TableCell>{methodBadge}</TableCell>
+                          <TableCell>{eventDate}</TableCell>
+                          <TableCell>{event.userId || '-'}</TableCell>
+                          <TableCell>{formattedAmount}</TableCell>
+                          <TableCell>
+                            {event.status ? (
+                              <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium
+                                ${event.status === 'completed' ? 'bg-green-100 text-green-800' : 
+                                event.status === 'pending' ? 'bg-yellow-100 text-yellow-800' : 
+                                event.status === 'failed' ? 'bg-red-100 text-red-800' : 
+                                'bg-gray-100 text-gray-800'}`}>
+                                {event.status}
+                              </span>
+                            ) : '-'}
+                          </TableCell>
+                        </TableRow>
+                      );
+                    })}
+                  </TableBody>
+                </Table>
+              ) : (
+                <div className="py-8 text-center text-gray-500">
+                  <CreditCard className="h-12 w-12 mx-auto mb-3 text-gray-400" />
+                  <p>No payment events recorded yet</p>
                 </div>
               )}
             </CardContent>
