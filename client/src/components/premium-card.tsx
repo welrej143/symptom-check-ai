@@ -752,7 +752,11 @@ export default function PremiumCard() {
               {/* PayPal Button - Only shows when enabled */}
               {paymentMethods?.paypal ? (
                 <button 
-                  onClick={() => setIsUpgrading(true)}
+                  onClick={() => {
+                    // Track PayPal button click
+                    trackPaymentButtonClick('paypal', user?.id);
+                    setIsUpgrading(true);
+                  }}
                   className="bg-blue-600 text-white py-2.5 px-4 rounded-md font-medium hover:bg-blue-700 transition-colors flex items-center justify-center w-full"
                   disabled={isUpgrading}
                 >
@@ -791,6 +795,9 @@ export default function PremiumCard() {
               {paymentMethods?.stripe ? (
                 <button 
                   onClick={async () => {
+                    // Track Stripe button click
+                    trackPaymentButtonClick('stripe', user?.id);
+                    
                     toast({
                       title: "Stripe Checkout",
                       description: "Starting Stripe checkout process...",
