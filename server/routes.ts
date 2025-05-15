@@ -102,6 +102,11 @@ export async function registerRoutes(app: Express): Promise<Server> {
       // Get payment settings
       const paymentSettings = await storage.getPaymentSettings();
       
+      // Get payment analytics data
+      const paymentClickStats = await storage.getPaymentClickStats();
+      const paymentSuccessStats = await storage.getPaymentSuccessStats();
+      const recentPaymentEvents = await storage.getRecentPaymentEvents(10);
+      
       // Return dashboard data
       res.status(200).json({
         statistics: {
@@ -109,8 +114,11 @@ export async function registerRoutes(app: Express): Promise<Server> {
           recordCount: recordCount[0]?.count || 0,
           trackingCount: trackingCount[0]?.count || 0,
         },
-        users: registeredUsers, // Add users to the response
+        users: registeredUsers,
         paymentSettings,
+        paymentClickStats,
+        paymentSuccessStats,
+        recentPaymentEvents,
       });
     } catch (error) {
       console.error("Admin dashboard error:", error);

@@ -64,10 +64,34 @@ interface User {
   createdAt: string;
 }
 
+interface PaymentClickStats {
+  stripe: number;
+  paypal: number;
+}
+
+interface PaymentSuccessStats {
+  stripe: number;
+  paypal: number;
+}
+
+interface PaymentEvent {
+  id: number;
+  method: string;
+  event: string;
+  timestamp: string;
+  userId: number | null;
+  amount: number | null;
+  currency: string | null;
+  status: string | null;
+}
+
 interface DashboardData {
   statistics: Statistics;
   users: User[];
   paymentSettings: PaymentSettings;
+  paymentClickStats: PaymentClickStats;
+  paymentSuccessStats: PaymentSuccessStats;
+  recentPaymentEvents: PaymentEvent[];
 }
 
 export default function AdminDashboard() {
