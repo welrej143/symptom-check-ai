@@ -1,4 +1,4 @@
-import { pgTable, text, serial, integer, boolean, date, time, timestamp } from "drizzle-orm/pg-core";
+import { pgTable, text, serial, integer, boolean, date, time, timestamp, numeric, jsonb } from "drizzle-orm/pg-core";
 import { createInsertSchema } from "drizzle-zod";
 import { z } from "zod";
 
@@ -153,10 +153,11 @@ export const paymentAnalytics = pgTable("payment_analytics", {
   event: text("event").notNull(), // 'button_click', 'payment_success', etc.
   method: text("method").notNull(), // 'stripe', 'paypal'
   userId: integer("user_id").references(() => users.id),
-  amount: text("amount"),
-  orderId: text("order_id"),
+  amount: numeric("amount"), // Numeric for storing currency values
+  currency: text("currency"), // Currency code (USD, EUR, etc.)
+  status: text("status"), // Payment status (completed, pending, failed)
   timestamp: timestamp("timestamp").notNull().defaultNow(),
-  additionalData: text("additional_data"), // JSON string for any extra data
+  metadata: jsonb("metadata"), // JSON data for any extra information
 });
 
 export const insertAppSettingsSchema = createInsertSchema(appSettings).pick({
@@ -167,14 +168,7 @@ export const insertAppSettingsSchema = createInsertSchema(appSettings).pick({
 export type InsertAppSettings = z.infer<typeof insertAppSettingsSchema>;
 export type AppSettings = typeof appSettings.$inferSelect;
 
-export const insertPaymentAnalyticsSchema = createInsertSchema(paymentAnalytics).pick({
-  event: true,
-  method: true,
-  userId: true,
-  amount: true,
-  orderId: true,
-  additionalData: true,
-});
+export const insertPaymentAnalyticsSchema = createInsertSchema(paymentAnalytics);
 
 export type InsertPaymentAnalytics = z.infer<typeof insertPaymentAnalyticsSchema>;
 export type PaymentAnalytics = typeof paymentAnalytics.$inferSelect;
