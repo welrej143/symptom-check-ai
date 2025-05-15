@@ -282,7 +282,7 @@ function PayPalPaymentOptions() {
         'paypal',
         amount,
         'USD',
-        auth.user?.id,
+        user?.id,
         'completed'
       );
       
@@ -492,11 +492,14 @@ export default function PremiumCard() {
           // Refresh subscription status to reflect changes
           await refreshSubscriptionStatus();
           
-          // Track conversion with Google Ads
+          // Track successful payment
           if (data && data.amount) {
-            trackPurchase(
+            trackSuccessfulPayment(
+              'stripe',
               parseFloat(data.amount),
-              data.currency || 'USD'
+              data.currency || 'USD',
+              user?.id,
+              'completed'
             );
           }
           
